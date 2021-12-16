@@ -1,0 +1,14 @@
+.tomczuk {
+    all: revert;
+}
+
+.tomczuk-right-panel {
+    color: red;
+    font-size: 36px;
+    position: fixed;
+    top: 20px;
+    right: 10px;
+    border: 1px solid black;
+    background: blue;
+    color: white;
+}
