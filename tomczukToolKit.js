@@ -18,6 +18,8 @@ function useTomczukToolbarStyles() {
     :root {
         --right-panel-width: 400px;
         --main-transition: 500ms;
+        --silver-color: #dedede;
+        --red-color: #f55;
     }
     
     .tomczuk {
@@ -29,17 +31,17 @@ function useTomczukToolbarStyles() {
     
     .tomczuk-right-panel {
         padding: 0;
-        color: silver;
-        font-size: 20px;
+        color: var(--silver-color);
+        font-size: 1.2rem;
         position: fixed;
         top: 0px;
         right: calc(( (var(--right-panel-width) / 2) * -1));
-        border-left: 3px solid black;
+        border-left: 3px solid #000;
         background: rgba(0, 0, 0, 0.5);
-        height: 100%;
+        height: 100vh;
         width: var(--right-panel-width);
         transition: var(--main-transition) ease-out;
-        box-shadow: inset 80px 0 80px -60px black;
+        box-shadow: inset 80px 0 80px -60px #000;
         user-select: none;
     }
     
@@ -56,13 +58,13 @@ function useTomczukToolbarStyles() {
     }
     
     .tomczuk-right-panel.permactive {
+        right: 0;
         background: rgba(0, 50, 0, 0.75);
     }
     
     .tomczuk-right-panel-header {
-        padding: .4rem;
-        background: rgba(0, 0, 0, 1);
-        color: white;
+        padding: 6px;
+        background: rgba(0, 0, 0, 0.8);
         letter-spacing: 1px;
         display: flex;
     }
@@ -70,6 +72,7 @@ function useTomczukToolbarStyles() {
     .tomczuk-utility-container {
         display: flex;
         flex-direction: row;
+        align-items: flex-start;
         padding: 0;
     }
     
@@ -79,71 +82,40 @@ function useTomczukToolbarStyles() {
         }
         .tomczuk-right-panel .tomczuk-utility-container {
             opacity: 0;
+            pointer-events: none;
             transition: var(--main-transition);
         }
         .tomczuk-right-panel.active .tomczuk-utility-container,
         .tomczuk-right-panel.permactive .tomczuk-utility-container {
             opacity: 1;
+            pointer-events: all;
         }
     }
     
     
     .tomczuk-primary,
     .tomczuk-secondary {
-        width: 50%;
+        flex: 1;
         display: flex;
-        justify-content: flex-start;
-        padding: 5px;
-        box-sizing: border-box;
         flex-direction: column;
-        align-items: center;
-    }
-    
-    .tomczuk-secondary {
-        background: rgba(255, 255, 255, 0.3);
-    }
-    
-    .tomczuk-primary {
-        background: rgba(0, 0, 0, 0.3);
-    }
-    
-    .tomczuk-self-input {
-        border: 1px solid black;
-        text-align: center;
-        width: 100%;
-        box-sizing: border-box;
-        font-size: 1rem;
-        padding: 3px;
-        border-radius: 5px;
-    }
-    
-    .tomczuk-self-input.tomczuk-self-input-copying {
-        color: red;
-        font-weight: 800;
-        background-color: white;
-        border-color: red;
-        cursor: wait;
+        padding: 5px;
     }
     
     .tomczuk-box {
-        border: 1px solid silver;
-        margin: 5px 0;
-        padding: 5px;
+        border: 1px solid var(--silver-color);
+        border-radius: 5px;
+        margin: 4px 0;
+        flex: 1;
         text-align: center;
-        width: 100%;
-        box-sizing: border-box;
-        background: rgba(0, 0, 0, 0.7);
-        /* border-radius: 3px; */
-        display: flex;
-        flex-direction: column;
+        background: rgba(0, 0, 0, 0.3);
     }
     
     .tomczuk-box-title {
-        color: silver;
-        background: black;
-        border-bottom: 1px solid silver;
-        border-right: 1px solid silver;
-        margin-bottom: 3px;
+        background: #000;
+        padding: 3px;
+        border-radius: inherit;
+        border-bottom: 2px solid var(--silver-color);
+        letter-spacing: 1px;
         text-transform: uppercase;
     }
     
@@ -155,7 +127,26 @@ function useTomczukToolbarStyles() {
         padding: 5px;
     }
     
-    .tomczuk-product-btns-container {
+    .tomczuk-self-input {
+        border: 1px solid black;
+        text-align: center;
+        width: 100%;
+        box-sizing: border-box;
+        font-size: 1rem;
+        padding: 3px;
+        cursor: copy;
+        border-radius: 5px;
+    }
+    
+    .tomczuk-self-input.tomczuk-self-input-copying {
+        color: var(--red-color);
+        font-weight: 800;
+        background-color: #fff;
+        border-color: var(--red-color);
+        cursor: progress;
+    }
+    
+    .tomczuk-row-btns {
         display: flex;
         flex-direction: row;
         justify-content: space-between;
@@ -170,16 +161,14 @@ function useTomczukToolbarStyles() {
         font-size: 1.1rem;
         border-radius: 5px;
         padding: 2px 0;
-        background: silver;
-        color: black;
+        background: var(--silver-color);
+        color: #000;
+        transition: 150ms;
         text-transform: uppercase;
     }
     
     .tomczuk-btn:hover {
-        background: gray;
         text-decoration: none;
-        color: white;
-        border-color: white;
         box-shadow: inset 0 0 2px 1px black;
     }
     
@@ -255,8 +244,29 @@ class App {
 
     productBox() {
         const allowed = this.auth.forbid([]);
-
+        
         if (!allowed) return;
+        //------------------------------------- NAV
+        let nav = box('Nawigacja');
+        const navBtnsContainer = html('div', { classes: 'tomczuk-nav-btns-container tomczuk-row-btns' });
+        const reCacheBtn = html('a', { classes: 'tomczuk-btn', style: 'background-image: url("https://svgsilh.com/svg/525698.svg"); background-size: 30%; background-origin: content-box; background-position: center; background-repeat: no-repeat; padding:5px;'});
+        reCacheBtn.addEventListener('click', e => {
+            let currentUrl = window.location.href.replaceAll(/\?ReCache=1/ig, '');
+            window.location.href = currentUrl + '?ReCache=1';
+            // let cleanUrl = currentUrl.
+        });
+        navBtnsContainer.append(reCacheBtn);
+        navBtnsContainer.append(btn({ value: 'Mobile' }));
+
+        nav.container.append(navBtnsContainer);
+
+
+
+        this.ctrl.primary.append(nav);
+
+        //------------------------------------- NAV
+
+
 
         let model = this.productModel();
         if (isDev() && !model) model = '9788382158106';
@@ -265,7 +275,7 @@ class App {
             const input = selfCopyInput({ value: model, classes: 'tomczuk-self-input' });
             productBox.container.append(input);
 
-            const btnsContainer = html('div', { classes: 'tomczuk-product-btns-container' });
+            const btnsContainer = html('div', { classes: 'tomczuk-product-btns-container tomczuk-row-btns' });
             if (!isCBA()) btnsContainer.append(btn({ value: 'cba' }));
             if (!isTK()) btnsContainer.append(btn({ value: 'tk', url: `https://www.taniaksiazka.pl/Szukaj/q-${model}` }));
             if (!isBEE()) btnsContainer.append(btn({ value: 'bee', url: `https://www.bee.pl/Szukaj/q-${model}?pf-size=24&pf-page=1` }))
@@ -274,6 +284,8 @@ class App {
 
             productBox.container.append(btnsContainer);
             productBox.container.append(basketsUrlBtn);
+
+            //test
             this.ctrl.primary.append(productBox);
         }
     }
@@ -350,16 +362,13 @@ class Controller {
             rightPanel.classList.remove('permactive');
         }
 
-        rightPanel.canTogglePanel = function(clickedEl) {
-            return (
-                clickedEl == rightPanel ||
-                clickedEl !== this.primary ||
-                clickedEl !== this.secondary
-            );
+        rightPanel.canTogglePanel = (clickedEl) => {
+            return clickedEl.querySelector('.tomczuk-box');
         }
 
         rightPanel.addEventListener('click', e => {
-            if (e.target !== rightPanel || rightPanel.classList.contains('permactive')) return;
+            console.log(e.target);
+            if (!rightPanel.canTogglePanel(e.target) || rightPanel.classList.contains('permactive')) return;
             setTimeout(() => {
                 if (!rightPanel.classList.contains('permactive')) rightPanel.classList.toggle('active')
             }, 180);
@@ -586,7 +595,11 @@ function box(title) {
 }
 
 function btn({ value, url }) {
-    const btn = html('a', { textContent: value, href: url, classes: 'tomczuk-btn' });
+    let attributes = {};
+    if (value) attributes.textContent = value;
+    attributes.classes = 'tomczuk-btn';
+    if (url) attributes.href = url;
+    const btn = html('a', attributes);
     return btn;
 }
 

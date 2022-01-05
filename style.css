@@ -1,6 +1,8 @@
 :root {
     --right-panel-width: 400px;
     --main-transition: 500ms;
+    --silver-color: #dedede;
+    --red-color: #f55;
 }
 
 .tomczuk {
@@ -12,16 +14,17 @@
 
 .tomczuk-right-panel {
     padding: 0;
+    color: var(--silver-color);
     font-size: 1.2rem;
     position: fixed;
     top: 0px;
     right: calc(( (var(--right-panel-width) / 2) * -1));
-    border-left: 3px solid black;
+    border-left: 3px solid #000;
     background: rgba(0, 0, 0, 0.5);
-    height: 100%;
+    height: 100vh;
     width: var(--right-panel-width);
     transition: var(--main-transition) ease-out;
-    box-shadow: inset 80px 0 80px -60px black;
+    box-shadow: inset 80px 0 80px -60px #000;
     user-select: none;
 }
 
@@ -38,13 +41,13 @@
 }
 
 .tomczuk-right-panel.permactive {
+    right: 0;
     background: rgba(0, 50, 0, 0.75);
 }
 
 .tomczuk-right-panel-header {
-    padding: .4rem;
-    background: rgba(0, 0, 0, 1);
-    color: white;
+    padding: 6px;
+    background: rgba(0, 0, 0, 0.8);
     letter-spacing: 1px;
     display: flex;
 }
@@ -52,6 +55,7 @@
 .tomczuk-utility-container {
     display: flex;
     flex-direction: row;
+    align-items: flex-start;
     padding: 0;
 }
 
@@ -61,71 +65,40 @@
     }
     .tomczuk-right-panel .tomczuk-utility-container {
         opacity: 0;
+        pointer-events: none;
         transition: var(--main-transition);
     }
     .tomczuk-right-panel.active .tomczuk-utility-container,
     .tomczuk-right-panel.permactive .tomczuk-utility-container {
         opacity: 1;
+        pointer-events: all;
     }
 }
 
 
 .tomczuk-primary,
 .tomczuk-secondary {
-    width: 50%;
+    flex: 1;
     display: flex;
-    justify-content: flex-start;
-    padding: 5px;
-    box-sizing: border-box;
     flex-direction: column;
-    align-items: center;
-}
-
-.tomczuk-secondary {
-    background: rgba(255, 255, 255, 0.3);
-}
-
-.tomczuk-primary {
-    background: rgba(0, 0, 0, 0.3);
-}
-
-.tomczuk-self-input {
-    border: 1px solid black;
-    text-align: center;
-    width: 100%;
-    box-sizing: border-box;
-    font-size: 1rem;
-    padding: 3px;
-    border-radius: 5px;
-}
-
-.tomczuk-self-input.tomczuk-self-input-copying {
-    color: red;
-    font-weight: 800;
-    background-color: white;
-    border-color: red;
-    cursor: wait;
+    padding: 5px;
 }
 
 .tomczuk-box {
-    border: 1px solid silver;
-    margin: 5px 0;
-    padding: 5px;
+    border: 1px solid var(--silver-color);
+    border-radius: 5px;
+    margin: 4px 0;
+    flex: 1;
     text-align: center;
-    width: 100%;
-    box-sizing: border-box;
-    background: rgba(0, 0, 0, 0.7);
-    /* border-radius: 3px; */
-    display: flex;
-    flex-direction: column;
+    background: rgba(0, 0, 0, 0.3);
 }
 
 .tomczuk-box-title {
-    color: silver;
-    background: black;
-    border-bottom: 1px solid silver;
-    border-right: 1px solid silver;
-    margin-bottom: 3px;
+    background: #000;
+    padding: 3px;
+    border-radius: inherit;
+    border-bottom: 2px solid var(--silver-color);
+    letter-spacing: 1px;
     text-transform: uppercase;
 }
 
@@ -137,7 +110,26 @@
     padding: 5px;
 }
 
-.tomczuk-product-btns-container {
+.tomczuk-self-input {
+    border: 1px solid black;
+    text-align: center;
+    width: 100%;
+    box-sizing: border-box;
+    font-size: 1rem;
+    padding: 3px;
+    cursor: copy;
+    border-radius: 5px;
+}
+
+.tomczuk-self-input.tomczuk-self-input-copying {
+    color: var(--red-color);
+    font-weight: 800;
+    background-color: #fff;
+    border-color: var(--red-color);
+    cursor: progress;
+}
+
+.tomczuk-row-btns {
     display: flex;
     flex-direction: row;
     justify-content: space-between;
@@ -152,16 +144,14 @@
     font-size: 1.1rem;
     border-radius: 5px;
     padding: 2px 0;
-    background: silver;
-    color: black;
+    background: var(--silver-color);
+    color: #000;
+    transition: 150ms;
     text-transform: uppercase;
 }
 
 .tomczuk-btn:hover {
-    background: gray;
     text-decoration: none;
-    color: white;
-    border-color: white;
     box-shadow: inset 0 0 2px 1px black;
 }
 
@@ -188,3 +178,9 @@
 #panel-toggler.unpinned:hover {
     border-color: black;
 }
+
+
+
+/* https://www.svgrepo.com/show/91399/mobile-phone-design.svg MOBILE ICON */
+
+/* https://svgsilh.com/svg/525698.svg REFRESH ICON */
