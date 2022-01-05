@@ -1,0 +1,695 @@
+// ==UserScript==
+// @name     tomczukToolKit
+// @version  1
+// @grant    none
+// ==/UserScript==
+
+// ========================== CONFIG ==========================
+
+const CONFIG = {};
+
+// ========================== CONFIG ==========================
+
+
+function useTomczukToolbarStyles() {
+    let style = document.createElement('style');
+    style.id = 'tomczuk-toolbar-styles';
+    let css = `
+    :root {
+        --right-panel-width: 400px;
+        --main-transition: 500ms;
+    }
+    
+    .tomczuk {
+        all: revert;
+        font-family: calibri;
+        z-index: 9999;
+        outline: none;
+    }
+    
+    .tomczuk-right-panel {
+        padding: 0;
+        color: silver;
+        font-size: 20px;
+        position: fixed;
+        top: 0px;
+        right: calc(( (var(--right-panel-width) / 2) * -1));
+        border-left: 3px solid black;
+        background: rgba(0, 0, 0, 0.5);
+        height: 100%;
+        width: var(--right-panel-width);
+        transition: var(--main-transition) ease-out;
+        box-shadow: inset 80px 0 80px -60px black;
+        user-select: none;
+    }
+    
+    @media only screen and (min-width: 2100px) {
+        .tomczuk-right-panel {
+            right: 0;
+        }
+    }
+    
+    .tomczuk-right-panel.active,
+    .tomczuk-right-panel.permactive {
+        right: 0;
+        background: rgba(0, 0, 0, 0.75);
+    }
+    
+    .tomczuk-right-panel.permactive {
+        background: rgba(0, 50, 0, 0.75);
+    }
+    
+    .tomczuk-right-panel-header {
+        padding: .4rem;
+        background: rgba(0, 0, 0, 1);
+        color: white;
+        letter-spacing: 1px;
+        display: flex;
+    }
+    
+    .tomczuk-utility-container {
+        display: flex;
+        flex-direction: row;
+        padding: 0;
+    }
+    
+    @media only screen and (max-width: 1700px) {
+        .tomczuk-right-panel {
+            right: calc( (var(--right-panel-width) * -1) + 35px);
+        }
+        .tomczuk-right-panel .tomczuk-utility-container {
+            opacity: 0;
+            transition: var(--main-transition);
+        }
+        .tomczuk-right-panel.active .tomczuk-utility-container,
+        .tomczuk-right-panel.permactive .tomczuk-utility-container {
+            opacity: 1;
+        }
+    }
+    
+    
+    .tomczuk-primary,
+    .tomczuk-secondary {
+        width: 50%;
+        display: flex;
+        justify-content: flex-start;
+        padding: 5px;
+        box-sizing: border-box;
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .tomczuk-secondary {
+        background: rgba(255, 255, 255, 0.3);
+    }
+    
+    .tomczuk-primary {
+        background: rgba(0, 0, 0, 0.3);
+    }
+    
+    .tomczuk-self-input {
+        border: 1px solid black;
+        text-align: center;
+        width: 100%;
+        box-sizing: border-box;
+        font-size: 1rem;
+        padding: 3px;
+        border-radius: 5px;
+    }
+    
+    .tomczuk-self-input.tomczuk-self-input-copying {
+        color: red;
+        font-weight: 800;
+        background-color: white;
+        border-color: red;
+        cursor: wait;
+    }
+    
+    .tomczuk-box {
+        border: 1px solid silver;
+        margin: 5px 0;
+        padding: 5px;
+        text-align: center;
+        width: 100%;
+        box-sizing: border-box;
+        background: rgba(0, 0, 0, 0.7);
+        /* border-radius: 3px; */
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .tomczuk-box-title {
+        color: silver;
+        background: black;
+        border-bottom: 1px solid silver;
+        border-right: 1px solid silver;
+        margin-bottom: 3px;
+        text-transform: uppercase;
+    }
+    
+    .tomczuk-box-container {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        align-items: stretch;
+        padding: 5px;
+    }
+    
+    .tomczuk-product-btns-container {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        gap: 4px;
+    }
+    
+    .tomczuk-btn {
+        cursor: pointer;
+        border: 1px solid black;
+        text-decoration: none;
+        flex: 1;
+        font-size: 1.1rem;
+        border-radius: 5px;
+        padding: 2px 0;
+        background: silver;
+        color: black;
+        text-transform: uppercase;
+    }
+    
+    .tomczuk-btn:hover {
+        background: gray;
+        text-decoration: none;
+        color: white;
+        border-color: white;
+        box-shadow: inset 0 0 2px 1px black;
+    }
+    
+    #panel-toggler {
+        border: 2px solid yellowgreen;
+        display: inline-block;
+        padding: 10px;
+        border-radius: 4px;
+        cursor: pointer;
+        background: white url('https://simpleicon.com/wp-content/uploads/pin.svg');
+        background-size: cover;
+        transition: var(--main-transition);
+        margin-right: 15px;
+    }
+    
+    #panel-toggler.pinned {
+        background-color: yellowgreen;
+    }
+    
+    #panel-toggler.pinned:hover {
+        border-color: red;
+    }
+    
+    #panel-toggler.unpinned:hover {
+        border-color: black;
+    }
+    `
+        // let revertedClasses = [...new Set(css.match(/\.[a-z-]+/ig))].map(e => e + ' {all: revert;}').join("\n");
+        // css = (revertedClasses + css)
+        //     .replaceAll(/[\n\t\s]+/ig, ' ')
+        //     .replaceAll(/\s*\{\s*/ig, '{')
+        //     .replaceAll(/\s*\}\s*/ig, '}')
+        //     .replaceAll(/\s*\:\s*/ig, ':');
+
+    style.textContent = css;
+    let head = document.querySelector('head');
+    let body = document.querySelector('body');
+    if (head) {
+        head.append(style);
+    } else {
+        let head = document.createElement('head');
+        if (html) {
+            html.append(head);
+            head.append(style);
+            if (!body) html.append(body);
+        } else {
+            let html = document.createElement('html');
+            document.append(html);
+            html.append(head);
+            head.append(style);
+            if (!body) html.append(body);
+        }
+    }
+}
+
+class App {
+    constructor(department) {
+        this.auth = new Auth(department);
+        switch (true) {
+            case isCBA():
+                this.ctrl = new CBAController;
+                break;
+            case isTK():
+                this.ctrl = new TKController;
+                break;
+            case isBEE():
+                this.ctrl = new BEEController;
+                break;
+            default:
+                this.ctrl = new BasicController;
+        }
+    }
+
+    productBox() {
+        const allowed = this.auth.forbid([]);
+
+        if (!allowed) return;
+
+        let model = this.productModel();
+        if (isDev() && !model) model = '9788382158106';
+        if (model) {
+            const productBox = box('Produkt');
+            const input = selfCopyInput({ value: model, classes: 'tomczuk-self-input' });
+            productBox.container.append(input);
+
+            const btnsContainer = html('div', { classes: 'tomczuk-product-btns-container' });
+            if (!isCBA()) btnsContainer.append(btn({ value: 'cba' }));
+            if (!isTK()) btnsContainer.append(btn({ value: 'tk', url: `https://www.taniaksiazka.pl/Szukaj/q-${model}` }));
+            if (!isBEE()) btnsContainer.append(btn({ value: 'bee', url: `https://www.bee.pl/Szukaj/q-${model}?pf-size=24&pf-page=1` }))
+            const basketsUrlBtn = btn({ value: 'Jadące koszyki', url: arrivingBasketsUrl(model) });
+
+
+            productBox.container.append(btnsContainer);
+            productBox.container.append(basketsUrlBtn);
+            this.ctrl.primary.append(productBox);
+        }
+    }
+
+    productModel() {
+        const allowed = this.auth.forbid([]);
+
+        if (!allowed) return;
+
+        const model = this.ctrl.productModel();
+        return model ? model : false;
+    }
+
+    salesBox() {
+        const allowed = this.auth.allow([
+            'handlowy'
+        ])
+        if (!allowed) return;
+
+        let model = this.productModel();
+        if (isDev() && !model) model = '9788382158106';
+        if (model) {
+            const salesBox = box('Sprzedaż');
+            const resultBox = html('div', { classes: 'tomczuk-sales-result-box', text: 'Sprzedaż z X dni:' });
+
+            salesBox.append(resultBox);
+
+
+
+            this.ctrl.secondary.append(salesBox);
+        }
+    }
+}
+
+
+
+// departments:
+// handlowy, bok, marketing, bee, it, 
+class Auth {
+    constructor(department) {
+        this.department = department;
+    }
+    allow(departments) {
+        return departments.includes(this.department);
+    }
+    forbid(departments) {
+        return !departments.includes(this.department)
+    }
+}
+
+class Controller {
+    constructor() {
+        this.rightPanel = this.getRightPanel();
+        this.header = this.getHeader();
+
+        this.makeUtilityContainer();
+    }
+
+    getRightPanel() {
+        let rightPanel = html('div', { classes: 'tomczuk-right-panel' });
+        document.body.append(rightPanel);
+
+        rightPanel.pin = function() {
+            localStorage.tomczukPanelToggler = 'pinned';
+            rightPanel.querySelector('#panel-toggler').classList.add('pinned');
+            rightPanel.querySelector('#panel-toggler').classList.remove('unpinned');
+            rightPanel.classList.add('permactive');
+        }
+
+        rightPanel.unpin = function() {
+            localStorage.tomczukPanelToggler = 'unpinned';
+            rightPanel.querySelector('#panel-toggler').classList.remove('pinned');
+            rightPanel.querySelector('#panel-toggler').classList.add('unpinned');
+            rightPanel.classList.remove('permactive');
+        }
+
+        rightPanel.canTogglePanel = function(clickedEl) {
+            return (
+                clickedEl == rightPanel ||
+                clickedEl !== this.primary ||
+                clickedEl !== this.secondary
+            );
+        }
+
+        rightPanel.addEventListener('click', e => {
+            if (e.target !== rightPanel || rightPanel.classList.contains('permactive')) return;
+            setTimeout(() => {
+                if (!rightPanel.classList.contains('permactive')) rightPanel.classList.toggle('active')
+            }, 180);
+        });
+        rightPanel.addEventListener('dblclick', e => {
+            if (!rightPanel.canTogglePanel(e.target)) return;
+
+            if (rightPanel.classList.contains('permactive')) {
+                console.log('dblclick odpinam');
+                rightPanel.unpin();
+            } else {
+                console.log('dblclick przypinam');
+                rightPanel.pin();
+            }
+        });
+
+        let timeOutId;
+        rightPanel.addEventListener('mouseout', () => {
+            timeOutId = setTimeout(() => {
+                rightPanel.classList.remove('active');
+            }, 1250);
+        });
+        rightPanel.addEventListener('mouseover', () => {
+            window.clearTimeout(timeOutId);
+        });
+
+        CONFIG.rightPanel = rightPanel;
+        return rightPanel;
+    }
+
+    makeUtilityContainer() {
+        const container = html('div', { classes: 'tomczuk-utility-container' });
+        const primary = this.getPrimary();
+        const secondary = this.getSecondary();
+
+        container.append(primary, secondary);
+        this.rightPanel.append(container);
+    }
+
+    getHeader() {
+        const rightPanel = this.rightPanel;
+        const header = html('div', { classes: 'tomczuk-right-panel-header' });
+        header.append(html('div', { textContent: '.tomczukToolKit' }));
+
+        const panelToggler = html('div', { id: 'panel-toggler' });
+        header.prepend(panelToggler);
+        rightPanel.append(header);
+
+        if (localStorage.tomczukPanelToggler == 'pinned') rightPanel.pin();
+        else rightPanel.unpin();
+
+        panelToggler.addEventListener('click', e => {
+            if (localStorage.tomczukPanelToggler == 'pinned') rightPanel.unpin();
+            else rightPanel.pin();
+        });
+
+        return header;
+    }
+
+    getPrimary() {
+        const primary = html('div', { classes: 'tomczuk-primary' });
+        this.primary = primary;
+        return primary;
+    }
+
+    getSecondary() {
+        const secondary = html('div', { classes: 'tomczuk-secondary' });
+        this.secondary = secondary;
+        return secondary;
+    }
+
+    productModel() {
+        return false;
+    }
+}
+
+
+class TKController extends Controller {
+    productModel() {
+        let meta = document.querySelector('meta[itemprop="productID"]');
+        if (!meta) return false;
+
+        let model = meta.getAttribute('content');
+        if (!model) return false;
+        return model;
+    }
+}
+
+class CBAController extends Controller {
+
+}
+
+class BEEController extends Controller {
+
+}
+
+class BasicController extends Controller {
+    productModel() {
+        return false;
+    }
+}
+
+function pl2url(string) {
+    let utf = {
+        "Ą": "%A1",
+        "Ć": "%C6",
+        "Ę": "%CA",
+        "Ł": "%A3",
+        "Ń": "%D1",
+        "Ó": "%D3",
+        "Ś": "%A6",
+        "Ź": "%AC",
+        "Ż": "%AF",
+        "ą": "%B1",
+        "ć": "%E6",
+        "ę": "%EA",
+        "ł": "%B3",
+        "ń": "%F1",
+        "ó": "%F3",
+        "ś": "%B6",
+        "ź": "%BC",
+        "ż": "%BF",
+        " ": "%20" // ? zostawić ?
+    };
+    string = string.trim();
+    let result = '';
+
+    let strlen = string.length;
+    for (i = 0; i < strlen; i++) {
+        const letter = string[i];
+        if (utf.hasOwnProperty(letter)) result += utf[letter];
+        else result += letter;
+    }
+    return result;
+}
+
+function isCurrentPage(page) {
+    page = page.replaceAll('.', '\.').replaceAll('/', '\/');
+    let regexp = new RegExp(page, 'ig');
+    return Boolean(window.location.href.match(regexp));
+}
+
+function isTK() { return isCurrentPage('taniaksiazka.pl'); }
+
+function isCBA() { return isCurrentPage('cba.kierus.com.pl'); }
+
+function isBEE() { return isCurrentPage('bee.pl'); }
+
+function isDev() {
+    let env = document.querySelector('meta[env="dev"]');
+    if (env) return env.getAttribute('env') == 'dev';
+    return false;
+}
+
+function arrivingBasketsUrl(model) {
+    return `https://jakistamlink.cba.kierus.com.pl?query=${model}?jakis_parametr=test`;
+}
+
+function px(value) { return value + 'px' }
+
+function noPx(value) {
+    if (Number.isInteger(value)) return value;
+    if (typeof value == 'string') {
+        let regexed = value.match(/(\d+)px/i);
+        if (!regexed) return parseInt(value);
+        return parseInt(regexed[1]);
+    };
+}
+
+function userSelection(strong = false, exceptions = '') {
+    var result = '';
+    if (exceptions) exceptions = exceptions.split('').join('\\');
+
+    if (document.activeElement.localName == 'input' || document.activeElement.localName == 'textarea') {
+        let active = document.activeElement;
+        let start = active.selectionStart;
+        let end = active.selectionEnd;
+        if (start != end) result = active.value.substr(start, end - start);
+    } else result = window.getSelection().toString();
+
+    if (strong) result = result.replace(new RegExp('[^a-z0-9ęóąśłżźćń' + exceptions + ']', 'ig'), ' ');
+
+    result = result.replace(/\s{2,}/ig, ' ').trim();
+
+    return result;
+}
+
+function getInterface() {
+    let interfaceContainer = document.createElement('div');
+    let minimize = document.createElement('div');
+}
+
+function getCloseBtn() {
+    let close = document.createElement('div');
+    close.classList.add('close-box');
+}
+
+function html(tag, attributes = {}) {
+    const el = document.createElement(tag);
+
+    for (const [key, value] of Object.entries(attributes)) {
+        if (key !== 'classes') el[key] = value;
+        else {
+            let classes = value.split(' ');
+            if (!classes.length) break;
+
+            if (classes.indexOf('tomczuk') > 0) classes.splice(classes.indexOf('tomczuk'), 1);
+
+            classes.unshift('tomczuk');
+            classes = classes.filter(cls => cls.length > 0);
+            for (let className of classes) el.classList.add(className);
+        }
+    }
+    return el;
+}
+
+function box(title) {
+    const box = html('div', { classes: 'tomczuk-box' })
+    const titleDiv = html('div', { classes: 'tomczuk-box-title', textContent: title });
+    const container = html('div', { classes: 'tomczuk-box-container' });
+    box.container = container;
+    box.append(titleDiv, container);
+    return box;
+}
+
+function btn({ value, url }) {
+    const btn = html('a', { textContent: value, href: url, classes: 'tomczuk-btn' });
+    return btn;
+}
+
+function selfCopyInput(attributes = { value, classes, id }) {
+    const input = html('input', attributes);
+
+    input.addEventListener('click', () => {
+        const VAL = input.value;
+        navigator.clipboard.writeText(VAL).then(() => {
+            const delayClassName = 'tomczuk-self-input-copying';
+            input.value = 'KOPIUJĘ...';
+            input.disabled = true;
+            input.classList.add(delayClassName);
+
+            setTimeout(() => {
+                input.value = VAL;
+                input.select();
+                input.disabled = false;
+                input.classList.remove(delayClassName);
+            }, 500);
+
+        });
+    });
+
+    return input;
+}
+
+async function getReportFromURL(url, additionalOptions = null) {
+    let dom = await fetchPageDOM(url, additionalOptions);
+    let rawReport = dom.querySelector('textarea#SqlReport').value;
+    let labels = dom.querySelector('textarea#LabelsNames').value.trim().split("\t").map(label => label.toLowerCase());
+    let result = [];
+    rawReport.split("\n").forEach(row => {
+        let obj = {};
+        row.split("\t").forEach((value, i) => {
+            obj[labels[i]] = value;
+        });
+        result.push(obj);
+    });
+    return result;
+}
+
+async function fetchPageDOM(url, additionalOptions = null) {
+    let finalOptions = { method: 'get', credentials: 'include', mode: 'cors' };
+
+    if (additionalOptions) {
+        for (property in additionalOptions) {
+            finalOptions[property] = additionalOptions[property];
+        }
+    }
+
+    let html = await fetch(url, finalOptions);
+    let buffer = await html.arrayBuffer();
+    let text = new TextDecoder('iso-8859-2').decode(buffer);
+    let dom = new DOMParser().parseFromString(text, 'text/html');
+    return dom;
+}
+
+function unnamedYet() {
+    document.addEventListener('keyup', e => {
+        if (e.key == 'd' && e.ctrlKey && e.altKey) {
+            console.log('go');
+
+            console.log(userSelection());
+            // let a = document.createElement('a');
+            // a.textContent = 'testowy tomczukBaton';
+            // a.href = window.location.href;
+            // a.className = 'tomczuk-btn';
+
+            // let body = document.querySelector('body');
+            // body.append(a);
+        }
+    });
+}
+
+function setInitListeners() {
+    document.addEventListener('click', e => {
+        const rightPanel = CONFIG.rightPanel;
+        if (!rightPanel.classList.contains('active')) return;
+        if (!rightPanel.contains(e.target)) {
+            rightPanel.classList.remove('active');
+        }
+    });
+}
+
+function basicInit(department) {
+    if (!isTK() && !isDev()) return false;
+    if (!isDev()) useTomczukToolbarStyles();
+    const app = new App(department);
+    setInitListeners();
+    return app;
+}
+
+
+(async function main() {
+    let app = basicInit('handlowy');
+    if (!app) return;
+
+    app.productBox();
+    app.salesBox();
+
+
+
+
+    console.log('success');
+})();

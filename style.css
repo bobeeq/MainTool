@@ -1,14 +1,190 @@
+:root {
+    --right-panel-width: 400px;
+    --main-transition: 500ms;
+}
+
 .tomczuk {
     all: revert;
+    font-family: calibri;
+    z-index: 9999;
+    outline: none;
 }
 
 .tomczuk-right-panel {
-    color: red;
-    font-size: 36px;
+    padding: 0;
+    font-size: 1.2rem;
     position: fixed;
-    top: 20px;
-    right: 10px;
-    border: 1px solid black;
-    background: blue;
+    top: 0px;
+    right: calc(( (var(--right-panel-width) / 2) * -1));
+    border-left: 3px solid black;
+    background: rgba(0, 0, 0, 0.5);
+    height: 100%;
+    width: var(--right-panel-width);
+    transition: var(--main-transition) ease-out;
+    box-shadow: inset 80px 0 80px -60px black;
+    user-select: none;
+}
+
+@media only screen and (min-width: 2100px) {
+    .tomczuk-right-panel {
+        right: 0;
+    }
+}
+
+.tomczuk-right-panel.active,
+.tomczuk-right-panel.permactive {
+    right: 0;
+    background: rgba(0, 0, 0, 0.75);
+}
+
+.tomczuk-right-panel.permactive {
+    background: rgba(0, 50, 0, 0.75);
+}
+
+.tomczuk-right-panel-header {
+    padding: .4rem;
+    background: rgba(0, 0, 0, 1);
     color: white;
+    letter-spacing: 1px;
+    display: flex;
+}
+
+.tomczuk-utility-container {
+    display: flex;
+    flex-direction: row;
+    padding: 0;
+}
+
+@media only screen and (max-width: 1700px) {
+    .tomczuk-right-panel {
+        right: calc( (var(--right-panel-width) * -1) + 35px);
+    }
+    .tomczuk-right-panel .tomczuk-utility-container {
+        opacity: 0;
+        transition: var(--main-transition);
+    }
+    .tomczuk-right-panel.active .tomczuk-utility-container,
+    .tomczuk-right-panel.permactive .tomczuk-utility-container {
+        opacity: 1;
+    }
+}
+
+
+.tomczuk-primary,
+.tomczuk-secondary {
+    width: 50%;
+    display: flex;
+    justify-content: flex-start;
+    padding: 5px;
+    box-sizing: border-box;
+    flex-direction: column;
+    align-items: center;
+}
+
+.tomczuk-secondary {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.tomczuk-primary {
+    background: rgba(0, 0, 0, 0.3);
+}
+
+.tomczuk-self-input {
+    border: 1px solid black;
+    text-align: center;
+    width: 100%;
+    box-sizing: border-box;
+    font-size: 1rem;
+    padding: 3px;
+    border-radius: 5px;
+}
+
+.tomczuk-self-input.tomczuk-self-input-copying {
+    color: red;
+    font-weight: 800;
+    background-color: white;
+    border-color: red;
+    cursor: wait;
+}
+
+.tomczuk-box {
+    border: 1px solid silver;
+    margin: 5px 0;
+    padding: 5px;
+    text-align: center;
+    width: 100%;
+    box-sizing: border-box;
+    background: rgba(0, 0, 0, 0.7);
+    /* border-radius: 3px; */
+    display: flex;
+    flex-direction: column;
+}
+
+.tomczuk-box-title {
+    color: silver;
+    background: black;
+    border-bottom: 1px solid silver;
+    border-right: 1px solid silver;
+    margin-bottom: 3px;
+    text-transform: uppercase;
+}
+
+.tomczuk-box-container {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    align-items: stretch;
+    padding: 5px;
+}
+
+.tomczuk-product-btns-container {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    gap: 4px;
+}
+
+.tomczuk-btn {
+    cursor: pointer;
+    border: 1px solid black;
+    text-decoration: none;
+    flex: 1;
+    font-size: 1.1rem;
+    border-radius: 5px;
+    padding: 2px 0;
+    background: silver;
+    color: black;
+    text-transform: uppercase;
+}
+
+.tomczuk-btn:hover {
+    background: gray;
+    text-decoration: none;
+    color: white;
+    border-color: white;
+    box-shadow: inset 0 0 2px 1px black;
+}
+
+#panel-toggler {
+    border: 2px solid yellowgreen;
+    display: inline-block;
+    padding: 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    background: white url('https://simpleicon.com/wp-content/uploads/pin.svg');
+    background-size: cover;
+    transition: var(--main-transition);
+    margin-right: 15px;
+}
+
+#panel-toggler.pinned {
+    background-color: yellowgreen;
+}
+
+#panel-toggler.pinned:hover {
+    border-color: red;
+}
+
+#panel-toggler.unpinned:hover {
+    border-color: black;
 }
