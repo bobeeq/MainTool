@@ -92,7 +92,6 @@ function useTomczukToolbarStyles() {
         }
     }
     
-    
     .tomczuk-primary,
     .tomczuk-secondary {
         flex: 1;
@@ -113,10 +112,28 @@ function useTomczukToolbarStyles() {
     .tomczuk-box-title {
         background: #000;
         padding: 3px;
+        display: flex;
+        flex-direction: row;
+        justify-content: center;
+        gap: 6px;
+        cursor: pointer;
         border-radius: inherit;
         border-bottom: 2px solid var(--silver-color);
         letter-spacing: 1px;
         text-transform: uppercase;
+    }
+    
+    .tomczuk-box-title::before {
+        content: '\\25BC';
+        text-transform: lowercase;
+        display: flex;
+        align-items: center;
+        font-size: .6rem;
+        color: var(--red-color);
+    }
+    
+    .tomczuk-box-title.minimized::before {
+        transform: rotate(-90deg);
     }
     
     .tomczuk-box-container {
@@ -125,6 +142,10 @@ function useTomczukToolbarStyles() {
         gap: 4px;
         align-items: stretch;
         padding: 5px;
+    }
+    
+    .tomczuk-box-container.tomczuk-minimized-box {
+        display: none;
     }
     
     .tomczuk-self-input {
@@ -172,6 +193,22 @@ function useTomczukToolbarStyles() {
         box-shadow: inset 0 0 2px 1px black;
     }
     
+    .tomczuk-nav-btn {
+        background-size: 30%;
+        background-origin: content-box;
+        background-position: center;
+        background-repeat: no-repeat;
+        padding: 5px;
+    }
+    
+    .tomczuk-recache-btn {
+        background-image: url("https://svgsilh.com/svg/525698.svg");
+    }
+    
+    .tomczuk-mobile-btn {
+        background-image: url("https://www.svgrepo.com/show/91399/mobile-phone-design.svg");
+    }
+    
     #panel-toggler {
         border: 2px solid yellowgreen;
         display: inline-block;
@@ -195,6 +232,12 @@ function useTomczukToolbarStyles() {
     #panel-toggler.unpinned:hover {
         border-color: black;
     }
+    
+    
+    /* https://www.svgrepo.com/show/91399/mobile-phone-design.svg MOBILE ICON */
+    
+    
+    /* https://svgsilh.com/svg/525698.svg REFRESH ICON */
     `
         // let revertedClasses = [...new Set(css.match(/\.[a-z-]+/ig))].map(e => e + ' {all: revert;}').join("\n");
         // css = (revertedClasses + css)
