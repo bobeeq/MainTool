@@ -242,31 +242,34 @@ class App {
         }
     }
 
-    productBox() {
+    navBox() {
         const allowed = this.auth.forbid([]);
-        
+
         if (!allowed) return;
-        //------------------------------------- NAV
+
+
+
         let nav = box('Nawigacja');
         const navBtnsContainer = html('div', { classes: 'tomczuk-nav-btns-container tomczuk-row-btns' });
-        const reCacheBtn = html('a', { classes: 'tomczuk-btn', style: 'background-image: url("https://svgsilh.com/svg/525698.svg"); background-size: 30%; background-origin: content-box; background-position: center; background-repeat: no-repeat; padding:5px;'});
+        const reCacheBtn = html('a', { classes: 'tomczuk-btn tomczuk-nav-btn tomczuk-recache-btn' });
         reCacheBtn.addEventListener('click', e => {
             let currentUrl = window.location.href.replaceAll(/\?ReCache=1/ig, '');
             window.location.href = currentUrl + '?ReCache=1';
-            // let cleanUrl = currentUrl.
         });
         navBtnsContainer.append(reCacheBtn);
-        navBtnsContainer.append(btn({ value: 'Mobile' }));
+        navBtnsContainer.append(html('a', { textContent: '_', classes: 'tomczuk-btn tomczuk-nav-btn tomczuk-mobile-btn' }));
 
         nav.container.append(navBtnsContainer);
 
 
 
         this.ctrl.primary.append(nav);
+    }
 
-        //------------------------------------- NAV
+    productBox() {
+        const allowed = this.auth.forbid([]);
 
-
+        if (!allowed) return;
 
         let model = this.productModel();
         if (isDev() && !model) model = '9788382158106';
@@ -588,6 +591,12 @@ function html(tag, attributes = {}) {
 function box(title) {
     const box = html('div', { classes: 'tomczuk-box' })
     const titleDiv = html('div', { classes: 'tomczuk-box-title', textContent: title });
+    titleDiv.addEventListener('click', e => {
+        e.stopPropagation();
+        titleDiv.classList.toggle('minimized');
+        const container = titleDiv.nextElementSibling;
+        container.classList.toggle('tomczuk-minimized-box');
+    });
     const container = html('div', { classes: 'tomczuk-box-container' });
     box.container = container;
     box.append(titleDiv, container);
@@ -698,6 +707,7 @@ function basicInit(department) {
     let app = basicInit('handlowy');
     if (!app) return;
 
+    app.navBox();
     app.productBox();
     app.salesBox();
 
