@@ -107,12 +107,19 @@
 }
 
 .tomczuk-box-title::before {
-    content: '\25BC';
+    content: "\25BC";
     text-transform: lowercase;
     display: flex;
     align-items: center;
     font-size: .6rem;
     color: var(--red-color);
+}
+
+.tomczuk-box-title:hover {
+    filter: brightness(1.05);
+}
+.tomczuk-box-title:hover::before {
+    color: #f00;
 }
 
 .tomczuk-box-title.minimized::before {
@@ -209,15 +216,9 @@
 }
 
 #panel-toggler.pinned:hover {
-    border-color: red;
+    border-color: var(--red-color);
 }
 
 #panel-toggler.unpinned:hover {
     border-color: black;
 }
-
-
-/* https://www.svgrepo.com/show/91399/mobile-phone-design.svg MOBILE ICON */
-
-
-/* https://svgsilh.com/svg/525698.svg REFRESH ICON */

@@ -124,7 +124,7 @@ function useTomczukToolbarStyles() {
     }
     
     .tomczuk-box-title::before {
-        content: '\\25BC';
+        content: "\\25BC";
         text-transform: lowercase;
         display: flex;
         align-items: center;
@@ -232,12 +232,6 @@ function useTomczukToolbarStyles() {
     #panel-toggler.unpinned:hover {
         border-color: black;
     }
-    
-    
-    /* https://www.svgrepo.com/show/91399/mobile-phone-design.svg MOBILE ICON */
-    
-    
-    /* https://svgsilh.com/svg/525698.svg REFRESH ICON */
     `
         // let revertedClasses = [...new Set(css.match(/\.[a-z-]+/ig))].map(e => e + ' {all: revert;}').join("\n");
         // css = (revertedClasses + css)
@@ -299,8 +293,21 @@ class App {
             let currentUrl = window.location.href.replaceAll(/\?ReCache=1/ig, '');
             window.location.href = currentUrl + '?ReCache=1';
         });
+        
+        const mobileBtn = html('a', { textContent: '_', classes: 'tomczuk-btn tomczuk-nav-btn tomczuk-mobile-btn' });
+        mobileBtn.addEventListener('click', async e => {
+            let currentUrl = window.location.href;
+            let url = currentUrl;
+            if(url.match(/\?/)) url += '&Theme=Mobile';
+            else url += '?Theme=Mobile';
+            await fetch(url);
+            window.location.href = currentUrl;
+        });
+
+
+        
         navBtnsContainer.append(reCacheBtn);
-        navBtnsContainer.append(html('a', { textContent: '_', classes: 'tomczuk-btn tomczuk-nav-btn tomczuk-mobile-btn' }));
+        navBtnsContainer.append(mobileBtn);
 
         nav.container.append(navBtnsContainer);
 
@@ -413,20 +420,18 @@ class Controller {
         }
 
         rightPanel.addEventListener('click', e => {
-            console.log(e.target);
             if (!rightPanel.canTogglePanel(e.target) || rightPanel.classList.contains('permactive')) return;
             setTimeout(() => {
                 if (!rightPanel.classList.contains('permactive')) rightPanel.classList.toggle('active')
             }, 180);
         });
         rightPanel.addEventListener('dblclick', e => {
+            e.stopPropagation();
             if (!rightPanel.canTogglePanel(e.target)) return;
 
             if (rightPanel.classList.contains('permactive')) {
-                console.log('dblclick odpinam');
                 rightPanel.unpin();
             } else {
-                console.log('dblclick przypinam');
                 rightPanel.pin();
             }
         });
@@ -717,7 +722,6 @@ function box(title) {
 
         if(titleDiv.classList.contains('minimized')) storage(minimizeOptName, 'true');
         else storage(minimizeOptName, 'false');
-        console.log(storageObj());
     });
     return box;
 }
