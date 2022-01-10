@@ -395,14 +395,14 @@ class Controller {
         document.body.append(rightPanel);
 
         rightPanel.pin = function() {
-            localStorage.tomczukPanelToggler = 'pinned';
+            storage('tomczukPanelToggler', 'pinned');
             rightPanel.querySelector('#panel-toggler').classList.add('pinned');
             rightPanel.querySelector('#panel-toggler').classList.remove('unpinned');
             rightPanel.classList.add('permactive');
         }
 
         rightPanel.unpin = function() {
-            localStorage.tomczukPanelToggler = 'unpinned';
+            storage('tomczukPanelToggler', 'unpinned');
             rightPanel.querySelector('#panel-toggler').classList.remove('pinned');
             rightPanel.querySelector('#panel-toggler').classList.add('unpinned');
             rightPanel.classList.remove('permactive');
@@ -463,11 +463,11 @@ class Controller {
         header.prepend(panelToggler);
         rightPanel.append(header);
 
-        if (localStorage.tomczukPanelToggler == 'pinned') rightPanel.pin();
+        if (storage('tomczukPanelToggler') == 'pinned') rightPanel.pin();
         else rightPanel.unpin();
 
         panelToggler.addEventListener('click', e => {
-            if (localStorage.tomczukPanelToggler == 'pinned') rightPanel.unpin();
+            if (storage('tomczukPanelToggler') == 'pinned') rightPanel.unpin();
             else rightPanel.pin();
         });
 
@@ -515,6 +515,70 @@ class BasicController extends Controller {
     productModel() {
         return false;
     }
+}
+
+function storage(key, value = null) {
+    if (value === null) return getFromLocalStorage(key);
+    return setToLocalStorage(key, value);
+}
+
+function getFromLocalStorage(key) {
+    let storage = storageObj();
+    if (!storage) return null;
+    if (!storage.hasOwnProperty(key)) null;
+    return storage[key];
+}
+
+function setToLocalStorage(key, value) {
+    let storage = storageObj();
+    if (!storage) {
+        localStorage.tomczukToolKit = `${key}=${value}`;
+        return true;
+    }
+    if (storage[key] !== undefined) {
+        storage[key] = value;
+
+        let storageStr = '';
+        for(const storageKey in storage) {
+            storageStr += `${storageKey}=${storage[storageKey]}&`;
+        }
+        localStorage.tomczukToolKit = storageStr.slice(0, -1);
+        
+        return true;
+    };
+    localStorage.tomczukToolKit += '&' + key + '=' + value;
+    return true;
+}
+
+function storageObj() {
+    const storageStr = localStorage.tomczukToolKit;
+    if (!storageStr) return null;
+    let resultObj = {};
+
+    for (const pair of storageStr.split('&')) {
+        let [key, val] = pair.split('=');
+
+        if (val.match(/^\d*$/)) {
+            resultObj[key] = parseInt(val);
+            continue;
+        }
+        if (val.match(/^\d*\.\d*$/)) {
+            resultObj[key] = parseFloat(val);
+            continue;
+        }
+        if(val.match(/^true|false$/i)) {
+            resultObj[key] = val.match(/true/i) ? true : false;
+            continue;
+        }
+
+        resultObj[key] = val;
+    }
+    return resultObj;
+}
+
+function emptyStorage() {
+    delete localStorage.tomczukToolKit;
+    return true;
 }
 
 function pl2url(string) {
@@ -634,15 +698,27 @@ function html(tag, attributes = {}) {
 function box(title) {
     const box = html('div', { classes: 'tomczuk-box' })
     const titleDiv = html('div', { classes: 'tomczuk-box-title', textContent: title });
+    const container = html('div', { classes: 'tomczuk-box-container' });
+    box.container = container;
+    box.append(titleDiv, container);
+    
+    
+    let minimizeOptName = title.toLowerCase()+'-boxMinimized';
+    if(storage(minimizeOptName) == true) {
+        titleDiv.classList.add('minimized');
+        container.classList.add('tomczuk-minimized-box');
+    }
+    
     titleDiv.addEventListener('click', e => {
         e.stopPropagation();
         titleDiv.classList.toggle('minimized');
         const container = titleDiv.nextElementSibling;
         container.classList.toggle('tomczuk-minimized-box');
+
+        if(titleDiv.classList.contains('minimized')) storage(minimizeOptName, 'true');
+        else storage(minimizeOptName, 'false');
+        console.log(storageObj());
     });
-    const container = html('div', { classes: 'tomczuk-box-container' });
-    box.container = container;
-    box.append(titleDiv, container);
     return box;
 }
 
@@ -746,6 +822,9 @@ function basicInit(department) {
 }
 
 
+//START APP
+
+
 (async function main() {
     let app = basicInit('handlowy');
     if (!app) return;
@@ -753,9 +832,6 @@ function basicInit(department) {
     app.navBox();
     app.productBox();
     app.salesBox();
-
-
-
 
     console.log('success');
 })();
