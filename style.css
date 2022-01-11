@@ -199,8 +199,13 @@
     background-image: url("https://www.svgrepo.com/show/91399/mobile-phone-design.svg");
 }
 
+.tomczuk-mobile-mode {
+    background-color: greenyellow;
+    border-color: var(--red-color);
+}
+
 #panel-toggler {
-    border: 2px solid yellowgreen;
+    border: 2px solid greenyellow;
     display: inline-block;
     padding: 10px;
     border-radius: 4px;
@@ -212,7 +217,7 @@
 }
 
 #panel-toggler.pinned {
-    background-color: yellowgreen;
+    background-color: greenyellow;
 }
 
 #panel-toggler.pinned:hover {

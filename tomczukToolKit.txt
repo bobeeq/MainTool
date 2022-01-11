@@ -14,8 +14,8 @@ const CONFIG = {};
 function useTomczukToolbarStyles() {
     let style = document.createElement('style');
     style.id = 'tomczuk-toolbar-styles';
-    let css =
-        `:root {
+    let css = `
+    :root {
         --right-panel-width: 400px;
         --main-transition: 500ms;
         --silver-color: #dedede;
@@ -216,13 +216,8 @@ function useTomczukToolbarStyles() {
         background-image: url("https://www.svgrepo.com/show/91399/mobile-phone-design.svg");
     }
     
-    .tomczuk-mobile-mode {
-        background-color: greenyellow;
-        border-color: var(--red-color);
-    }
-    
     #panel-toggler {
-        border: 2px solid greenyellow;
+        border: 2px solid yellowgreen;
         display: inline-block;
         padding: 10px;
         border-radius: 4px;
@@ -234,7 +229,7 @@ function useTomczukToolbarStyles() {
     }
     
     #panel-toggler.pinned {
-        background-color: greenyellow;
+        background-color: yellowgreen;
     }
     
     #panel-toggler.pinned:hover {
@@ -243,7 +238,8 @@ function useTomczukToolbarStyles() {
     
     #panel-toggler.unpinned:hover {
         border-color: black;
-    }`
+    }
+    `
         // let revertedClasses = [...new Set(css.match(/\.[a-z-]+/ig))].map(e => e + ' {all: revert;}').join("\n");
         // css = (revertedClasses + css)
         //     .replaceAll(/[\n\t\s]+/ig, ' ')
@@ -300,36 +296,23 @@ class App {
         let nav = box('Nawigacja');
         const navBtnsContainer = html('div', { classes: 'tomczuk-nav-btns-container tomczuk-row-btns' });
         const reCacheBtn = html('a', { classes: 'tomczuk-btn tomczuk-nav-btn tomczuk-recache-btn' });
-        reCacheBtn.addEventListener('click', async e => {
-            const basicUrl = window.location.href.match(/^https?:\/\/[^\/]*/);
-            try { await fetch(basicUrl + '/?ReCache=1'); } catch(e) {}
-            window.location.reload();
+        reCacheBtn.addEventListener('click', e => {
+            let currentUrl = window.location.href.replaceAll(/\?ReCache=1/ig, '');
+            window.location.href = currentUrl + '?ReCache=1';
         });
-
+        
         const mobileBtn = html('a', { textContent: '_', classes: 'tomczuk-btn tomczuk-nav-btn tomczuk-mobile-btn' });
-        if (sessionStorage.tomczukMobileMode !== 'true') {
-            mobileBtn.classList.remove('tomczuk-mobile-mode');
-        } else {
-            mobileBtn.classList.add('tomczuk-mobile-mode');
-        }
         mobileBtn.addEventListener('click', async e => {
-            const basicUrl = window.location.href.match(/^https?:\/\/[^\/]*/);
-            if (!mobileBtn.classList.contains('tomczuk-mobile-mode')) {
-                mobileBtn.classList.add('tomczuk-mobile-mode');
-                sessionStorage.tomczukMobileMode = 'true';
-                try { await fetch(basicUrl + '/?Theme=Mobile'); } catch (e) {}
-                window.location.reload(true);
-            } else {
-                mobileBtn.classList.remove('tomczuk-mobile-mode');
-                sessionStorage.tomczukMobileMode = 'false';
-                try { await fetch(basicUrl + '/?Theme='); } catch (e) {}
-
-                window.location.reload(true);
-            }
+            let currentUrl = window.location.href;
+            let url = currentUrl;
+            if(url.match(/\?/)) url += '&Theme=Mobile';
+            else url += '?Theme=Mobile';
+            await fetch(url);
+            window.location.href = currentUrl;
         });
 
 
-
+        
         navBtnsContainer.append(reCacheBtn);
         navBtnsContainer.append(mobileBtn);
 
@@ -353,7 +336,7 @@ class App {
             productBox.container.append(input);
 
             const btnsContainer = html('div', { classes: 'tomczuk-product-btns-container tomczuk-row-btns' });
-            if (!isCBA()) btnsContainer.append(btn({ value: 'cba', url: `https://cba.kierus.com.pl/?p=EditProduct&load=*${model}` }));
+            if (!isCBA()) btnsContainer.append(btn({ value: 'cba' }));
             if (!isTK()) btnsContainer.append(btn({ value: 'tk', url: `https://www.taniaksiazka.pl/Szukaj/q-${model}` }));
             if (!isBEE()) btnsContainer.append(btn({ value: 'bee', url: `https://www.bee.pl/Szukaj/q-${model}?pf-size=24&pf-page=1` }))
             const basketsUrlBtn = btn({ value: 'Jadące koszyki', url: arrivingBasketsUrl(model) });
@@ -568,11 +551,11 @@ function setToLocalStorage(key, value) {
         storage[key] = value;
 
         let storageStr = '';
-        for (const storageKey in storage) {
+        for(const storageKey in storage) {
             storageStr += `${storageKey}=${storage[storageKey]}&`;
         }
         localStorage.tomczukToolKit = storageStr.slice(0, -1);
-
+        
         return true;
     };
     localStorage.tomczukToolKit += '&' + key + '=' + value;
@@ -595,7 +578,7 @@ function storageObj() {
             resultObj[key] = parseFloat(val);
             continue;
         }
-        if (val.match(/^true|false$/i)) {
+        if(val.match(/^true|false$/i)) {
             resultObj[key] = val.match(/true/i) ? true : false;
             continue;
         }
@@ -663,7 +646,7 @@ function isDev() {
 }
 
 function arrivingBasketsUrl(model) {
-    return `https://cba.kierus.com.pl/?p=SupplierBasket&a=Filter&sp=0&stm=&stl=&edtm=&edtl=&dtm=&dtl=&SbkStatus=unreceived&SbkOrderBy=Id&SbkViewBy=DESC&opiekun=&product_filter=${model}&doc_filter=&Magazine=-1&DocumentFilter=0`;
+    return `https://jakistamlink.cba.kierus.com.pl?query=${model}?jakis_parametr=test`;
 }
 
 function px(value) { return value + 'px' }
@@ -730,21 +713,21 @@ function box(title) {
     const container = html('div', { classes: 'tomczuk-box-container' });
     box.container = container;
     box.append(titleDiv, container);
-
-
-    let minimizeOptName = title.toLowerCase() + '-boxMinimized';
-    if (storage(minimizeOptName) == true) {
+    
+    
+    let minimizeOptName = title.toLowerCase()+'-boxMinimized';
+    if(storage(minimizeOptName) == true) {
         titleDiv.classList.add('minimized');
         container.classList.add('tomczuk-minimized-box');
     }
-
+    
     titleDiv.addEventListener('click', e => {
         e.stopPropagation();
         titleDiv.classList.toggle('minimized');
         const container = titleDiv.nextElementSibling;
         container.classList.toggle('tomczuk-minimized-box');
 
-        if (titleDiv.classList.contains('minimized')) storage(minimizeOptName, 'true');
+        if(titleDiv.classList.contains('minimized')) storage(minimizeOptName, 'true');
         else storage(minimizeOptName, 'false');
     });
     return box;
