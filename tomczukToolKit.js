@@ -275,6 +275,12 @@ function useTomczukToolbarStyles() {
 class App {
     constructor(department) {
         this.auth = new Auth(department);
+
+        this.rightPanel = this.getRightPanel();
+
+        this.rightPanel.header = this.getHeader();
+        this.makeUtilityContainer();
+
         switch (true) {
             case isCBA():
                 this.ctrl = new CBAController;
@@ -290,12 +296,108 @@ class App {
         }
     }
 
+    getRightPanel() {
+        console.log('get right panel');
+        let rightPanel = html('div', { classes: 'tomczuk-right-panel' });
+        document.body.append(rightPanel);
+
+        rightPanel.pin = function() {
+            storage('tomczukPanelToggler', 'pinned');
+            rightPanel.querySelector('#panel-toggler').classList.add('pinned');
+            rightPanel.querySelector('#panel-toggler').classList.remove('unpinned');
+            rightPanel.classList.add('permactive');
+        }
+
+        rightPanel.unpin = function() {
+            storage('tomczukPanelToggler', 'unpinned');
+            rightPanel.querySelector('#panel-toggler').classList.remove('pinned');
+            rightPanel.querySelector('#panel-toggler').classList.add('unpinned');
+            rightPanel.classList.remove('permactive');
+        }
+
+        rightPanel.canTogglePanel = (clickedEl) => {
+            return clickedEl.querySelector('.tomczuk-box');
+        }
+
+        rightPanel.addEventListener('click', e => {
+            if (!rightPanel.canTogglePanel(e.target) || rightPanel.classList.contains('permactive')) return;
+            console.log('timeout');
+            setTimeout(() => {
+                if (!rightPanel.classList.contains('permactive')) rightPanel.classList.toggle('active')
+            }, 180);
+        });
+        rightPanel.addEventListener('dblclick', e => {
+            e.stopPropagation();
+            if (!rightPanel.canTogglePanel(e.target)) return;
+
+            if (rightPanel.classList.contains('permactive')) {
+                rightPanel.unpin();
+            } else {
+                rightPanel.pin();
+            }
+        });
+
+        let timeOutId;
+        rightPanel.addEventListener('mouseout', () => {
+            timeOutId = setTimeout(() => {
+                rightPanel.classList.remove('active');
+            }, 1250);
+        });
+        rightPanel.addEventListener('mouseover', () => {
+            window.clearTimeout(timeOutId);
+        });
+
+        CONFIG.rightPanel = rightPanel;
+        return rightPanel;
+    }
+
+    makeUtilityContainer() {
+        const container = html('div', { classes: 'tomczuk-utility-container' });
+        const primary = this.getPrimary();
+        const secondary = this.getSecondary();
+
+        this.rightPanel.container = container;
+        this.rightPanel.container.primary = primary;
+        this.rightPanel.container.secondary = secondary;
+
+        container.append(primary, secondary);
+        this.rightPanel.append(container);
+    }
+
+    getHeader() {
+        const rightPanel = this.rightPanel;
+        const header = html('div', { classes: 'tomczuk-right-panel-header' });
+        header.append(html('div', { textContent: '.tomczukToolKit' }));
+
+        const panelToggler = html('div', { id: 'panel-toggler' });
+        header.prepend(panelToggler);
+        rightPanel.append(header);
+
+        if (storage('tomczukPanelToggler') == 'pinned') rightPanel.pin();
+        else rightPanel.unpin();
+
+        panelToggler.addEventListener('click', e => {
+            if (storage('tomczukPanelToggler') == 'pinned') rightPanel.unpin();
+            else rightPanel.pin();
+        });
+
+        return header;
+    }
+
+    getPrimary() {
+        const primary = html('div', { classes: 'tomczuk-primary' });
+        return primary;
+    }
+    
+    getSecondary() {
+        const secondary = html('div', { classes: 'tomczuk-secondary' });
+        return secondary;
+    }
+
     navBox() {
         const allowed = this.auth.forbid([]);
 
         if (!allowed) return;
-
-
 
         let nav = box('Nawigacja');
         const navBtnsContainer = html('div', { classes: 'tomczuk-nav-btns-container tomczuk-row-btns' });
@@ -334,10 +436,7 @@ class App {
         navBtnsContainer.append(mobileBtn);
 
         nav.container.append(navBtnsContainer);
-
-
-
-        this.ctrl.primary.append(nav);
+        this.rightPanel.container.primary.append(nav);
     }
 
     productBox() {
@@ -362,8 +461,7 @@ class App {
             productBox.container.append(btnsContainer);
             productBox.container.append(basketsUrlBtn);
 
-            //test
-            this.ctrl.primary.append(productBox);
+            this.rightPanel.container.primary.append(productBox);
         }
     }
 
@@ -392,7 +490,7 @@ class App {
 
 
 
-            this.ctrl.secondary.append(salesBox);
+            this.rightPanel.container.secondary.append(salesBox);
         }
     }
 }
@@ -415,104 +513,6 @@ class Auth {
 
 class Controller {
     constructor() {
-        this.rightPanel = this.getRightPanel();
-        this.header = this.getHeader();
-
-        this.makeUtilityContainer();
-    }
-
-    getRightPanel() {
-        let rightPanel = html('div', { classes: 'tomczuk-right-panel' });
-        document.body.append(rightPanel);
-
-        rightPanel.pin = function() {
-            storage('tomczukPanelToggler', 'pinned');
-            rightPanel.querySelector('#panel-toggler').classList.add('pinned');
-            rightPanel.querySelector('#panel-toggler').classList.remove('unpinned');
-            rightPanel.classList.add('permactive');
-        }
-
-        rightPanel.unpin = function() {
-            storage('tomczukPanelToggler', 'unpinned');
-            rightPanel.querySelector('#panel-toggler').classList.remove('pinned');
-            rightPanel.querySelector('#panel-toggler').classList.add('unpinned');
-            rightPanel.classList.remove('permactive');
-        }
-
-        rightPanel.canTogglePanel = (clickedEl) => {
-            return clickedEl.querySelector('.tomczuk-box');
-        }
-
-        rightPanel.addEventListener('click', e => {
-            if (!rightPanel.canTogglePanel(e.target) || rightPanel.classList.contains('permactive')) return;
-            setTimeout(() => {
-                if (!rightPanel.classList.contains('permactive')) rightPanel.classList.toggle('active')
-            }, 180);
-        });
-        rightPanel.addEventListener('dblclick', e => {
-            e.stopPropagation();
-            if (!rightPanel.canTogglePanel(e.target)) return;
-
-            if (rightPanel.classList.contains('permactive')) {
-                rightPanel.unpin();
-            } else {
-                rightPanel.pin();
-            }
-        });
-
-        let timeOutId;
-        rightPanel.addEventListener('mouseout', () => {
-            timeOutId = setTimeout(() => {
-                rightPanel.classList.remove('active');
-            }, 1250);
-        });
-        rightPanel.addEventListener('mouseover', () => {
-            window.clearTimeout(timeOutId);
-        });
-
-        CONFIG.rightPanel = rightPanel;
-        return rightPanel;
-    }
-
-    makeUtilityContainer() {
-        const container = html('div', { classes: 'tomczuk-utility-container' });
-        const primary = this.getPrimary();
-        const secondary = this.getSecondary();
-
-        container.append(primary, secondary);
-        this.rightPanel.append(container);
-    }
-
-    getHeader() {
-        const rightPanel = this.rightPanel;
-        const header = html('div', { classes: 'tomczuk-right-panel-header' });
-        header.append(html('div', { textContent: '.tomczukToolKit' }));
-
-        const panelToggler = html('div', { id: 'panel-toggler' });
-        header.prepend(panelToggler);
-        rightPanel.append(header);
-
-        if (storage('tomczukPanelToggler') == 'pinned') rightPanel.pin();
-        else rightPanel.unpin();
-
-        panelToggler.addEventListener('click', e => {
-            if (storage('tomczukPanelToggler') == 'pinned') rightPanel.unpin();
-            else rightPanel.pin();
-        });
-
-        return header;
-    }
-
-    getPrimary() {
-        const primary = html('div', { classes: 'tomczuk-primary' });
-        this.primary = primary;
-        return primary;
-    }
-
-    getSecondary() {
-        const secondary = html('div', { classes: 'tomczuk-secondary' });
-        this.secondary = secondary;
-        return secondary;
     }
 
     productModel() {
