@@ -10,12 +10,13 @@
     font-family: calibri;
     z-index: 9999;
     outline: none;
+    font-size: 17px;
 }
 
 .tomczuk-right-panel {
     padding: 0;
     color: var(--silver-color);
-    font-size: 1.2rem;
+    font-size: 1.2em;
     position: fixed;
     top: 0px;
     right: calc(( (var(--right-panel-width) / 2) * -1));
@@ -50,6 +51,7 @@
     background: rgba(0, 0, 0, 0.8);
     letter-spacing: 1px;
     display: flex;
+    align-items: center;
 }
 
 .tomczuk-utility-container {
@@ -111,7 +113,7 @@
     text-transform: lowercase;
     display: flex;
     align-items: center;
-    font-size: .6rem;
+    font-size: .6em;
     color: var(--red-color);
 }
 
@@ -132,10 +134,18 @@
     gap: 4px;
     align-items: stretch;
     padding: 5px;
+    overflow: hidden;
+    opacity: 1;
+    max-height: 120px;
+    pointer-events: all;
+    transition: .5s;
 }
 
 .tomczuk-box-container.tomczuk-minimized-box {
-    display: none;
+    transition: .8s cubic-bezier(0,1,0,1);
+    pointer-events: none;
+    opacity: 0;
+    max-height: 0;
 }
 
 .tomczuk-self-input {
@@ -143,10 +153,10 @@
     text-align: center;
     width: 100%;
     box-sizing: border-box;
-    font-size: 1rem;
+    font-size: 1em;
     padding: 3px;
     cursor: copy;
-    border-radius: 5px;
+    border-radius: 3px;
 }
 
 .tomczuk-self-input.tomczuk-self-input-copying {
@@ -169,7 +179,7 @@
     border: 1px solid black;
     text-decoration: none;
     flex: 1;
-    font-size: 1.1rem;
+    font-size: 1em;
     border-radius: 5px;
     padding: 2px 0;
     background: var(--silver-color);
@@ -180,7 +190,8 @@
 
 .tomczuk-btn:hover {
     text-decoration: none;
-    box-shadow: inset 0 0 2px 1px black;
+    box-shadow: inset 0 0 3px 1px #444;
+    background-color: #fefefe;
 }
 
 .tomczuk-nav-btn {
@@ -195,13 +206,17 @@
     background-image: url("https://svgsilh.com/svg/525698.svg");
 }
 
-.tomczuk-mobile-btn {
+.tomczuk-btn.tomczuk-mobile-btn {
+    color: rgba(0,0,0,0);
     background-image: url("https://www.svgrepo.com/show/91399/mobile-phone-design.svg");
 }
 
 .tomczuk-mobile-mode {
     background-color: greenyellow;
     border-color: var(--red-color);
+}
+.tomczuk-mobile-mode:hover {
+    background-color: orange;
 }
 
 #panel-toggler {

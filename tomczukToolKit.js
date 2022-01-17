@@ -16,234 +16,249 @@ function useTomczukToolbarStyles() {
     style.id = 'tomczuk-toolbar-styles';
     let css =
         `:root {
-        --right-panel-width: 400px;
-        --main-transition: 500ms;
-        --silver-color: #dedede;
-        --red-color: #f55;
-    }
-    
-    .tomczuk {
-        all: revert;
-        font-family: calibri;
-        z-index: 9999;
-        outline: none;
-    }
-    
-    .tomczuk-right-panel {
-        padding: 0;
-        color: var(--silver-color);
-        font-size: 1.2rem;
-        position: fixed;
-        top: 0px;
-        right: calc(( (var(--right-panel-width) / 2) * -1));
-        border-left: 3px solid #000;
-        background: rgba(0, 0, 0, 0.5);
-        height: 100vh;
-        width: var(--right-panel-width);
-        transition: var(--main-transition) ease-out;
-        box-shadow: inset 80px 0 80px -60px #000;
-        user-select: none;
-    }
-    
-    @media only screen and (min-width: 2100px) {
+            --right-panel-width: 400px;
+            --main-transition: 500ms;
+            --silver-color: #dedede;
+            --red-color: #f55;
+        }
+        
+        .tomczuk {
+            all: revert;
+            font-family: calibri;
+            z-index: 9999;
+            outline: none;
+            font-size: 17px;
+        }
+        
         .tomczuk-right-panel {
+            padding: 0;
+            color: var(--silver-color);
+            font-size: 1.2em;
+            position: fixed;
+            top: 0px;
+            right: calc(( (var(--right-panel-width) / 2) * -1));
+            border-left: 3px solid #000;
+            background: rgba(0, 0, 0, 0.5);
+            height: 100vh;
+            width: var(--right-panel-width);
+            transition: var(--main-transition) ease-out;
+            box-shadow: inset 80px 0 80px -60px #000;
+            user-select: none;
+        }
+        
+        @media only screen and (min-width: 2100px) {
+            .tomczuk-right-panel {
+                right: 0;
+            }
+        }
+        
+        .tomczuk-right-panel.active,
+        .tomczuk-right-panel.permactive {
             right: 0;
+            background: rgba(0, 0, 0, 0.75);
         }
-    }
-    
-    .tomczuk-right-panel.active,
-    .tomczuk-right-panel.permactive {
-        right: 0;
-        background: rgba(0, 0, 0, 0.75);
-    }
-    
-    .tomczuk-right-panel.permactive {
-        right: 0;
-        background: rgba(0, 50, 0, 0.75);
-    }
-    
-    .tomczuk-right-panel-header {
-        padding: 6px;
-        background: rgba(0, 0, 0, 0.8);
-        letter-spacing: 1px;
-        display: flex;
-    }
-    
-    .tomczuk-utility-container {
-        display: flex;
-        flex-direction: row;
-        align-items: flex-start;
-        padding: 0;
-    }
-    
-    @media only screen and (max-width: 1700px) {
-        .tomczuk-right-panel {
-            right: calc( (var(--right-panel-width) * -1) + 35px);
+        
+        .tomczuk-right-panel.permactive {
+            right: 0;
+            background: rgba(0, 50, 0, 0.75);
         }
-        .tomczuk-right-panel .tomczuk-utility-container {
-            opacity: 0;
-            pointer-events: none;
-            transition: var(--main-transition);
+        
+        .tomczuk-right-panel-header {
+            padding: 6px;
+            background: rgba(0, 0, 0, 0.8);
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
         }
-        .tomczuk-right-panel.active .tomczuk-utility-container,
-        .tomczuk-right-panel.permactive .tomczuk-utility-container {
+        
+        .tomczuk-utility-container {
+            display: flex;
+            flex-direction: row;
+            align-items: flex-start;
+            padding: 0;
+        }
+        
+        @media only screen and (max-width: 1700px) {
+            .tomczuk-right-panel {
+                right: calc( (var(--right-panel-width) * -1) + 35px);
+            }
+            .tomczuk-right-panel .tomczuk-utility-container {
+                opacity: 0;
+                pointer-events: none;
+                transition: var(--main-transition);
+            }
+            .tomczuk-right-panel.active .tomczuk-utility-container,
+            .tomczuk-right-panel.permactive .tomczuk-utility-container {
+                opacity: 1;
+                pointer-events: all;
+            }
+        }
+        
+        .tomczuk-primary,
+        .tomczuk-secondary {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 5px;
+        }
+        
+        .tomczuk-box {
+            border: 1px solid var(--silver-color);
+            border-radius: 5px;
+            margin: 4px 0;
+            flex: 1;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.3);
+        }
+        
+        .tomczuk-box-title {
+            background: #000;
+            padding: 3px;
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+            gap: 6px;
+            cursor: pointer;
+            border-radius: inherit;
+            border-bottom: 2px solid var(--silver-color);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        
+        .tomczuk-box-title::before {
+            content: "\\25BC";
+            text-transform: lowercase;
+            display: flex;
+            align-items: center;
+            font-size: .6em;
+            color: var(--red-color);
+        }
+        
+        .tomczuk-box-title:hover {
+            filter: brightness(1.05);
+        }
+        .tomczuk-box-title:hover::before {
+            color: #f00;
+        }
+        
+        .tomczuk-box-title.minimized::before {
+            transform: rotate(-90deg);
+        }
+        
+        .tomczuk-box-container {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            align-items: stretch;
+            padding: 5px;
+            overflow: hidden;
             opacity: 1;
+            max-height: 120px;
             pointer-events: all;
+            transition: .5s;
         }
-    }
-    
-    .tomczuk-primary,
-    .tomczuk-secondary {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        padding: 5px;
-    }
-    
-    .tomczuk-box {
-        border: 1px solid var(--silver-color);
-        border-radius: 5px;
-        margin: 4px 0;
-        flex: 1;
-        text-align: center;
-        background: rgba(0, 0, 0, 0.3);
-    }
-    
-    .tomczuk-box-title {
-        background: #000;
-        padding: 3px;
-        display: flex;
-        flex-direction: row;
-        justify-content: center;
-        gap: 6px;
-        cursor: pointer;
-        border-radius: inherit;
-        border-bottom: 2px solid var(--silver-color);
-        letter-spacing: 1px;
-        text-transform: uppercase;
-    }
-    
-    .tomczuk-box-title::before {
-        content: "\\25BC";
-        text-transform: lowercase;
-        display: flex;
-        align-items: center;
-        font-size: .6rem;
-        color: var(--red-color);
-    }
-    
-    .tomczuk-box-title:hover {
-        filter: brightness(1.05);
-    }
-    .tomczuk-box-title:hover::before {
-        color: #f00;
-    }
-    
-    .tomczuk-box-title.minimized::before {
-        transform: rotate(-90deg);
-    }
-    
-    .tomczuk-box-container {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-        align-items: stretch;
-        padding: 5px;
-    }
-    
-    .tomczuk-box-container.tomczuk-minimized-box {
-        display: none;
-    }
-    
-    .tomczuk-self-input {
-        border: 1px solid black;
-        text-align: center;
-        width: 100%;
-        box-sizing: border-box;
-        font-size: 1rem;
-        padding: 3px;
-        cursor: copy;
-        border-radius: 5px;
-    }
-    
-    .tomczuk-self-input.tomczuk-self-input-copying {
-        color: var(--red-color);
-        font-weight: 800;
-        background-color: #fff;
-        border-color: var(--red-color);
-        cursor: progress;
-    }
-    
-    .tomczuk-row-btns {
-        display: flex;
-        flex-direction: row;
-        justify-content: space-between;
-        gap: 4px;
-    }
-    
-    .tomczuk-btn {
-        cursor: pointer;
-        border: 1px solid black;
-        text-decoration: none;
-        flex: 1;
-        font-size: 1.1rem;
-        border-radius: 5px;
-        padding: 2px 0;
-        background: var(--silver-color);
-        color: #000;
-        transition: 150ms;
-        text-transform: uppercase;
-    }
-    
-    .tomczuk-btn:hover {
-        text-decoration: none;
-        box-shadow: inset 0 0 2px 1px black;
-    }
-    
-    .tomczuk-nav-btn {
-        background-size: 30%;
-        background-origin: content-box;
-        background-position: center;
-        background-repeat: no-repeat;
-        padding: 5px;
-    }
-    
-    .tomczuk-recache-btn {
-        background-image: url("https://svgsilh.com/svg/525698.svg");
-    }
-    
-    .tomczuk-mobile-btn {
-        background-image: url("https://www.svgrepo.com/show/91399/mobile-phone-design.svg");
-    }
-    
-    .tomczuk-mobile-mode {
-        background-color: greenyellow;
-        border-color: var(--red-color);
-    }
-    
-    #panel-toggler {
-        border: 2px solid greenyellow;
-        display: inline-block;
-        padding: 10px;
-        border-radius: 4px;
-        cursor: pointer;
-        background: white url('https://simpleicon.com/wp-content/uploads/pin.svg');
-        background-size: cover;
-        transition: var(--main-transition);
-        margin-right: 15px;
-    }
-    
-    #panel-toggler.pinned {
-        background-color: greenyellow;
-    }
-    
-    #panel-toggler.pinned:hover {
-        border-color: var(--red-color);
-    }
-    
-    #panel-toggler.unpinned:hover {
-        border-color: black;
-    }`
+        
+        .tomczuk-box-container.tomczuk-minimized-box {
+            transition: .8s cubic-bezier(0,1,0,1);
+            pointer-events: none;
+            opacity: 0;
+            max-height: 0;
+        }
+        
+        .tomczuk-self-input {
+            border: 1px solid black;
+            text-align: center;
+            width: 100%;
+            box-sizing: border-box;
+            font-size: 1em;
+            padding: 3px;
+            cursor: copy;
+            border-radius: 3px;
+        }
+        
+        .tomczuk-self-input.tomczuk-self-input-copying {
+            color: var(--red-color);
+            font-weight: 800;
+            background-color: #fff;
+            border-color: var(--red-color);
+            cursor: progress;
+        }
+        
+        .tomczuk-row-btns {
+            display: flex;
+            flex-direction: row;
+            justify-content: space-between;
+            gap: 4px;
+        }
+        
+        .tomczuk-btn {
+            cursor: pointer;
+            border: 1px solid black;
+            text-decoration: none;
+            flex: 1;
+            font-size: 1em;
+            border-radius: 5px;
+            padding: 2px 0;
+            background: var(--silver-color);
+            color: #000;
+            transition: 150ms;
+            text-transform: uppercase;
+        }
+        
+        .tomczuk-btn:hover {
+            text-decoration: none;
+            box-shadow: inset 0 0 3px 1px #444;
+            background-color: #fefefe;
+        }
+        
+        .tomczuk-nav-btn {
+            background-size: 30%;
+            background-origin: content-box;
+            background-position: center;
+            background-repeat: no-repeat;
+            padding: 5px;
+        }
+        
+        .tomczuk-recache-btn {
+            background-image: url("https://svgsilh.com/svg/525698.svg");
+        }
+        
+        .tomczuk-btn.tomczuk-mobile-btn {
+            color: rgba(0,0,0,0);
+            background-image: url("https://www.svgrepo.com/show/91399/mobile-phone-design.svg");
+        }
+        
+        .tomczuk-mobile-mode {
+            background-color: greenyellow;
+            border-color: var(--red-color);
+        }
+        .tomczuk-mobile-mode:hover {
+            background-color: orange;
+        }
+        
+        #panel-toggler {
+            border: 2px solid greenyellow;
+            display: inline-block;
+            padding: 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            background: white url('https://simpleicon.com/wp-content/uploads/pin.svg');
+            background-size: cover;
+            transition: var(--main-transition);
+            margin-right: 15px;
+        }
+        
+        #panel-toggler.pinned {
+            background-color: greenyellow;
+        }
+        
+        #panel-toggler.pinned:hover {
+            border-color: var(--red-color);
+        }
+        
+        #panel-toggler.unpinned:hover {
+            border-color: black;
+        }`
         // let revertedClasses = [...new Set(css.match(/\.[a-z-]+/ig))].map(e => e + ' {all: revert;}').join("\n");
         // css = (revertedClasses + css)
         //     .replaceAll(/[\n\t\s]+/ig, ' ')
@@ -274,12 +289,8 @@ function useTomczukToolbarStyles() {
 
 class App {
     constructor(department) {
-        this.auth = new Auth(department);
-
-        this.rightPanel = this.getRightPanel();
-
-        this.rightPanel.header = this.getHeader();
-        this.makeUtilityContainer();
+        this.department = department;
+        this.getRightPanel();
 
         switch (true) {
             case isCBA():
@@ -296,10 +307,18 @@ class App {
         }
     }
 
+    allow(departments) {
+        return departments.includes(this.department);
+    }
+    forbid(departments) {
+        return !departments.includes(this.department)
+    }
+
     getRightPanel() {
-        console.log('get right panel');
         let rightPanel = html('div', { classes: 'tomczuk-right-panel' });
+        CONFIG.rightPanel = rightPanel;
         document.body.append(rightPanel);
+        this.rightPanel = rightPanel;
 
         rightPanel.pin = function() {
             storage('tomczukPanelToggler', 'pinned');
@@ -321,11 +340,11 @@ class App {
 
         rightPanel.addEventListener('click', e => {
             if (!rightPanel.canTogglePanel(e.target) || rightPanel.classList.contains('permactive')) return;
-            console.log('timeout');
             setTimeout(() => {
                 if (!rightPanel.classList.contains('permactive')) rightPanel.classList.toggle('active')
             }, 180);
         });
+
         rightPanel.addEventListener('dblclick', e => {
             e.stopPropagation();
             if (!rightPanel.canTogglePanel(e.target)) return;
@@ -343,11 +362,13 @@ class App {
                 rightPanel.classList.remove('active');
             }, 1250);
         });
+
         rightPanel.addEventListener('mouseover', () => {
             window.clearTimeout(timeOutId);
         });
 
-        CONFIG.rightPanel = rightPanel;
+        this.getHeader();
+        this.makeUtilityContainer();
         return rightPanel;
     }
 
@@ -355,13 +376,11 @@ class App {
         const container = html('div', { classes: 'tomczuk-utility-container' });
         const primary = this.getPrimary();
         const secondary = this.getSecondary();
-
-        this.rightPanel.container = container;
-        this.rightPanel.container.primary = primary;
-        this.rightPanel.container.secondary = secondary;
-
+        container.primary = primary;
+        container.secondary = secondary;
         container.append(primary, secondary);
         this.rightPanel.append(container);
+        this.rightPanel.container = container;
     }
 
     getHeader() {
@@ -380,22 +399,21 @@ class App {
             if (storage('tomczukPanelToggler') == 'pinned') rightPanel.unpin();
             else rightPanel.pin();
         });
-
-        return header;
+        rightPanel.header = header;
     }
 
     getPrimary() {
         const primary = html('div', { classes: 'tomczuk-primary' });
         return primary;
     }
-    
+
     getSecondary() {
         const secondary = html('div', { classes: 'tomczuk-secondary' });
         return secondary;
     }
 
     navBox() {
-        const allowed = this.auth.forbid([]);
+        const allowed = this.forbid([]);
 
         if (!allowed) return;
 
@@ -404,7 +422,7 @@ class App {
         const reCacheBtn = html('a', { classes: 'tomczuk-btn tomczuk-nav-btn tomczuk-recache-btn' });
         reCacheBtn.addEventListener('click', async e => {
             const basicUrl = window.location.href.match(/^https?:\/\/[^\/]*/);
-            try { await fetch(basicUrl + '/?ReCache=1'); } catch(e) {}
+            try { await fetch(basicUrl + '/?ReCache=1'); } catch (e) {}
             window.location.reload();
         });
 
@@ -440,33 +458,33 @@ class App {
     }
 
     productBox() {
-        const allowed = this.auth.forbid([]);
+        const allowed = this.forbid([]);
 
         if (!allowed) return;
 
         let model = this.productModel();
         if (isDev() && !model) model = '9788382158106';
-        if (model) {
-            const productBox = box('Produkt');
-            const input = selfCopyInput({ value: model, classes: 'tomczuk-self-input' });
-            productBox.container.append(input);
+        if (!model) return;
 
-            const btnsContainer = html('div', { classes: 'tomczuk-product-btns-container tomczuk-row-btns' });
-            if (!isCBA()) btnsContainer.append(btn({ value: 'cba', url: `https://cba.kierus.com.pl/?p=EditProduct&load=*${model}` }));
-            if (!isTK()) btnsContainer.append(btn({ value: 'tk', url: `https://www.taniaksiazka.pl/Szukaj/q-${model}` }));
-            if (!isBEE()) btnsContainer.append(btn({ value: 'bee', url: `https://www.bee.pl/Szukaj/q-${model}?pf-size=24&pf-page=1` }))
-            const basketsUrlBtn = btn({ value: 'Jadące koszyki', url: arrivingBasketsUrl(model) });
+        const productBox = box('Produkt');
+        const input = selfCopyInput({ value: model, classes: 'tomczuk-self-input' });
+        productBox.container.append(input);
+
+        const btnsContainer = html('div', { classes: 'tomczuk-product-btns-container tomczuk-row-btns' });
+        if (!isCBA()) btnsContainer.append(btn({ value: 'cba', url: `https://cba.kierus.com.pl/?p=EditProduct&load=*${model}` }));
+        if (!isTK()) btnsContainer.append(btn({ value: 'tk', url: `https://www.taniaksiazka.pl/Szukaj/q-${model}` }));
+        if (!isBEE()) btnsContainer.append(btn({ value: 'bee', url: `https://www.bee.pl/Szukaj/q-${model}?pf-size=24&pf-page=1` }))
+        const basketsUrlBtn = btn({ value: 'Jadące koszyki', url: arrivingBasketsUrl(model) });
 
 
-            productBox.container.append(btnsContainer);
-            productBox.container.append(basketsUrlBtn);
+        productBox.container.append(btnsContainer);
+        productBox.container.append(basketsUrlBtn);
 
-            this.rightPanel.container.primary.append(productBox);
-        }
+        this.rightPanel.container.primary.append(productBox);
     }
 
     productModel() {
-        const allowed = this.auth.forbid([]);
+        const allowed = this.forbid([]);
 
         if (!allowed) return;
 
@@ -475,7 +493,7 @@ class App {
     }
 
     salesBox() {
-        const allowed = this.auth.allow([
+        const allowed = this.allow([
             'handlowy'
         ])
         if (!allowed) return;
@@ -495,28 +513,22 @@ class App {
     }
 }
 
-
-
-// departments:
-// handlowy, bok, marketing, bee, it, 
-class Auth {
-    constructor(department) {
-        this.department = department;
-    }
-    allow(departments) {
-        return departments.includes(this.department);
-    }
-    forbid(departments) {
-        return !departments.includes(this.department)
-    }
-}
-
 class Controller {
-    constructor() {
-    }
+    constructor() {}
 
     productModel() {
         return false;
+    }
+
+    redirectFromSearchPage() {
+        if (!this.isSearchPage()) return;
+        console.log('wyszukiwanie');
+        const searchText = this.searchText();
+        console.log(searchText);
+        const url = this.searchedElementUrl(searchText);
+        if (!url) return;
+        console.log(url);
+        window.location.href = url;
     }
 }
 
@@ -530,6 +542,24 @@ class TKController extends Controller {
         if (!model) return false;
         return model;
     }
+
+    isSearchPage() {
+        return isCurrentPage('taniaksiazka.pl/Szukaj/q-');
+    }
+
+    searchText() {
+        let searchText = document.querySelector('div.text.search-results.text-with-border > strong');
+        if (!searchText) return null;
+        searchText = searchText.textContent;
+        if (!searchText) return null;
+        return searchText;
+    }
+
+    searchedElementUrl(searchText) {
+        const searchedElement = document.querySelector(`a[data-model="${searchText}"]`);
+        if (!searchedElement) return false;
+        return searchedElement.href;
+    }
 }
 
 class CBAController extends Controller {
@@ -537,7 +567,35 @@ class CBAController extends Controller {
 }
 
 class BEEController extends Controller {
+    productModel() {
+        let meta = document.querySelector('meta[itemprop="productID"]');
+        if (!meta) return false;
 
+        let model = meta.getAttribute('content');
+        if (!model) return false;
+
+        return model;
+    }
+    
+    isSearchPage() {
+        return isCurrentPage('bee.pl/Szukaj/q-');
+    }
+
+    searchText() {
+        let url = window.location.href;
+        let searchText = url.match(/Szukaj\/q\-([^\?]*)/i);
+        if (!searchText) return null;
+        searchText = searchText[1];
+        return searchText;
+    }
+
+    searchedElementUrl(searchText) {
+        console.log(`szukam: ${searchText}`);
+        const searchedElement = document.querySelector(`a[data-model="${searchText}"]`);
+        console.log(`znalazłem: ${searchedElement}`);
+        if (!searchedElement) return false;
+        return searchedElement.href;
+    }
 }
 
 class BasicController extends Controller {
@@ -842,9 +900,10 @@ function setInitListeners() {
 }
 
 function basicInit(department) {
-    if (!isTK() && !isDev()) return false;
+    if (!isTK() && !isDev() && !isBEE()) return false;
     if (!isDev()) useTomczukToolbarStyles();
     const app = new App(department);
+    app.ctrl.redirectFromSearchPage();
     setInitListeners();
     return app;
 }
