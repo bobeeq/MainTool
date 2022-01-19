@@ -28,6 +28,7 @@ function useTomczukToolbarStyles() {
             z-index: 9999;
             outline: none;
             font-size: 17px;
+            line-height: normal;
         }
         
         .tomczuk-right-panel {
@@ -91,6 +92,9 @@ function useTomczukToolbarStyles() {
             .tomczuk-right-panel.permactive .tomczuk-utility-container {
                 opacity: 1;
                 pointer-events: all;
+            }
+            .tomczuk-box {
+                pointer-events: inherit;
             }
         }
         
@@ -492,6 +496,10 @@ class App {
         return model ? model : false;
     }
 
+    productList() {
+        this.ctrl.productList();
+    }
+
     salesBox() {
         const allowed = this.allow([
             'handlowy'
@@ -530,6 +538,9 @@ class Controller {
         console.log(url);
         window.location.href = url;
     }
+    isSearchPage() {}
+    searchText() {}
+    searchedElementUrl() {}
 }
 
 
@@ -560,6 +571,53 @@ class TKController extends Controller {
         if (!searchedElement) return false;
         return searchedElement.href;
     }
+
+    productList() {
+        const ul = document.querySelector('ul#pagi-slide');
+        if (!ul) return null;
+
+        let els = ul.querySelectorAll('li');
+        if (!els) return null;
+
+        els = Array.from(els);
+        let products = {};
+        for (let prod of els) {
+            let obj = {};
+            let a = prod.querySelector('a[data-model]');
+            if (!a) continue;
+            const model = a.dataset.model;
+
+            obj.url = a.href;
+            obj.title = a.dataset.name;
+            obj.category = a.dataset.category;
+            obj.price = a.dataset.price;
+
+            const avail = prod.querySelector('.product-availability-wrapper');
+            obj.availability = avail ? avail.textContent.trim() : '';
+
+            const discount = prod.querySelector('.product-discount');
+            obj.discount = discount ? discount.textContent.trim() : '-';
+
+            const authors = prod.querySelector('.product-authors');
+
+            obj.author = '';
+            if (authors) {
+                let authorList = authors.querySelectorAll('a');
+                if (!authorList) break;
+
+                authorList = Array.from(authorList);
+
+                let authorString = authorList.map(a => a.textContent.trim()).join(', ');
+
+                obj.author = authorString;
+            }
+
+            console.log(obj.availability);
+            products[model] = obj;
+        }
+
+        console.log(products)
+    }
 }
 
 class CBAController extends Controller {
@@ -576,7 +634,7 @@ class BEEController extends Controller {
 
         return model;
     }
-    
+
     isSearchPage() {
         return isCurrentPage('bee.pl/Szukaj/q-');
     }
@@ -919,6 +977,5 @@ function basicInit(department) {
     app.navBox();
     app.productBox();
     app.salesBox();
-
-    console.log('success');
+    app.productList();
 })();

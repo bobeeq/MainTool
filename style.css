@@ -11,6 +11,7 @@
     z-index: 9999;
     outline: none;
     font-size: 17px;
+    line-height: normal;
 }
 
 .tomczuk-right-panel {
@@ -74,6 +75,9 @@
     .tomczuk-right-panel.permactive .tomczuk-utility-container {
         opacity: 1;
         pointer-events: all;
+    }
+    .tomczuk-box {
+        pointer-events: inherit;
     }
 }
 
