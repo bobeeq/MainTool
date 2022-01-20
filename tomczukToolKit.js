@@ -654,6 +654,69 @@ class BEEController extends Controller {
         if (!searchedElement) return false;
         return searchedElement.href;
     }
+
+    productList() {
+        let ul = document.querySelectorAll('div.row div.product_list');
+        if (!ul) return null;
+        ul = Array.from(ul).filter(div => !div.classList.contains('products'));
+
+        if (ul.length === 1) ul = ul[0];
+        else return null;
+
+        let els = ul.querySelectorAll('.product-container');
+        if (!els) return null;
+        els = Array.from(els).filter(div => !div.classList.contains('productlike-adzone'));
+
+        let products = {};
+        products.keys = ['name', 'price', 'discount', 'category', 'brand', 'size', 'availability', 'url'];
+        for (let prod of els) {
+            let obj = {};
+            let a = prod.querySelector('a.product-name[data-model]');
+            if (!a) continue;
+            const model = a.dataset.model;
+
+            obj.url = a.href ? a.href : '-';
+            obj.category = a.dataset.category ? a.dataset.category : '-';
+            obj.price = a.dataset.price ? a.dataset.price : '-';
+            let [brand, name, size] = [
+                a.querySelector('.products-title-prefix'),
+                a.querySelector('.products-title-name'),
+                a.querySelector('.products-title-suffix')
+            ];
+
+            obj.brand = brand ? brand.textContent : '-';
+            obj.name = name ? name.textContent : '-';
+            obj.size = size ? size.textContent : '-';
+
+            let avail = prod.querySelector('.product-available');
+            obj.availability = avail ? avail.textContent : '';
+
+            const discount = prod.querySelector('.product-discount');
+            obj.discount = discount ? discount.textContent.trim() : '-';
+
+            products[model] = obj;
+        }
+
+        console.log(this.objToXls(products));
+    }
+
+    objToXls(obj) {
+        let models = Object.keys(obj).filter(model => model !== 'keys');
+
+        let string = "model\t" + obj.keys.join("\t");
+        for (let model of models) {
+            string += `\n${model}`;
+            for (let key of obj.keys) {
+                let value = obj[model][key];
+                
+                if (key === 'price') value = value.replace('.', ',');
+                
+                string += `\t${value}`;
+            }
+        }
+        
+        return string;
+    }
 }
 
 class BasicController extends Controller {
