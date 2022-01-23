@@ -112,19 +112,21 @@
     text-transform: uppercase;
 }
 
-.tomczuk-box-title::before {
-    content: "\25BC";
-    text-transform: lowercase;
+.tomczuk-box-title-arrow {
     display: flex;
     align-items: center;
     font-size: .6em;
     color: var(--red-color);
 }
 
-.tomczuk-box-title:hover {
-    filter: brightness(1.05);
+.tomczuk-box-title-arrow.arrow-minimized {
+    transform:rotate(-90deg);
 }
-.tomczuk-box-title:hover::before {
+
+.tomczuk-box-title:hover {
+    filter: contrast(2);
+}
+.tomczuk-box-title-arrow:hover {
     color: #f00;
 }
 
@@ -150,6 +152,10 @@
     pointer-events: none;
     opacity: 0;
     max-height: 0;
+}
+
+.tomczuk-product-btns-container .tomczuk-btn {
+    background: icon('https://cf-bee.statiki.pl/images/favicon.ico');
 }
 
 .tomczuk-self-input {
@@ -188,14 +194,14 @@
     padding: 2px 0;
     background: var(--silver-color);
     color: #000;
-    transition: 150ms;
+    transition: 80ms;
     text-transform: uppercase;
 }
 
 .tomczuk-btn:hover {
     text-decoration: none;
-    box-shadow: inset 0 0 3px 1px #444;
-    background-color: #fefefe;
+    filter: contrast(1.3);
+    /* box-shadow: inset 0 0 1px 1px #444; */
 }
 
 .tomczuk-nav-btn {
@@ -203,16 +209,8 @@
     background-origin: content-box;
     background-position: center;
     background-repeat: no-repeat;
+    font-size: 1.5em;
     padding: 5px;
-}
-
-.tomczuk-recache-btn {
-    background-image: url("https://svgsilh.com/svg/525698.svg");
-}
-
-.tomczuk-btn.tomczuk-mobile-btn {
-    color: rgba(0,0,0,0);
-    background-image: url("https://www.svgrepo.com/show/91399/mobile-phone-design.svg");
 }
 
 .tomczuk-mobile-mode {
@@ -223,13 +221,19 @@
     background-color: orange;
 }
 
+.tomczuk-goup-btn.tomczuk-hidden {
+    /* display: none; */
+    filter: brightness(.6);
+    cursor: default;
+}
+
 #panel-toggler {
     border: 2px solid greenyellow;
     display: inline-block;
     padding: 10px;
     border-radius: 4px;
     cursor: pointer;
-    background: white url('https://simpleicon.com/wp-content/uploads/pin.svg');
+    background: #f3f3f3 url('https://simpleicon.com/wp-content/uploads/pin.svg');
     background-size: cover;
     transition: var(--main-transition);
     margin-right: 15px;
