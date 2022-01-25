@@ -66,13 +66,13 @@
     .tomczuk-right-panel {
         right: calc( (var(--right-panel-width) * -1) + 35px);
     }
-    .tomczuk-right-panel .tomczuk-utility-container {
+    .tomczuk-right-panel .tomczuk-utility-container * {
         opacity: 0;
         pointer-events: none;
         transition: var(--main-transition);
     }
-    .tomczuk-right-panel.active .tomczuk-utility-container,
-    .tomczuk-right-panel.permactive .tomczuk-utility-container {
+    .tomczuk-right-panel.active .tomczuk-utility-container *,
+    .tomczuk-right-panel.permactive .tomczuk-utility-container * {
         opacity: 1;
         pointer-events: all;
     }
@@ -221,10 +221,26 @@
     background-color: orange;
 }
 
-.tomczuk-goup-btn.tomczuk-hidden {
-    /* display: none; */
-    filter: brightness(.6);
+.tomczuk-goup-btn {
+    opacity: 1;
+    transition: opacity 600ms;
+}
+
+.tomczuk-hidden {
+    opacity: .5;
     cursor: default;
+}
+
+.tomczuk-hidden:hover {
+    filter: none;
+}
+
+.tomczuk-goup-btn.tomczuk-hidden {
+    filter: none;
+}
+
+.tomczuk-bee-product-card {
+    border: 1px solid red;
 }
 
 #panel-toggler {

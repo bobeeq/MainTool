@@ -83,13 +83,13 @@ function useTomczukToolbarStyles() {
             .tomczuk-right-panel {
                 right: calc( (var(--right-panel-width) * -1) + 35px);
             }
-            .tomczuk-right-panel .tomczuk-utility-container {
+            .tomczuk-right-panel .tomczuk-utility-container * {
                 opacity: 0;
                 pointer-events: none;
                 transition: var(--main-transition);
             }
-            .tomczuk-right-panel.active .tomczuk-utility-container,
-            .tomczuk-right-panel.permactive .tomczuk-utility-container {
+            .tomczuk-right-panel.active .tomczuk-utility-container *,
+            .tomczuk-right-panel.permactive .tomczuk-utility-container * {
                 opacity: 1;
                 pointer-events: all;
             }
@@ -238,10 +238,26 @@ function useTomczukToolbarStyles() {
             background-color: orange;
         }
         
-        .tomczuk-goup-btn.tomczuk-hidden {
-            /* display: none; */
-            filter: brightness(.6);
+        .tomczuk-goup-btn {
+            opacity: 1;
+            transition: opacity 600ms;
+        }
+        
+        .tomczuk-hidden {
+            opacity: .5;
             cursor: default;
+        }
+        
+        .tomczuk-hidden:hover {
+            filter: none;
+        }
+        
+        .tomczuk-goup-btn.tomczuk-hidden {
+            filter: none;
+        }
+        
+        .tomczuk-bee-product-card {
+            border: 1px solid red;
         }
         
         #panel-toggler {
@@ -266,13 +282,7 @@ function useTomczukToolbarStyles() {
         
         #panel-toggler.unpinned:hover {
             border-color: black;
-        }`
-        // let revertedClasses = [...new Set(css.match(/\.[a-z-]+/ig))].map(e => e + ' {all: revert;}').join("\n");
-        // css = (revertedClasses + css)
-        //     .replaceAll(/[\n\t\s]+/ig, ' ')
-        //     .replaceAll(/\s*\{\s*/ig, '{')
-        //     .replaceAll(/\s*\}\s*/ig, '}')
-        //     .replaceAll(/\s*\:\s*/ig, ':');
+        }`;
 
     style.textContent = css;
     let head = document.querySelector('head');
@@ -284,13 +294,13 @@ function useTomczukToolbarStyles() {
         if (html) {
             html.append(head);
             head.append(style);
-            if (!body) html.append(body);
+            if (!body) html.append(document.createElement('body'));
         } else {
             let html = document.createElement('html');
             document.append(html);
             html.append(head);
             head.append(style);
-            if (!body) html.append(body);
+            if (!body) html.append(document.createElement('body'));
         }
     }
 }
@@ -298,6 +308,7 @@ function useTomczukToolbarStyles() {
 class App {
     constructor(department) {
         this.department = department;
+        this.builder = new HTMLBuilder;
         this.getRightPanel();
 
         switch (true) {
@@ -521,9 +532,33 @@ class App {
         return model ? model : false;
     }
 
-    productList() {
-        this.ctrl.productList();
+    modifyProductList() {
+        this.ctrl.modifyProductList();
     }
+
+    productListBox() {
+        const productList = this.ctrl.productList();
+        if (!productList) return;
+
+        const productListBox = box('Lista produktów');
+        const btnsContainer = html('div', { classes: 'tomczuk-product-btns-container tomczuk-row-btns' });
+        const button = btn({ value: 'Kopiuj listę', url: '' });
+
+        button.addEventListener('click', e => {
+            e.preventDefault();
+            button.classList.add('tomczuk-hidden');
+            button.textContent = 'Kopiuję...';
+            setTimeout(() => { 
+                button.classList.remove('tomczuk-hidden');
+                button.textContent = 'Kopiuj listę';
+            }, 600);
+            navigator.clipboard.writeText(this.ctrl.objToXls(productList));
+        });
+
+        productListBox.container.append(btnsContainer);
+        btnsContainer.append(button);
+        this.rightPanel.container.primary.append(productListBox);
+    };
 
     salesBox() {
         const allowed = this.allow([
@@ -544,6 +579,10 @@ class App {
             this.rightPanel.container.secondary.append(salesBox);
         }
     }
+}
+
+class HTMLBuilder {
+
 }
 
 class Controller {
@@ -583,7 +622,6 @@ class Controller {
     }
 }
 
-
 class TKController extends Controller {
     productModel() {
         let meta = document.querySelector('meta[itemprop="productID"]');
@@ -621,6 +659,7 @@ class TKController extends Controller {
 
         els = Array.from(els);
         let products = {};
+        products.keys = ['title', 'price', 'discount', 'category', 'author', 'availability', 'url'];
         for (let prod of els) {
             let obj = {};
             let a = prod.querySelector('a[data-model]');
@@ -652,11 +691,10 @@ class TKController extends Controller {
                 obj.author = authorString;
             }
 
-            console.log(obj.availability);
             products[model] = obj;
         }
-
-        console.log(products)
+        if (Object.keys(products).length == 0) return null;
+        return products;
     }
 }
 
@@ -693,6 +731,18 @@ class BEEController extends Controller {
         console.log(`znalazłem: ${searchedElement}`);
         if (!searchedElement) return false;
         return searchedElement.href;
+    }
+
+    modifyProductList() {
+        let list = document.querySelector('.product_list');
+
+        if(!list) return;
+
+        list = Array.from(list.querySelectorAll('.product-container'));
+
+        list.map(el => el.classList.add('tomczuk-bee-product-card'));
+
+        console.log(list);
     }
 
     productList() {
@@ -737,7 +787,7 @@ class BEEController extends Controller {
             products[model] = obj;
         }
 
-        console.log(this.objToXls(products));
+        return products;
     }
 
 }
@@ -1068,5 +1118,7 @@ function basicInit(department) {
     app.navBox();
     app.productBox();
     app.salesBox();
-    // app.productList();
+    app.productListBox();
+
+    app.modifyProductList();
 })();
