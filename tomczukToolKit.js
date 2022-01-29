@@ -17,7 +17,7 @@ function useTomczukToolbarStyles() {
     let css =
         `:root {
             --right-panel-width: 400px;
-            --main-transition: 500ms;
+            --main-transition: 250ms;
             --silver-color: #dedede;
             --red-color: #f55;
         }
@@ -25,7 +25,7 @@ function useTomczukToolbarStyles() {
         .tomczuk {
             all: revert;
             font-family: calibri;
-            z-index: 9999;
+            z-index: 99999;
             outline: none;
             font-size: 17px;
             line-height: normal;
@@ -36,8 +36,8 @@ function useTomczukToolbarStyles() {
             color: var(--silver-color);
             font-size: 1.2em;
             position: fixed;
-            top: 0px;
-            right: calc(( (var(--right-panel-width) / 2) * -1));
+            top: 0;
+            right: 0;
             border-left: 3px solid #000;
             background: rgba(0, 0, 0, 0.5);
             height: 100vh;
@@ -45,23 +45,6 @@ function useTomczukToolbarStyles() {
             transition: var(--main-transition) ease-out;
             box-shadow: inset 80px 0 80px -60px #000;
             user-select: none;
-        }
-        
-        @media only screen and (min-width: 2100px) {
-            .tomczuk-right-panel {
-                right: 0;
-            }
-        }
-        
-        .tomczuk-right-panel.active,
-        .tomczuk-right-panel.permactive {
-            right: 0;
-            background: rgba(0, 0, 0, 0.75);
-        }
-        
-        .tomczuk-right-panel.permactive {
-            right: 0;
-            background: rgba(0, 50, 0, 0.75);
         }
         
         .tomczuk-right-panel-header {
@@ -79,31 +62,14 @@ function useTomczukToolbarStyles() {
             padding: 0;
         }
         
-        @media only screen and (max-width: 1700px) {
-            .tomczuk-right-panel {
-                right: calc( (var(--right-panel-width) * -1) + 35px);
-            }
-            .tomczuk-right-panel .tomczuk-utility-container * {
-                opacity: 0;
-                pointer-events: none;
-                transition: var(--main-transition);
-            }
-            .tomczuk-right-panel.active .tomczuk-utility-container *,
-            .tomczuk-right-panel.permactive .tomczuk-utility-container * {
-                opacity: 1;
-                pointer-events: all;
-            }
-            .tomczuk-box {
-                pointer-events: inherit;
-            }
-        }
-        
         .tomczuk-primary,
         .tomczuk-secondary {
             flex: 1;
             display: flex;
             flex-direction: column;
             padding: 5px;
+            max-height: 90vh;
+            overflow-y: auto;
         }
         
         .tomczuk-box {
@@ -137,18 +103,15 @@ function useTomczukToolbarStyles() {
         }
         
         .tomczuk-box-title-arrow.arrow-minimized {
-            transform:rotate(-90deg);
+            transform: rotate(-90deg);
         }
         
         .tomczuk-box-title:hover {
             filter: contrast(2);
         }
+        
         .tomczuk-box-title-arrow:hover {
             color: #f00;
-        }
-        
-        .tomczuk-box-title.minimized::before {
-            transform: rotate(-90deg);
         }
         
         .tomczuk-box-container {
@@ -165,14 +128,10 @@ function useTomczukToolbarStyles() {
         }
         
         .tomczuk-box-container.tomczuk-minimized-box {
-            transition: .8s cubic-bezier(0,1,0,1);
+            transition: .8s cubic-bezier(0, 1, 0, 1);
             pointer-events: none;
             opacity: 0;
             max-height: 0;
-        }
-        
-        .tomczuk-product-btns-container .tomczuk-btn {
-            background: icon('https://cf-bee.statiki.pl/images/favicon.ico');
         }
         
         .tomczuk-self-input {
@@ -201,7 +160,8 @@ function useTomczukToolbarStyles() {
             gap: 4px;
         }
         
-        .tomczuk-btn {
+        .tomczuk-btn,
+        .tomczuk-btn:visited {
             cursor: pointer;
             border: 1px solid black;
             text-decoration: none;
@@ -211,14 +171,14 @@ function useTomczukToolbarStyles() {
             padding: 2px 0;
             background: var(--silver-color);
             color: #000;
-            transition: 80ms;
+            transition: filter 80ms;
             text-transform: uppercase;
         }
         
         .tomczuk-btn:hover {
             text-decoration: none;
+            color: #000;
             filter: contrast(1.3);
-            /* box-shadow: inset 0 0 1px 1px #444; */
         }
         
         .tomczuk-nav-btn {
@@ -234,6 +194,7 @@ function useTomczukToolbarStyles() {
             background-color: greenyellow;
             border-color: var(--red-color);
         }
+        
         .tomczuk-mobile-mode:hover {
             background-color: orange;
         }
@@ -257,31 +218,37 @@ function useTomczukToolbarStyles() {
         }
         
         .tomczuk-bee-product-card {
-            border: 1px solid red;
+            /* border: 1px solid silver; */
         }
         
-        #panel-toggler {
-            border: 2px solid greenyellow;
-            display: inline-block;
-            padding: 10px;
-            border-radius: 4px;
-            cursor: pointer;
-            background: #f3f3f3 url('https://simpleicon.com/wp-content/uploads/pin.svg');
-            background-size: cover;
-            transition: var(--main-transition);
-            margin-right: 15px;
+        .tomczuk-product-info-box {
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            max-height: 120px;
+            opacity: 1;
+            transition: 1s;
         }
         
-        #panel-toggler.pinned {
-            background-color: greenyellow;
+        .tomczuk-product-info-box.tomczuk-hidden {
+            max-height: 0;
+            opacity: 0;
         }
         
-        #panel-toggler.pinned:hover {
-            border-color: var(--red-color);
+        .tomczuk-product-info-box > .tomczuk-box-child {
+            margin: 3px;
+            background: green;
+            color: white;
+            z-index: 1;
         }
         
-        #panel-toggler.unpinned:hover {
-            border-color: black;
+        .tomczuk-btn.tomczuk-product-list-mode {
+            background: greenyellow;
+        }
+        
+        .tomczuk-copy-product-list,
+        .tomczuk-modify-product-list {
+            font-size: 1.5em;
         }`;
 
     style.textContent = css;
@@ -309,7 +276,6 @@ class App {
     constructor(department) {
         this.department = department;
         this.builder = new HTMLBuilder;
-        this.getRightPanel();
 
         switch (true) {
             case isCBA():
@@ -321,9 +287,26 @@ class App {
             case isBEE():
                 this.ctrl = new BEEController;
                 break;
+            case isCurrentPage('bonito.pl'):
+                this.ctrl = new BonitoController;
+                break;
+            case isCurrentPage('gandalf.com.pl'):
+                this.ctrl = new GandalfController;
+                break;
+            case isCurrentPage('swiatksiazki.pl'):
+                this.ctrl = new SwiatKsiazkiController;
+                break;
+            case isCurrentPage('tantis.pl'):
+                this.ctrl = new TantisController;
+                break;
+            case isCurrentPage('czytam.pl'):
+                this.ctrl = new CzytamController;
+                break;
             default:
                 this.ctrl = new BasicController;
         }
+
+        this.getRightPanel();
     }
 
     allow(departments) {
@@ -336,61 +319,48 @@ class App {
     getRightPanel() {
         let rightPanel = html('div', { classes: 'tomczuk-right-panel' });
         CONFIG.rightPanel = rightPanel;
-        document.body.append(rightPanel);
         this.rightPanel = rightPanel;
 
-        rightPanel.pin = function() {
-            storage('tomczukPanelToggler', 'pinned');
-            rightPanel.querySelector('#panel-toggler').classList.add('pinned');
-            rightPanel.querySelector('#panel-toggler').classList.remove('unpinned');
-            rightPanel.classList.add('permactive');
+
+        rightPanel.adjustWidth = () => {
+            rightPanel.style.right = Math.max(Math.min(this.ctrl.spaceForPanel() - 400, 0), -370) + 'px';
         }
 
-        rightPanel.unpin = function() {
-            storage('tomczukPanelToggler', 'unpinned');
-            rightPanel.querySelector('#panel-toggler').classList.remove('pinned');
-            rightPanel.querySelector('#panel-toggler').classList.add('unpinned');
-            rightPanel.classList.remove('permactive');
-        }
+        rightPanel.fullWidth = () => rightPanel.style.right = 0;
 
-        rightPanel.canTogglePanel = (clickedEl) => {
-            if (clickedEl.querySelector('.tomczuk-box')) return true;
-            if (clickedEl.classList.contains('tomczuk-right-panel-header')) return true;
-            if (clickedEl.classList.contains('tomczuk-right-panel-header-title')) return true;
-            return false;
-        }
+        rightPanel.adjustWidth();
+
+        // let timeOutId;
+
+        // rightPanel.addEventListener('mouseover', () => {
+        //     window.clearTimeout(timeOutId);
+        //     timeOutId = setTimeout(() => rightPanel.fullWidth(), 350);
+        // });
+
+        rightPanel.addEventListener('mouseout', () => {
+            // window.clearTimeout(timeOutId);
+            timeOutId = setTimeout(() => {
+                rightPanel.adjustWidth();
+            }, 800);
+        });
+
 
         rightPanel.addEventListener('click', e => {
-            if (!rightPanel.canTogglePanel(e.target) || rightPanel.classList.contains('permactive')) return;
-            setTimeout(() => {
-                if (!rightPanel.classList.contains('permactive')) rightPanel.classList.toggle('active')
-            }, 180);
-        });
+            let classes = e.target.classList;
 
-        rightPanel.addEventListener('dblclick', e => {
-            e.stopPropagation();
-            if (!rightPanel.canTogglePanel(e.target)) return;
-
-            if (rightPanel.classList.contains('permactive')) {
-                rightPanel.unpin();
-            } else {
-                rightPanel.pin();
-            }
-        });
-
-        let timeOutId;
-        rightPanel.addEventListener('mouseout', () => {
-            timeOutId = setTimeout(() => {
-                rightPanel.classList.remove('active');
-            }, 1250);
-        });
-
-        rightPanel.addEventListener('mouseover', () => {
-            window.clearTimeout(timeOutId);
+            if (
+                classes.contains('tomczuk-right-panel') ||
+                classes.contains('tomczuk-primary') ||
+                classes.contains('timczuk-secondary') ||
+                classes.contains('tomczuk-utility-container') ||
+                classes.contains('tomczuk-right-panel-header') ||
+                classes.contains('tomczuk-right-panel-header-title')
+            ) rightPanel.fullWidth();
         });
 
         this.getHeader();
         this.makeUtilityContainer();
+        document.body.append(rightPanel);
         return rightPanel;
     }
 
@@ -410,17 +380,9 @@ class App {
         const header = html('div', { classes: 'tomczuk-right-panel-header' });
         header.append(html('div', { textContent: '.tomczukToolKit', classes: 'tomczuk-right-panel-header-title' }));
 
-        const panelToggler = html('div', { id: 'panel-toggler' });
+        const panelToggler = html('div', { id: 'panel-toggler', innerHTML: '&#128204;' });
         header.prepend(panelToggler);
         rightPanel.append(header);
-
-        if (storage('tomczukPanelToggler') == 'pinned') rightPanel.pin();
-        else rightPanel.unpin();
-
-        panelToggler.addEventListener('click', e => {
-            if (storage('tomczukPanelToggler') == 'pinned') rightPanel.unpin();
-            else rightPanel.pin();
-        });
         rightPanel.header = header;
     }
 
@@ -453,7 +415,11 @@ class App {
             window.location.reload();
         });
 
-        const mobileBtn = html('a', { innerHTML: '&#128241;', classes: 'tomczuk-btn tomczuk-nav-btn tomczuk-mobile-btn' });
+        const mobileBtn = html('a', {
+            innerHTML: '&#128241;',
+            classes: 'tomczuk-btn tomczuk-nav-btn tomczuk-mobile-btn'
+        });
+
         if (sessionStorage.tomczukMobileMode !== 'true') {
             mobileBtn.classList.remove('tomczuk-mobile-mode');
         } else {
@@ -475,7 +441,7 @@ class App {
             }
         });
 
-        const goUpBtn = html('button', {
+        const goUpBtn = html('a', {
             innerHTML: '&#11014;&#65039;',
             classes: 'tomczuk-btn tomczuk-nav-btn tomczuk-goup-btn'
         });
@@ -499,10 +465,9 @@ class App {
 
     productBox() {
         const allowed = this.forbid([]);
-
         if (!allowed) return;
 
-        let model = this.productModel();
+        let model = this.ctrl.productModel();
         if (isDev() && !model) model = '9788382158106';
         if (!model) return;
 
@@ -523,17 +488,8 @@ class App {
         this.rightPanel.container.primary.append(productBox);
     }
 
-    productModel() {
-        const allowed = this.forbid([]);
-
-        if (!allowed) return;
-
-        const model = this.ctrl.productModel();
-        return model ? model : false;
-    }
-
-    modifyProductList() {
-        this.ctrl.modifyProductList();
+    modifyProductList(mode) {
+        this.ctrl.modifyProductList(mode);
     }
 
     productListBox() {
@@ -542,21 +498,43 @@ class App {
 
         const productListBox = box('Lista produktów');
         const btnsContainer = html('div', { classes: 'tomczuk-product-btns-container tomczuk-row-btns' });
-        const button = btn({ value: 'Kopiuj listę', url: '' });
+        const copyListBtn = html('a', { innerHTML: '&#128203;', classes: 'tomczuk-btn tomczuk-copy-product-list' });
+        const modifyListBtn = html('a', { innerHTML: '&#128200;', classes: 'tomczuk-btn tomczuk-modify-product-list' });
 
-        button.addEventListener('click', e => {
+        if (storage('productListMode') == true) {
+            modifyListBtn.classList.add('tomczuk-product-list-mode');
+            this.ctrl.modifyProductList(true);
+        } else {
+            modifyListBtn.classList.remove('tomczuk-product-list-mode');
+            this.ctrl.modifyProductList(false);
+        }
+
+        modifyListBtn.addEventListener('click', async e => {
+            if (!modifyListBtn.classList.contains('tomczuk-product-list-mode')) {
+                modifyListBtn.classList.add('tomczuk-product-list-mode');
+                storage('productListMode', 'true');
+                this.ctrl.modifyProductList(true);
+            } else {
+                modifyListBtn.classList.remove('tomczuk-product-list-mode');
+                storage('productListMode', 'false');
+                this.ctrl.modifyProductList(false);
+            }
+        });
+
+        copyListBtn.addEventListener('click', e => {
             e.preventDefault();
-            button.classList.add('tomczuk-hidden');
-            button.textContent = 'Kopiuję...';
-            setTimeout(() => { 
-                button.classList.remove('tomczuk-hidden');
-                button.textContent = 'Kopiuj listę';
-            }, 600);
+            copyListBtn.classList.add('tomczuk-hidden');
+            let copyTextContent = copyListBtn.textContent;
+            setTimeout(() => {
+                copyListBtn.classList.remove('tomczuk-hidden');
+                copyListBtn.textContent = copyTextContent;
+            }, 1200);
             navigator.clipboard.writeText(this.ctrl.objToXls(productList));
         });
 
         productListBox.container.append(btnsContainer);
-        btnsContainer.append(button);
+        btnsContainer.append(copyListBtn);
+        btnsContainer.append(modifyListBtn);
         this.rightPanel.container.primary.append(productListBox);
     };
 
@@ -566,15 +544,13 @@ class App {
         ])
         if (!allowed) return;
 
-        let model = this.productModel();
+        let model = this.ctrl.productModel();
         if (isDev() && !model) model = '9788382158106';
         if (model) {
             const salesBox = box('Sprzedaż');
             const resultBox = html('div', { classes: 'tomczuk-sales-result-box', text: 'Sprzedaż z X dni:' });
 
             salesBox.append(resultBox);
-
-
 
             this.rightPanel.container.secondary.append(salesBox);
         }
@@ -588,18 +564,34 @@ class HTMLBuilder {
 class Controller {
     constructor() {}
 
+    spaceForPanel() {
+        let selector = this.mainContainerSelector();
+        if (!selector) return 50;
+        let container = document.querySelector(selector);
+        if (!container) return null;
+
+        return ((noPx(window.getComputedStyle(document.body).width) - container.clientWidth) / 2 - 10);
+    }
+
+    mainContainerSelector() { return null; }
+
     productModel() {
-        return false;
+        return null;
+    }
+
+    productList() {
+        return null;
+    }
+
+    modifyProductList(mode = true) {
+        return null;
     }
 
     redirectFromSearchPage() {
         if (!this.isSearchPage()) return;
-        console.log('wyszukiwanie');
         const searchText = this.searchText();
-        console.log(searchText);
         const url = this.searchedElementUrl(searchText);
         if (!url) return;
-        console.log(url);
         window.location.href = url;
     }
     isSearchPage() {}
@@ -623,12 +615,15 @@ class Controller {
 }
 
 class TKController extends Controller {
+
+    mainContainerSelector() { return 'header#top'; }
+
     productModel() {
         let meta = document.querySelector('meta[itemprop="productID"]');
-        if (!meta) return false;
+        if (!meta) return null;
 
         let model = meta.getAttribute('content');
-        if (!model) return false;
+        if (!model) return null;
         return model;
     }
 
@@ -648,6 +643,12 @@ class TKController extends Controller {
         const searchedElement = document.querySelector(`a[data-model="${searchText}"]`);
         if (!searchedElement) return false;
         return searchedElement.href;
+    }
+
+    modifyProductList() {
+        let productList = this.productList();
+
+        if (!productList) return;
     }
 
     productList() {
@@ -703,6 +704,8 @@ class CBAController extends Controller {
 }
 
 class BEEController extends Controller {
+    mainContainerSelector() { return '#header-logo-level .container .row'; }
+
     productModel() {
         let meta = document.querySelector('meta[itemprop="productID"]');
         if (!meta) return false;
@@ -726,23 +729,36 @@ class BEEController extends Controller {
     }
 
     searchedElementUrl(searchText) {
-        console.log(`szukam: ${searchText}`);
         const searchedElement = document.querySelector(`a[data-model="${searchText}"]`);
-        console.log(`znalazłem: ${searchedElement}`);
         if (!searchedElement) return false;
         return searchedElement.href;
     }
 
-    modifyProductList() {
+    modifyProductList(mode = true) {
         let list = document.querySelector('.product_list');
 
-        if(!list) return;
+        if (!list) return;
+        if (mode == false) {
+            let containers = list.querySelectorAll('.tomczuk-product-info-box')
+            if (containers) Array.from(containers).map(el => el.classList.add('tomczuk-hidden'));
+            return;
+        }
 
-        list = Array.from(list.querySelectorAll('.product-container'));
-
-        list.map(el => el.classList.add('tomczuk-bee-product-card'));
-
-        console.log(list);
+        let hiddenEls = list.querySelectorAll('.tomczuk-product-info-box.tomczuk-hidden');
+        if (hiddenEls.length) {
+            Array.from(hiddenEls).map(el => el.classList.remove('tomczuk-hidden'));
+            return;
+        }
+        list = Array.from(list.querySelectorAll('.li.ajax_block_product'));
+        list.map(el => {
+            let model = el.querySelector('[data-model]');
+            if (model) model = model.dataset.model;
+            let infoBox = html('div', { textContent: 'info', classes: 'tomczuk-product-info-box' });
+            el.classList.add('tomczuk-bee-product-card');
+            el.prepend(infoBox);
+            let url = model ? `https://cba.kierus.com.pl/?p=EditProduct&load=*${model}` : '';
+            infoBox.append(html('a', { classes: 'tomczuk-box-child', textContent: 'idź do cba', href: url }));
+        });
     }
 
     productList() {
@@ -792,10 +808,83 @@ class BEEController extends Controller {
 
 }
 
-class BasicController extends Controller {
+class BonitoController extends Controller {
+    mainContainerSelector() { return 'body > div.container'; }
+
     productModel() {
-        return false;
+        let meta = document.querySelector('meta[property="og:upc"]');
+        if (!meta) return null;
+
+        let ean = meta.getAttribute('content');
+        if (!ean) return null;
+        return ean;
     }
+}
+
+class GandalfController extends Controller {
+    mainContainerSelector() { return '.top-menu > .container:not(.infoheader)'; }
+
+    productModel() {
+        let list = document.querySelector('div#product-details.details-list');
+
+        if (!list) return null;
+
+        list = list.querySelectorAll('li > span.nowrap');
+        if (!list.length) return null;
+        list = Array.from(list);
+        let el = list.find(el => el.textContent === 'ISBN:');
+        return el.nextElementSibling.textContent.trim() || null;
+    }
+}
+
+class SwiatKsiazkiController extends Controller {
+    mainContainerSelector() { return '.header.content'; }
+
+    productModel() {
+        let meta = document.querySelector('meta[itemprop="gtin13"]')
+        if (!meta) return null;
+
+        let content = meta.getAttribute('content');
+        if (!content) return null;
+        return content;
+    }
+}
+
+class TantisController extends Controller {
+    mainContainerSelector() { return '.header-main'; }
+
+    productModel() {
+        let json = document.head.querySelector('script[type="application/ld+json"]');
+        if (!json) return null;
+
+        json = JSON.parse(json.textContent);
+        if (!json) return null;
+        if (!json.hasOwnProperty('@graph')) return null;
+        json = json['@graph'];
+        if (!json.hasOwnProperty('5')) return null;
+        json = json['5'];
+        if (!json.hasOwnProperty('@id')) return null;
+        return json['@id'];
+    }
+}
+
+class CzytamController extends Controller {
+    mainContainerSelector() { return '#header-logo'; }
+
+    productModel() {
+        let details = document.querySelector('div.show-for-medium-up div#opis blockquote.size-12');
+        if (!details) return null;
+
+        let elements = details.querySelectorAll('span');
+        if (!elements.length) return null;
+        elements = Array.from(elements);
+        let element = elements.find(el => el.textContent.match(/paskowy|isbn/i));
+        return element.nextElementSibling.textContent.trim() || null;
+    }
+}
+
+class BasicController extends Controller {
+
 }
 
 //-------------------------------------------------------------- STORAGE
@@ -925,11 +1014,14 @@ function arrivingBasketsUrl(model) {
 function px(value) { return value + 'px' }
 
 function noPx(value) {
-    if (Number.isInteger(value)) return value;
-    if (typeof value == 'string') {
-        let regexed = value.match(/(\d+)px/i);
-        if (!regexed) return parseInt(value);
-        return parseInt(regexed[1]);
+    if (typeof value === 'number') return value;
+    if (typeof value === 'string') {
+        let regexed = value.match(/(\d+\.?\d*)px/i);
+        if (!regexed) throw new Error('Błędny argument dla funkcji noPx');
+        regexed = regexed[1];
+        if (regexed.match(/\./)) regexed = parseFloat(regexed);
+        else regexed = parseInt(regexed);
+        return regexed;
     };
 }
 
@@ -1087,19 +1179,17 @@ function showGoUpBtn() {
 
 function setInitListeners() {
     document.addEventListener('click', e => {
-        const rightPanel = CONFIG.rightPanel;
-        if (!rightPanel.classList.contains('active')) return;
-        if (!rightPanel.contains(e.target)) {
-            rightPanel.classList.remove('active');
-        }
+        if (e.target.closest('.tomczuk-right-panel')) return;
+        CONFIG.rightPanel.adjustWidth();
     });
+
+    window.addEventListener('resize', e => { CONFIG.rightPanel.adjustWidth(); });
 
     document.addEventListener('scroll', showGoUpBtn);
     document.addEventListener('resize', showGoUpBtn);
 }
 
 function basicInit(department) {
-    if (!isTK() && !isDev() && !isBEE()) return false;
     if (!isDev()) useTomczukToolbarStyles();
     const app = new App(department);
     app.ctrl.redirectFromSearchPage();
@@ -1114,11 +1204,9 @@ function basicInit(department) {
 (async function main() {
     let app = basicInit('handlowy');
     if (!app) return;
-
+    console.log('tomczukToolKit - Running...');
     app.navBox();
     app.productBox();
     app.salesBox();
     app.productListBox();
-
-    app.modifyProductList();
 })();
