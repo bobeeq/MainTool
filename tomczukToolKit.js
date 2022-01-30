@@ -48,11 +48,31 @@ function useTomczukToolbarStyles() {
         }
         
         .tomczuk-right-panel-header {
-            padding: 6px;
+            padding: 7px 2px;
             background: rgba(0, 0, 0, 0.8);
             letter-spacing: 1px;
             display: flex;
             align-items: center;
+        }
+        
+        #tomczuk-panel-toggler {
+            background-color: var(--silver-color);
+            border-radius: 5px;
+            padding: 2px;
+            font-size: .9em;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-right: 5px;
+        }
+        
+        #tomczuk-panel-toggler:hover {
+            cursor: pointer;
+            background-color: #ababab;
+        }
+        
+        #tomczuk-panel-toggler.active {
+            background-color: greenyellow;
         }
         
         .tomczuk-utility-container {
@@ -79,6 +99,10 @@ function useTomczukToolbarStyles() {
             flex: 1;
             text-align: center;
             background: rgba(0, 0, 0, 0.3);
+        }
+        
+        .tomczuk-right-panel.tomczuk-hidden .tomczuk-box {
+            display: none;
         }
         
         .tomczuk-box-title {
@@ -217,10 +241,6 @@ function useTomczukToolbarStyles() {
             filter: none;
         }
         
-        .tomczuk-bee-product-card {
-            /* border: 1px solid silver; */
-        }
-        
         .tomczuk-product-info-box {
             text-align: center;
             display: flex;
@@ -275,7 +295,6 @@ function useTomczukToolbarStyles() {
 class App {
     constructor(department) {
         this.department = department;
-        this.builder = new HTMLBuilder;
 
         switch (true) {
             case isCBA():
@@ -318,30 +337,62 @@ class App {
 
     getRightPanel() {
         let rightPanel = html('div', { classes: 'tomczuk-right-panel' });
-        CONFIG.rightPanel = rightPanel;
-        this.rightPanel = rightPanel;
-
+        CONFIG.rightPanel = this.rightPanel = rightPanel;
 
         rightPanel.adjustWidth = () => {
-            rightPanel.style.right = Math.max(Math.min(this.ctrl.spaceForPanel() - 400, 0), -370) + 'px';
+            if (rightPanel.classList.contains('tomczuk-pinned')) return;
+            let panelWidth = 400;
+            let minSpace = 30;
+            let space = this.ctrl.spaceForPanel();
+            if (!space) {
+                rightPanel.hide();
+                rightPanel.removeAttribute('style');
+            } else {
+                rightPanel.classList.remove('tomczuk-hidden');
+                rightPanel.style.right = Math.min(0, Math.max(space - panelWidth, minSpace - panelWidth)) + 'px';
+            }
         }
 
-        rightPanel.fullWidth = () => rightPanel.style.right = 0;
+        rightPanel.fullWidth = () => {
+            if (rightPanel.classList.contains('tomczuk-pinned')) return;
+            rightPanel.removeAttribute('style');
+            rightPanel.classList.remove('tomczuk-hidden');
+            rightPanel.classList.add('tomczuk-full');
+        }
 
-        rightPanel.adjustWidth();
+        rightPanel.hide = () => {
+            if (rightPanel.classList.contains('tomczuk-pinned')) return;
+            rightPanel.classList.remove('tomczuk-full');
+            rightPanel.classList.add('tomczuk-hidden');
+        }
 
-        // let timeOutId;
+        rightPanel.pin = () => {
+            rightPanel.removeAttribute('style');
+            rightPanel.classList.add('tomczuk-pinned');
+            rightPanel.classList.remove('tomczuk-full', 'tomczuk-hidden');
+            storage('tomczukPanelToggler', 'pinned')
+        }
 
-        // rightPanel.addEventListener('mouseover', () => {
-        //     window.clearTimeout(timeOutId);
-        //     timeOutId = setTimeout(() => rightPanel.fullWidth(), 350);
-        // });
+        rightPanel.unpin = () => {
+            rightPanel.classList.remove('tomczuk-pinned');
+            rightPanel.adjustWidth();
+            storage('tomczukPanelToggler', 'unpinned')
+        }
 
-        rightPanel.addEventListener('mouseout', () => {
-            // window.clearTimeout(timeOutId);
+        if (storage('tomczukPanelToggler') == 'pinned') {
+            rightPanel.pin();
+        } else rightPanel.adjustWidth();
+
+        let timeOutId;
+        rightPanel.addEventListener('mouseleave', e => {
+            if (rightPanel.classList.contains('tomczuk-pinned')) return;
             timeOutId = setTimeout(() => {
                 rightPanel.adjustWidth();
             }, 800);
+        });
+
+        rightPanel.addEventListener('mouseover', e => {
+            clearTimeout(timeOutId);
         });
 
 
@@ -355,7 +406,10 @@ class App {
                 classes.contains('tomczuk-utility-container') ||
                 classes.contains('tomczuk-right-panel-header') ||
                 classes.contains('tomczuk-right-panel-header-title')
-            ) rightPanel.fullWidth();
+            ) {
+                rightPanel.fullWidth();
+                rightPanel.classList.remove('tomczuk-hidden');
+            }
         });
 
         this.getHeader();
@@ -380,7 +434,17 @@ class App {
         const header = html('div', { classes: 'tomczuk-right-panel-header' });
         header.append(html('div', { textContent: '.tomczukToolKit', classes: 'tomczuk-right-panel-header-title' }));
 
-        const panelToggler = html('div', { id: 'panel-toggler', innerHTML: '&#128204;' });
+        const panelToggler = html('div', { id: 'tomczuk-panel-toggler', innerHTML: '&#128204;' });
+        if (storage('tomczukPanelToggler') == 'pinned') panelToggler.classList.add('active');
+        panelToggler.addEventListener('click', e => {
+            if (storage('tomczukPanelToggler') == 'pinned') {
+                rightPanel.unpin();
+                panelToggler.classList.remove('active');
+            } else {
+                rightPanel.pin();
+                panelToggler.classList.add('active');
+            }
+        });
         header.prepend(panelToggler);
         rightPanel.append(header);
         rightPanel.header = header;
@@ -488,10 +552,6 @@ class App {
         this.rightPanel.container.primary.append(productBox);
     }
 
-    modifyProductList(mode) {
-        this.ctrl.modifyProductList(mode);
-    }
-
     productListBox() {
         const productList = this.ctrl.productList();
         if (!productList) return;
@@ -566,7 +626,7 @@ class Controller {
 
     spaceForPanel() {
         let selector = this.mainContainerSelector();
-        if (!selector) return 50;
+        if (!selector) return null;
         let container = document.querySelector(selector);
         if (!container) return null;
 
@@ -580,10 +640,6 @@ class Controller {
     }
 
     productList() {
-        return null;
-    }
-
-    modifyProductList(mode = true) {
         return null;
     }
 
@@ -612,11 +668,41 @@ class Controller {
         }
         return string;
     }
+
+    modifyProductList(mode = true) {
+        let selectors = this.getSelectorsForProductList();
+        let list = document.querySelector(selectors.list);
+        if (!list) return;
+
+        if (mode == false) {
+            let containers = list.querySelectorAll('.tomczuk-product-info-box')
+            if (containers) Array.from(containers).map(el => el.classList.add('tomczuk-hidden'));
+            return;
+        }
+
+        let hiddenEls = list.querySelectorAll('tomczuk-product-info-box.tomczuk-hidden');
+        if (hiddenEls.length) {
+            Array.from(hiddenEls).map(el => el.classList.remove('tomczuk-hidden'));
+            return;
+        }
+        list = Array.from(list.querySelectorAll(selectors.container));
+        list.map(el => {
+            let model = el.querySelector('[data-model]');
+            if (model) model = model.dataset.model;
+            let infoBox = html('div', { textContent: 'info', classes: 'tomczuk-product-info-box' });
+            el.classList.add('tomczuk-bee-product-card');
+            el.prepend(infoBox);
+            let url = model ? `https://cba.kierus.com.pl/?p=EditProduct&load=*${model}` : '';
+            infoBox.append(html('a', { classes: 'tomczuk-box-child', textContent: 'idź do cba', href: url }));
+        });
+    }
 }
 
 class TKController extends Controller {
-
-    mainContainerSelector() { return 'header#top'; }
+    mainContainerSelector() {
+        if (sessionStorage.tomczukMobileMode === 'true') return '#header > .container';
+        return 'header#top';
+    }
 
     productModel() {
         let meta = document.querySelector('meta[itemprop="productID"]');
@@ -643,12 +729,6 @@ class TKController extends Controller {
         const searchedElement = document.querySelector(`a[data-model="${searchText}"]`);
         if (!searchedElement) return false;
         return searchedElement.href;
-    }
-
-    modifyProductList() {
-        let productList = this.productList();
-
-        if (!productList) return;
     }
 
     productList() {
@@ -697,6 +777,10 @@ class TKController extends Controller {
         if (Object.keys(products).length == 0) return null;
         return products;
     }
+
+    getSelectorsForProductList() {
+        return { list: 'ul#pagi-slide', container: 'li' };
+    }
 }
 
 class CBAController extends Controller {
@@ -704,7 +788,10 @@ class CBAController extends Controller {
 }
 
 class BEEController extends Controller {
-    mainContainerSelector() { return '#header-logo-level .container .row'; }
+    mainContainerSelector() {
+        if (sessionStorage.tomczukMobileMode === 'true') return '#header .container';
+        return '#header .container';
+    }
 
     productModel() {
         let meta = document.querySelector('meta[itemprop="productID"]');
@@ -734,31 +821,8 @@ class BEEController extends Controller {
         return searchedElement.href;
     }
 
-    modifyProductList(mode = true) {
-        let list = document.querySelector('.product_list');
-
-        if (!list) return;
-        if (mode == false) {
-            let containers = list.querySelectorAll('.tomczuk-product-info-box')
-            if (containers) Array.from(containers).map(el => el.classList.add('tomczuk-hidden'));
-            return;
-        }
-
-        let hiddenEls = list.querySelectorAll('.tomczuk-product-info-box.tomczuk-hidden');
-        if (hiddenEls.length) {
-            Array.from(hiddenEls).map(el => el.classList.remove('tomczuk-hidden'));
-            return;
-        }
-        list = Array.from(list.querySelectorAll('.li.ajax_block_product'));
-        list.map(el => {
-            let model = el.querySelector('[data-model]');
-            if (model) model = model.dataset.model;
-            let infoBox = html('div', { textContent: 'info', classes: 'tomczuk-product-info-box' });
-            el.classList.add('tomczuk-bee-product-card');
-            el.prepend(infoBox);
-            let url = model ? `https://cba.kierus.com.pl/?p=EditProduct&load=*${model}` : '';
-            infoBox.append(html('a', { classes: 'tomczuk-box-child', textContent: 'idź do cba', href: url }));
-        });
+    getSelectorsForProductList() {
+        return { list: '.product_list', container: '.li.ajax_block_product' };
     }
 
     productList() {
