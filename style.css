@@ -38,6 +38,10 @@
     right: 0;
 }
 
+.tomczuk-right-panel.tomczuk-invisible {
+    top: 100vh;
+}
+
 .tomczuk-right-panel.tomczuk-hidden {
     right: calc(30px - var(--right-panel-width));
 }
@@ -268,4 +272,17 @@
 .tomczuk-copy-product-list,
 .tomczuk-modify-product-list {
     font-size: 1.5em;
+}
+
+.tomczuk-invisible-btn {
+    position: fixed;
+    cursor: pointer;
+    right: 1px;
+    bottom: 1px;
+    font-size: .75em;
+    z-index: 100000;
+}
+
+.tomczuk-invisible-btn:hover {
+    filter: brightness(1.5);
 }

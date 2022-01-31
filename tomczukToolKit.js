@@ -47,6 +47,26 @@ function useTomczukToolbarStyles() {
             user-select: none;
         }
         
+        .tomczuk-right-panel.tomczuk-pinned {
+            right: 0;
+        }
+        
+        .tomczuk-right-panel.tomczuk-full {
+            right: 0;
+        }
+        
+        .tomczuk-right-panel.tomczuk-invisible {
+            top: 100vh;
+        }
+        
+        .tomczuk-right-panel.tomczuk-hidden {
+            right: calc(30px - var(--right-panel-width));
+        }
+        
+        .tomczuk-right-panel.tomczuk-hidden:hover {
+            opacity: .7;
+        }
+        
         .tomczuk-right-panel-header {
             padding: 7px 2px;
             background: rgba(0, 0, 0, 0.8);
@@ -269,6 +289,19 @@ function useTomczukToolbarStyles() {
         .tomczuk-copy-product-list,
         .tomczuk-modify-product-list {
             font-size: 1.5em;
+        }
+        
+        .tomczuk-invisible-btn {
+            position: fixed;
+            cursor: pointer;
+            right: 1px;
+            bottom: 1px;
+            font-size: .75em;
+            z-index: 100000;
+        }
+        
+        .tomczuk-invisible-btn:hover {
+            filter: brightness(1.5);
         }`;
 
     style.textContent = css;
@@ -416,6 +449,32 @@ class App {
         this.makeUtilityContainer();
         document.body.append(rightPanel);
         return rightPanel;
+    }
+
+    getInvisibleBtn() {
+        let btn = html('a', { classes: 'tomczuk-invisible-btn' });
+
+        if (storage('tomczukRightPanelInvisible') == true) {
+            this.rightPanel.classList.add('tomczuk-invisible');
+            btn.innerHTML = '&#128316;';
+        } else {
+            this.rightPanel.classList.remove('tomczuk-invisible');
+            storage('tomczukRightPanelInvisible', 'false');
+            btn.innerHTML = '&#128317;';
+        }
+
+        btn.addEventListener('click', e => {
+            this.rightPanel.classList.toggle('tomczuk-invisible');
+            if (this.rightPanel.classList.contains('tomczuk-invisible')) {
+                btn.innerHTML = '&#128316;';
+                storage('tomczukRightPanelInvisible', 'true');
+            } else {
+                btn.innerHTML = '&#128317;'
+                storage('tomczukRightPanelInvisible', 'false');
+            }
+        });
+
+        document.body.append(btn);
     }
 
     makeUtilityContainer() {
@@ -1242,12 +1301,13 @@ function showGoUpBtn() {
 }
 
 function setInitListeners() {
+    let rightPanel = CONFIG.rightPanel;
     document.addEventListener('click', e => {
         if (e.target.closest('.tomczuk-right-panel')) return;
-        CONFIG.rightPanel.adjustWidth();
+        rightPanel.adjustWidth();
     });
 
-    window.addEventListener('resize', e => { CONFIG.rightPanel.adjustWidth(); });
+    window.addEventListener('resize', e => { rightPanel.adjustWidth(); });
 
     document.addEventListener('scroll', showGoUpBtn);
     document.addEventListener('resize', showGoUpBtn);
@@ -1258,6 +1318,7 @@ function basicInit(department) {
     const app = new App(department);
     app.ctrl.redirectFromSearchPage();
     setInitListeners();
+    app.getInvisibleBtn();
     return app;
 }
 
