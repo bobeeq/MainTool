@@ -30,6 +30,11 @@
     user-select: none;
 }
 
+.tomczuk-right-panel.tomczuk-click-through {
+    opacity: .03;
+    pointer-events: none;
+}
+
 .tomczuk-right-panel.tomczuk-pinned {
     right: 0;
 }
@@ -40,6 +45,7 @@
 
 .tomczuk-right-panel.tomczuk-invisible {
     top: 100vh;
+    right: calc(var(--right-panel-width) * -1) !important;
 }
 
 .tomczuk-right-panel.tomczuk-hidden {
@@ -150,7 +156,7 @@
     overflow: hidden;
     opacity: 1;
     max-height: 120px;
-    pointer-events: all;
+    pointer-events: inherit;
     transition: .5s;
 }
 

@@ -47,6 +47,11 @@ function useTomczukToolbarStyles() {
             user-select: none;
         }
         
+        .tomczuk-right-panel.tomczuk-click-through {
+            opacity: .03;
+            pointer-events: none;
+        }
+        
         .tomczuk-right-panel.tomczuk-pinned {
             right: 0;
         }
@@ -57,6 +62,7 @@ function useTomczukToolbarStyles() {
         
         .tomczuk-right-panel.tomczuk-invisible {
             top: 100vh;
+            right: calc(var(--right-panel-width) * -1) !important;
         }
         
         .tomczuk-right-panel.tomczuk-hidden {
@@ -167,7 +173,7 @@ function useTomczukToolbarStyles() {
             overflow: hidden;
             opacity: 1;
             max-height: 120px;
-            pointer-events: all;
+            pointer-events: inherit;
             transition: .5s;
         }
         
@@ -354,6 +360,9 @@ class App {
             case isCurrentPage('czytam.pl'):
                 this.ctrl = new CzytamController;
                 break;
+            case isCurrentPage('wydawnictwokobiece.pl'):
+                this.ctrl = new WKController;
+                break;
             default:
                 this.ctrl = new BasicController;
         }
@@ -379,7 +388,6 @@ class App {
             let space = this.ctrl.spaceForPanel();
             if (!space) {
                 rightPanel.hide();
-                rightPanel.removeAttribute('style');
             } else {
                 rightPanel.classList.remove('tomczuk-hidden');
                 rightPanel.style.right = Math.min(0, Math.max(space - panelWidth, minSpace - panelWidth)) + 'px';
@@ -408,7 +416,7 @@ class App {
 
         rightPanel.unpin = () => {
             rightPanel.classList.remove('tomczuk-pinned');
-            rightPanel.adjustWidth();
+            rightPanel.fullWidth();
             storage('tomczukPanelToggler', 'unpinned')
         }
 
@@ -452,15 +460,14 @@ class App {
     }
 
     getInvisibleBtn() {
-        let btn = html('a', { classes: 'tomczuk-invisible-btn' });
-
-        if (storage('tomczukRightPanelInvisible') == true) {
-            this.rightPanel.classList.add('tomczuk-invisible');
-            btn.innerHTML = '&#128316;';
-        } else {
+        let btn = html('a', { classes: 'tomczuk-invisible-btn tomczuk-invisible' });
+        if (storage('tomczukRightPanelInvisible') == false) {
             this.rightPanel.classList.remove('tomczuk-invisible');
-            storage('tomczukRightPanelInvisible', 'false');
             btn.innerHTML = '&#128317;';
+        } else {
+            this.rightPanel.classList.add('tomczuk-invisible');
+            storage('tomczukRightPanelInvisible', 'true');
+            btn.innerHTML = '&#128316;';
         }
 
         btn.addEventListener('click', e => {
@@ -944,6 +951,20 @@ class BonitoController extends Controller {
     }
 }
 
+class WKController extends Controller {
+    mainContainerSelector() { return '.blog-header > div.container'; }
+
+    productModel() {
+        let tds = document.querySelectorAll('table.shop_attributes > tbody > tr > td');
+        if (!tds) return null;
+        tds = [...tds].map(el => el.innerText.replaceAll('-', '').trim());
+        let text = tds.find(el => el.match(/^\d{13,}$/));
+        if(!text) return null;
+
+        return text;
+    }
+}
+
 class GandalfController extends Controller {
     mainContainerSelector() { return '.top-menu > .container:not(.infoheader)'; }
 
@@ -1311,6 +1332,18 @@ function setInitListeners() {
 
     document.addEventListener('scroll', showGoUpBtn);
     document.addEventListener('resize', showGoUpBtn);
+
+    window.addEventListener('keydown', e => {
+        if (e.key === 'Control') {
+            let originalOpacity = rightPanel.style.opacity;
+            setTimeout(() => {
+                rightPanel.classList.add('tomczuk-click-through');
+                setTimeout(() => {
+                    rightPanel.classList.remove('tomczuk-click-through');
+                }, 2500);
+            }, 150);
+        };
+    });
 }
 
 function basicInit(department) {
