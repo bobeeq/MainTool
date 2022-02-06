@@ -43,7 +43,7 @@ function useTomczukToolbarStyles() {
             height: 100vh;
             width: var(--right-panel-width);
             transition: var(--main-transition) ease-out;
-            box-shadow: inset 80px 0 80px -60px #000;
+            box-shadow: inset 80px 0 80px -60px rgba(0, 0, 0, 0.5);
             user-select: none;
         }
         
@@ -281,7 +281,7 @@ function useTomczukToolbarStyles() {
             opacity: 0;
         }
         
-        .tomczuk-product-info-box > .tomczuk-box-child {
+        .tomczuk-product-info-box>.tomczuk-box-child {
             margin: 3px;
             background: green;
             color: white;
@@ -300,9 +300,9 @@ function useTomczukToolbarStyles() {
         .tomczuk-invisible-btn {
             position: fixed;
             cursor: pointer;
-            right: 1px;
-            bottom: 1px;
-            font-size: .75em;
+            right: .1vh;
+            bottom: .1vh;
+            font-size: .75vh;
             z-index: 100000;
         }
         
@@ -332,7 +332,7 @@ function useTomczukToolbarStyles() {
 }
 
 class App {
-    constructor(department) {
+constructor(department) {
         this.department = department;
 
         switch (true) {
@@ -362,6 +362,15 @@ class App {
                 break;
             case isCurrentPage('wydawnictwokobiece.pl'):
                 this.ctrl = new WKController;
+                break;
+            case isCurrentPage('czarymary.pl'):
+                this.ctrl = new CMController;
+                break;
+            case isCurrentPage('allegro.pl/oferta'):
+                this.ctrl = new AllegroController;
+                break;
+            case isCurrentPage('matras.pl'):
+                this.ctrl = new MatrasController;
                 break;
             default:
                 this.ctrl = new BasicController;
@@ -691,7 +700,13 @@ class Controller {
     constructor() {}
 
     spaceForPanel() {
-        let selector = this.mainContainerSelector();
+        let selectors = this.mainContainerSelectors();
+        let selector;
+        if (!Array.isArray(selectors)) selector = selectors;
+        else {
+            selector = selectors.find(sel => document.querySelector(sel));
+        }
+
         if (!selector) return null;
         let container = document.querySelector(selector);
         if (!container) return null;
@@ -699,7 +714,7 @@ class Controller {
         return ((noPx(window.getComputedStyle(document.body).width) - container.clientWidth) / 2 - 10);
     }
 
-    mainContainerSelector() { return null; }
+    mainContainerSelectors() { return null; }
 
     productModel() {
         return null;
@@ -765,7 +780,7 @@ class Controller {
 }
 
 class TKController extends Controller {
-    mainContainerSelector() {
+    mainContainerSelectors() {
         if (sessionStorage.tomczukMobileMode === 'true') return '#header > .container';
         return 'header#top';
     }
@@ -849,12 +864,46 @@ class TKController extends Controller {
     }
 }
 
+class CMController extends Controller {
+    mainContainerSelectors() {
+        return [
+            'header#top',
+            'header > div.container.clearfix'
+        ];
+    }
+
+    productModel() {
+        let meta = document.querySelector('meta[itemprop="productID"]');
+        return meta ? meta.getAttribute('content') : null;
+    }
+}
+
 class CBAController extends Controller {
 
 }
 
+class AllegroController extends Controller {
+    mainContainerSelectors() {
+        return 'div[data-role="header-primary-bar"]';
+    }
+
+    productModel() {
+        let boxes = [];
+        let desc = boxes.push(document.querySelector('div[data-box-name="Container Description"]'));
+        if(!desc) return null;
+
+        boxes.push(document.querySelector('div[data-box-name="Container Parameters"]'));
+        boxes.push(desc);
+
+        let string = boxes.map(el => el.innerText).join('');
+        string = string.replaceAll(/[\s\-]/g,'').match(/[^\d](\d{13})[^\d]/);
+        console.log(string);
+        return string.length === 0 ? null : string[1];
+    }
+}
+
 class BEEController extends Controller {
-    mainContainerSelector() {
+    mainContainerSelectors() {
         if (sessionStorage.tomczukMobileMode === 'true') return '#header .container';
         return '#header .container';
     }
@@ -939,7 +988,7 @@ class BEEController extends Controller {
 }
 
 class BonitoController extends Controller {
-    mainContainerSelector() { return 'body > div.container'; }
+    mainContainerSelectors() { return 'body > div.container'; }
 
     productModel() {
         let meta = document.querySelector('meta[property="og:upc"]');
@@ -952,21 +1001,21 @@ class BonitoController extends Controller {
 }
 
 class WKController extends Controller {
-    mainContainerSelector() { return '.blog-header > div.container'; }
+    mainContainerSelectors() { return '.blog-header > div.container'; }
 
     productModel() {
         let tds = document.querySelectorAll('table.shop_attributes > tbody > tr > td');
         if (!tds) return null;
         tds = [...tds].map(el => el.innerText.replaceAll('-', '').trim());
         let text = tds.find(el => el.match(/^\d{13,}$/));
-        if(!text) return null;
+        if (!text) return null;
 
         return text;
     }
 }
 
 class GandalfController extends Controller {
-    mainContainerSelector() { return '.top-menu > .container:not(.infoheader)'; }
+    mainContainerSelectors() { return '.top-menu > .container:not(.infoheader)'; }
 
     productModel() {
         let list = document.querySelector('div#product-details.details-list');
@@ -982,7 +1031,7 @@ class GandalfController extends Controller {
 }
 
 class SwiatKsiazkiController extends Controller {
-    mainContainerSelector() { return '.header.content'; }
+    mainContainerSelectors() { return '.header.content'; }
 
     productModel() {
         let meta = document.querySelector('meta[itemprop="gtin13"]')
@@ -995,7 +1044,7 @@ class SwiatKsiazkiController extends Controller {
 }
 
 class TantisController extends Controller {
-    mainContainerSelector() { return '.header-main'; }
+    mainContainerSelectors() { return '.header-main'; }
 
     productModel() {
         let json = document.head.querySelector('script[type="application/ld+json"]');
@@ -1013,7 +1062,7 @@ class TantisController extends Controller {
 }
 
 class CzytamController extends Controller {
-    mainContainerSelector() { return '#header-logo'; }
+    mainContainerSelectors() { return '#header-logo'; }
 
     productModel() {
         let details = document.querySelector('div.show-for-medium-up div#opis blockquote.size-12');
@@ -1024,6 +1073,20 @@ class CzytamController extends Controller {
         elements = Array.from(elements);
         let element = elements.find(el => el.textContent.match(/paskowy|isbn/i));
         return element.nextElementSibling.textContent.trim() || null;
+    }
+}
+
+class MatrasController extends Controller {
+    mainContainerSelectors() { return 'header.mainHeader'; }
+
+    productModel() {
+        let infoBox = document.querySelector('div.content div.colsInfo');
+        if (!infoBox) return null;
+
+        let model = infoBox.innerText.replaceAll('-','').match(/[^\d](\d{13})[^\d]?/);
+
+        if(model.length === 0) return null;
+        return model[1];
     }
 }
 
@@ -1334,13 +1397,12 @@ function setInitListeners() {
     document.addEventListener('resize', showGoUpBtn);
 
     window.addEventListener('keydown', e => {
-        if (e.key === 'Control') {
-            let originalOpacity = rightPanel.style.opacity;
+        if (e.key === 'Escape') {
             setTimeout(() => {
                 rightPanel.classList.add('tomczuk-click-through');
                 setTimeout(() => {
                     rightPanel.classList.remove('tomczuk-click-through');
-                }, 2500);
+                }, 3000);
             }, 150);
         };
     });
