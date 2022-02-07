@@ -81,7 +81,7 @@ function useTomczukToolbarStyles() {
             align-items: center;
         }
         
-        #tomczuk-panel-toggler {
+        .tomczuk-panel-toggler {
             background-color: var(--silver-color);
             border-radius: 5px;
             padding: 2px;
@@ -92,12 +92,12 @@ function useTomczukToolbarStyles() {
             margin-right: 5px;
         }
         
-        #tomczuk-panel-toggler:hover {
+        .tomczuk-panel-toggler:hover {
             cursor: pointer;
             background-color: #ababab;
         }
         
-        #tomczuk-panel-toggler.active {
+        .tomczuk-panel-toggler.tomczuk-active {
             background-color: greenyellow;
         }
         
@@ -300,9 +300,9 @@ function useTomczukToolbarStyles() {
         .tomczuk-invisible-btn {
             position: fixed;
             cursor: pointer;
-            right: .1vh;
-            bottom: .1vh;
-            font-size: .75vh;
+            right: 0;
+            bottom: 0;
+            font-size: 12px;
             z-index: 100000;
         }
         
@@ -332,7 +332,7 @@ function useTomczukToolbarStyles() {
 }
 
 class App {
-constructor(department) {
+    constructor(department) {
         this.department = department;
 
         switch (true) {
@@ -379,11 +379,11 @@ constructor(department) {
         this.getRightPanel();
     }
 
-    allow(departments) {
-        return departments.includes(this.department);
+    allow(departments, feature) {
+        return (departments.includes(this.department) && this.ctrl.showFeature(feature));
     }
-    forbid(departments) {
-        return !departments.includes(this.department)
+    forbid(departments, feature) {
+        return (!departments.includes(this.department) && this.ctrl.showFeature(feature));
     }
 
     getRightPanel() {
@@ -441,9 +441,7 @@ constructor(department) {
             }, 800);
         });
 
-        rightPanel.addEventListener('mouseover', e => {
-            clearTimeout(timeOutId);
-        });
+        rightPanel.addEventListener('mouseover', e => clearTimeout(timeOutId));
 
 
         rightPanel.addEventListener('click', e => {
@@ -490,7 +488,7 @@ constructor(department) {
             }
         });
 
-        document.body.append(btn);
+        this.rightPanel.after(btn);
     }
 
     makeUtilityContainer() {
@@ -508,21 +506,29 @@ constructor(department) {
         const rightPanel = this.rightPanel;
         const header = html('div', { classes: 'tomczuk-right-panel-header' });
         header.append(html('div', { textContent: '.tomczukToolKit', classes: 'tomczuk-right-panel-header-title' }));
+        const panelToggler = this.getPanelToggler(storage('tomczukPanelToggler'));
 
-        const panelToggler = html('div', { id: 'tomczuk-panel-toggler', innerHTML: '&#128204;' });
-        if (storage('tomczukPanelToggler') == 'pinned') panelToggler.classList.add('active');
-        panelToggler.addEventListener('click', e => {
-            if (storage('tomczukPanelToggler') == 'pinned') {
-                rightPanel.unpin();
-                panelToggler.classList.remove('active');
-            } else {
-                rightPanel.pin();
-                panelToggler.classList.add('active');
-            }
-        });
         header.prepend(panelToggler);
         rightPanel.append(header);
         rightPanel.header = header;
+    }
+
+    getPanelToggler(pinned) {
+        const panelToggler = html('div', { classes: 'tomczuk-panel-toggler', innerHTML: '&#128204;' });
+        const activeClass = 'tomczuk-active';
+
+        if (pinned == 'pinned') panelToggler.classList.add(activeClass);
+
+        panelToggler.addEventListener('click', e => {
+            if (panelToggler.classList.contains(activeClass)) {
+                this.rightPanel.unpin();
+                panelToggler.classList.remove(activeClass);
+            } else {
+                this.rightPanel.pin();
+                panelToggler.classList.add(activeClass);
+            }
+        });
+        return panelToggler;
     }
 
     getPrimary() {
@@ -536,13 +542,41 @@ constructor(department) {
     }
 
     navBox() {
-        const allowed = this.forbid([]);
+        const allowed = this.forbid([], 'navBox');
 
         if (!allowed) return;
 
         let nav = box('Nawigacja');
         const navBtnsContainer = html('div', { classes: 'tomczuk-nav-btns-container tomczuk-row-btns' });
 
+        let reCacheBtn = this.getReCacheBtn();
+        if (reCacheBtn) navBtnsContainer.append(reCacheBtn);
+
+        const mobileBtn = this.getMobileBtn();
+        if(mobileBtn) navBtnsContainer.append(mobileBtn);
+
+        const goUpBtn = html('a', {
+            innerHTML: '&#11014;&#65039;',
+            classes: 'tomczuk-btn tomczuk-nav-btn tomczuk-goup-btn'
+        });
+        goUpBtn.classList.toggle('tomczuk-hidden', !window.scrollY);
+
+
+        goUpBtn.addEventListener('click', e => {
+            e.preventDefault();
+            window.scrollTo(0, 0);
+        });
+
+
+        navBtnsContainer.append(goUpBtn);
+
+        nav.container.append(navBtnsContainer);
+        this.rightPanel.container.primary.append(nav);
+    }
+
+    getReCacheBtn() {
+        const allowed = this.forbid([], 'reCacheBtn');
+        if (!allowed) return null;
         const reCacheBtn = html('a', {
             classes: 'tomczuk-btn tomczuk-nav-btn tomczuk-recache-btn',
             innerHTML: '&#128260;'
@@ -553,6 +587,13 @@ constructor(department) {
             try { await fetch(basicUrl + '/?ReCache=1'); } catch (e) {}
             window.location.reload();
         });
+
+        return reCacheBtn;
+    }
+
+    getMobileBtn() {
+        const allowed = this.forbid([], 'mobileBtn');
+        if(!allowed) return null;
 
         const mobileBtn = html('a', {
             innerHTML: '&#128241;',
@@ -580,30 +621,11 @@ constructor(department) {
             }
         });
 
-        const goUpBtn = html('a', {
-            innerHTML: '&#11014;&#65039;',
-            classes: 'tomczuk-btn tomczuk-nav-btn tomczuk-goup-btn'
-        });
-        goUpBtn.classList.toggle('tomczuk-hidden', !window.scrollY);
-
-
-        goUpBtn.addEventListener('click', e => {
-            e.preventDefault();
-            window.scrollTo(0, 0);
-        });
-
-
-
-        navBtnsContainer.append(reCacheBtn);
-        navBtnsContainer.append(mobileBtn);
-        navBtnsContainer.append(goUpBtn);
-
-        nav.container.append(navBtnsContainer);
-        this.rightPanel.container.primary.append(nav);
+        return mobileBtn;
     }
 
     productBox() {
-        const allowed = this.forbid([]);
+        const allowed = this.forbid([], 'productBox');
         if (!allowed) return;
 
         let model = this.ctrl.productModel();
@@ -618,13 +640,21 @@ constructor(department) {
         if (!isCBA()) btnsContainer.append(btn({ value: 'cba', url: `https://cba.kierus.com.pl/?p=EditProduct&load=*${model}` }));
         if (!isTK()) btnsContainer.append(btn({ value: 'tk', url: `https://www.taniaksiazka.pl/Szukaj/q-${model}` }));
         if (!isBEE()) btnsContainer.append(btn({ value: 'bee', url: `https://www.bee.pl/Szukaj/q-${model}?pf-size=24&pf-page=1` }))
-        const basketsUrlBtn = btn({ value: 'Jadące koszyki', url: arrivingBasketsUrl(model) });
 
 
+        const comingBasketsUrlBtn = this.comingBasketsUrlBtn(model);
+        
         productBox.container.append(btnsContainer);
-        productBox.container.append(basketsUrlBtn);
+        
+        if(comingBasketsUrlBtn) productBox.container.append(comingBasketsUrlBtn);
 
         this.rightPanel.container.primary.append(productBox);
+    }
+
+    comingBasketsUrlBtn(model) {
+        const allowed = this.allow('handlowy', 'comingBasketsUrlBtn');
+        if(!allowed) return null;
+        return btn({ value: 'Jadące koszyki', url: arrivingBasketsUrl(model) });
     }
 
     productListBox() {
@@ -676,7 +706,7 @@ constructor(department) {
     salesBox() {
         const allowed = this.allow([
             'handlowy'
-        ])
+        ], 'salesBox')
         if (!allowed) return;
 
         let model = this.ctrl.productModel();
@@ -777,6 +807,32 @@ class Controller {
             infoBox.append(html('a', { classes: 'tomczuk-box-child', textContent: 'idź do cba', href: url }));
         });
     }
+
+    forbiddenFeatures() {
+        return [
+            'reCacheBtn',
+            'mobileBtn'
+        ];
+    }
+
+    acceptedFeatures() {
+        return [];
+    }
+
+    showFeature(feature) {
+        const accepted = this.acceptedFeatures();
+        const forbidden = this.forbiddenFeatures();
+        if (forbidden.length > 0) {
+            if (forbidden.find(el => el === feature)) return false;
+            else return true;
+        }
+
+        if (accepted.length > 0) {
+            if (accepted.find(el => el === feature)) return true;
+            else return false;
+        }
+        return true;
+    }
 }
 
 class TKController extends Controller {
@@ -862,6 +918,10 @@ class TKController extends Controller {
     getSelectorsForProductList() {
         return { list: 'ul#pagi-slide', container: 'li' };
     }
+
+    forbiddenFeatures() {
+        return [];
+    }
 }
 
 class CMController extends Controller {
@@ -890,14 +950,13 @@ class AllegroController extends Controller {
     productModel() {
         let boxes = [];
         let desc = boxes.push(document.querySelector('div[data-box-name="Container Description"]'));
-        if(!desc) return null;
+        if (!desc) return null;
 
         boxes.push(document.querySelector('div[data-box-name="Container Parameters"]'));
         boxes.push(desc);
 
         let string = boxes.map(el => el.innerText).join('');
-        string = string.replaceAll(/[\s\-]/g,'').match(/[^\d](\d{13})[^\d]/);
-        console.log(string);
+        string = string.replaceAll(/[\s\-]/g, '').match(/[^\d](\d{13})[^\d]/);
         return string.length === 0 ? null : string[1];
     }
 }
@@ -1083,9 +1142,9 @@ class MatrasController extends Controller {
         let infoBox = document.querySelector('div.content div.colsInfo');
         if (!infoBox) return null;
 
-        let model = infoBox.innerText.replaceAll('-','').match(/[^\d](\d{13})[^\d]?/);
+        let model = infoBox.innerText.replaceAll('-', '').match(/[^\d](\d{13})[^\d]?/);
 
-        if(model.length === 0) return null;
+        if (model.length === 0) return null;
         return model[1];
     }
 }
