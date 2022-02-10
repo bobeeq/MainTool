@@ -553,7 +553,7 @@ class App {
         if (reCacheBtn) navBtnsContainer.append(reCacheBtn);
 
         const mobileBtn = this.getMobileBtn();
-        if(mobileBtn) navBtnsContainer.append(mobileBtn);
+        if (mobileBtn) navBtnsContainer.append(mobileBtn);
 
         const goUpBtn = html('a', {
             innerHTML: '&#11014;&#65039;',
@@ -593,7 +593,7 @@ class App {
 
     getMobileBtn() {
         const allowed = this.forbid([], 'mobileBtn');
-        if(!allowed) return null;
+        if (!allowed) return null;
 
         const mobileBtn = html('a', {
             innerHTML: '&#128241;',
@@ -643,21 +643,23 @@ class App {
 
 
         const comingBasketsUrlBtn = this.comingBasketsUrlBtn(model);
-        
+
         productBox.container.append(btnsContainer);
-        
-        if(comingBasketsUrlBtn) productBox.container.append(comingBasketsUrlBtn);
+
+        if (comingBasketsUrlBtn) productBox.container.append(comingBasketsUrlBtn);
 
         this.rightPanel.container.primary.append(productBox);
     }
 
     comingBasketsUrlBtn(model) {
         const allowed = this.allow('handlowy', 'comingBasketsUrlBtn');
-        if(!allowed) return null;
+        if (!allowed) return null;
         return btn({ value: 'Jadące koszyki', url: arrivingBasketsUrl(model) });
     }
 
-    productListBox() {
+    async productListBox() {
+        let prods = await this.ctrl.modifyProductList();
+        return prods;
         const productList = this.ctrl.productList();
         if (!productList) return;
 
@@ -746,6 +748,10 @@ class Controller {
 
     mainContainerSelectors() { return null; }
 
+    productListElement() {
+        return null;
+    }
+
     productModel() {
         return null;
     }
@@ -780,32 +786,51 @@ class Controller {
         return string;
     }
 
-    modifyProductList(mode = true) {
-        let selectors = this.getSelectorsForProductList();
-        let list = document.querySelector(selectors.list);
-        if (!list) return;
+    async productListObj() {
+        const cfg = this.productListSettings();
+        if (!cfg.access) return false;
+        
+        let obj = {};
+        obj.listContainer = document.querySelector(cfg.listContainer);
+        if (!obj.listContainer) return null;
+        obj.listElements = obj.listContainer.querySelectorAll(cfg.listElements);
+        if (!obj.listElements) return null;
+        obj.listElements = Array.from(obj.listElements);
+        let objects = []; 
+        for(let el of obj.listElements) {
+            let elObj = {};
+            elObj.productBox = el;
 
-        if (mode == false) {
-            let containers = list.querySelectorAll('.tomczuk-product-info-box')
-            if (containers) Array.from(containers).map(el => el.classList.add('tomczuk-hidden'));
-            return;
-        }
+            let dom;
+            if(cfg.fetchRequired) {
+                dom = await fetchPageDOM(cfg.fetchUrl()); //@todo ogarnąć pobieranie modelupoprzez funkcję (powiązać to jakoś z pobieraniem modelu z kontrolera)
+            } else dom = el;
 
-        let hiddenEls = list.querySelectorAll('tomczuk-product-info-box.tomczuk-hidden');
-        if (hiddenEls.length) {
-            Array.from(hiddenEls).map(el => el.classList.remove('tomczuk-hidden'));
-            return;
-        }
-        list = Array.from(list.querySelectorAll(selectors.container));
-        list.map(el => {
-            let model = el.querySelector('[data-model]');
-            if (model) model = model.dataset.model;
-            let infoBox = html('div', { textContent: 'info', classes: 'tomczuk-product-info-box' });
-            el.classList.add('tomczuk-bee-product-card');
-            el.prepend(infoBox);
-            let url = model ? `https://cba.kierus.com.pl/?p=EditProduct&load=*${model}` : '';
-            infoBox.append(html('a', { classes: 'tomczuk-box-child', textContent: 'idź do cba', href: url }));
-        });
+            let modelElement = dom.querySelector(cfg.modelSelector);
+            elObj.model = cfg.getModel(modelElement);
+            objects.push(elObj);
+        };
+
+        return objects;
+    }
+
+    productListSettings() {
+        return {
+            access: false,
+            listContainer: null,
+            listElements: null,
+            fetchRequired: false,
+            fetchUrl: null,
+            modelSelector: null,
+            getModel: function() {
+                return null;
+            }
+        };
+    }
+
+    async modifyProductList() {
+        let productList = await this.productListObj();
+        return productList;
     }
 
     forbiddenFeatures() {
@@ -841,8 +866,10 @@ class TKController extends Controller {
         return 'header#top';
     }
 
-    productModel() {
-        let meta = document.querySelector('meta[itemprop="productID"]');
+    async productModel(dom = null) {
+        if(!dom) dom = document;
+        
+        let meta = dom.querySelector('meta[itemprop="productID"]');
         if (!meta) return null;
 
         let model = meta.getAttribute('content');
@@ -869,10 +896,10 @@ class TKController extends Controller {
     }
 
     productList() {
-        const ul = document.querySelector('ul#pagi-slide');
-        if (!ul) return null;
+        const listElem = this.productListSettings();
+        if (!listElem) return null;
 
-        let els = ul.querySelectorAll('li');
+        let els = listElem.querySelectorAll('li');
         if (!els) return null;
 
         els = Array.from(els);
@@ -915,8 +942,26 @@ class TKController extends Controller {
         return products;
     }
 
+    productListSettings() {
+        return {
+            access: true,
+            listContainer: 'ul#pagi-slide',
+            listElements: 'li',
+            fetchRequired: false,
+            fetchUrl: function (urlElem) {
+                return urlElem.href;
+            },
+            modelSelector: 'a.product-title[data-model]',
+            getModel: function(modelElement) {
+                let model = modelElement.dataset.model;
+                if(!model) return null;
+                return model;
+            }
+        };
+    }
+
     getSelectorsForProductList() {
-        return { list: 'ul#pagi-slide', container: 'li' };
+        return { listContainer: 'ul#pagi-slide', listElements: 'li' };
     }
 
     forbiddenFeatures() {
@@ -1105,8 +1150,9 @@ class SwiatKsiazkiController extends Controller {
 class TantisController extends Controller {
     mainContainerSelectors() { return '.header-main'; }
 
-    productModel() {
-        let json = document.head.querySelector('script[type="application/ld+json"]');
+    productModel(dom = null) {
+        if (!dom) dom = document;
+        let json = dom.head.querySelector('script[type="application/ld+json"]');
         if (!json) return null;
 
         json = JSON.parse(json.textContent);
@@ -1117,6 +1163,33 @@ class TantisController extends Controller {
         json = json['5'];
         if (!json.hasOwnProperty('@id')) return null;
         return json['@id'];
+    }
+
+    getSelectorsForProductList() {
+        return { list: '.product-list-grid', container: '.card-body' };
+    }
+
+    productListSettings() {
+        return {
+            access: true,
+            listContainer: '.product-list-grid',
+            listElements: '.card-body',
+            fetchRequired: true,
+            fetchUrl: null,
+            modelSelector: null,
+            getModel: function() {
+                return null;
+            }
+        };
+    }
+
+    async productList() {
+        let { list, container } = this.getSelectorsForProductList();
+        let elems = Array.from(document.querySelectorAll(`${list} ${container}`));
+        for (let elem of elems) {
+            let url = elem.querySelector('a').href;
+            let dom = await fetchPageDOM(url);
+        }
     }
 }
 
@@ -1487,5 +1560,6 @@ function basicInit(department) {
     app.navBox();
     app.productBox();
     app.salesBox();
-    app.productListBox();
+    let productList = await app.productListBox();
+    console.log(productList);
 })();
