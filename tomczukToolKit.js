@@ -658,9 +658,7 @@ class App {
     }
 
     async productListBox() {
-        let prods = await this.ctrl.modifyProductList();
-        return prods;
-        const productList = this.ctrl.productList();
+        let productList = await this.ctrl.modifyProductList();
         if (!productList) return;
 
         const productListBox = box('Lista produktów');
@@ -729,7 +727,35 @@ class HTMLBuilder {
 }
 
 class Controller {
-    constructor() {}
+    constructor() {
+        this.init();
+    }
+
+    init() {
+        this.cfg = this.getCfg();
+        if(this.cfg.access === false) return;
+        
+        this.cfg.productListContainerElement = document.querySelector(this.cfg.productListContainerSelector);
+        this.cfg.productListElementsArray = Array.from(this.cfg.productListContainerElement?.querySelectorAll(this.cfg.productListElementSelector) ?? []);
+        this.cfg.productBoxesArray = Array.from(document.querySelectorAll(this.cfg.productBoxSelector) ?? []);
+        console.log(this.cfg);
+    }
+
+    getCfg() {
+        return {
+            access: false,
+            productListContainerSelector: null,
+            productListContainerElement: null,
+            productListElementSelector: null,
+            productListElementsArray: [],
+            productBoxSelector: null,
+            productBoxesArray: [],
+            fetchRequired: false,
+            fetchUrl: function(listElement) { return null },
+            modelSelector: null,
+            getModel: async function(modelElement) { return null; }
+        };
+    }
 
     spaceForPanel() {
         let selectors = this.mainContainerSelectors();
@@ -752,7 +778,7 @@ class Controller {
         return null;
     }
 
-    productModel() {
+    productModel(dom = null) {
         return null;
     }
 
@@ -789,48 +815,35 @@ class Controller {
     async productListObj() {
         const cfg = this.productListSettings();
         if (!cfg.access) return false;
-        
+
         let obj = {};
         obj.listContainer = document.querySelector(cfg.listContainer);
         if (!obj.listContainer) return null;
         obj.listElements = obj.listContainer.querySelectorAll(cfg.listElements);
         if (!obj.listElements) return null;
         obj.listElements = Array.from(obj.listElements);
-        let objects = []; 
-        for(let el of obj.listElements) {
+        let objects = [];
+        for (let [i, el] of obj.listElements.entries()) {
             let elObj = {};
             elObj.productBox = el;
-
-            let dom;
-            if(cfg.fetchRequired) {
-                dom = await fetchPageDOM(cfg.fetchUrl()); //@todo ogarnąć pobieranie modelupoprzez funkcję (powiązać to jakoś z pobieraniem modelu z kontrolera)
-            } else dom = el;
-
-            let modelElement = dom.querySelector(cfg.modelSelector);
-            elObj.model = cfg.getModel(modelElement);
+            if (cfg.fetchRequired) {
+                let url = cfg.fetchUrl(el);
+                let model = await cfg.getModelFromURL(url);
+                elObj.model = model;
+            } else {
+                elObj.model = cfg.getModelFromSelector(el);
+            }
             objects.push(elObj);
         };
 
         return objects;
     }
 
-    productListSettings() {
-        return {
-            access: false,
-            listContainer: null,
-            listElements: null,
-            fetchRequired: false,
-            fetchUrl: null,
-            modelSelector: null,
-            getModel: function() {
-                return null;
-            }
-        };
-    }
-
-    async modifyProductList() {
+    async modifyProductList(modify = true) {
         let productList = await this.productListObj();
-        return productList;
+        for (const obj in productList) {
+            console.log(obj);
+        }
     }
 
     forbiddenFeatures() {
@@ -861,14 +874,53 @@ class Controller {
 }
 
 class TKController extends Controller {
+    getCfg() {
+        return {
+            access: true,
+            productListContainerSelector: 'ul#pagi-slide',
+            productListContainerElement: null,
+            productListElementSelector: 'li',
+            productListElementsArray: [],
+            productBoxSelector: '.product-container',
+            productBoxesArray: [],
+            fetchRequired: false,
+            fetchUrl: function(listElement) { return null },
+            modelSelector: 'a[data-model]',
+            getModel: async function(modelElement) { 
+                return modelElement.querySelector(this.modelSelector)?.dataset.model;
+            }
+        }
+    };
+    
+    // productListSettings() {
+    //     return {
+    //         access: true,
+    //         listContainer: 'ul#pagi-slide',
+    //         listElements: 'li',
+    //         fetchRequired: false,
+    //         fetchUrl: function(listElement) {
+    //             return null;
+    //         },
+    //         modelSelector: 'a.product-title[data-model]',
+    //         getModelFromSelector: function(el) {
+    //             return el.querySelector(this.modelSelector).dataset.model;
+    //         },
+    //         getModel: function(modelElement) {
+    //             let model = modelElement.dataset.model;
+    //             if (!model) return null;
+    //             return model;
+    //         }
+    //     };
+    // }
+
     mainContainerSelectors() {
         if (sessionStorage.tomczukMobileMode === 'true') return '#header > .container';
         return 'header#top';
     }
 
-    async productModel(dom = null) {
-        if(!dom) dom = document;
-        
+    productModel(dom = null) {
+        if (!dom) dom = document;
+
         let meta = dom.querySelector('meta[itemprop="productID"]');
         if (!meta) return null;
 
@@ -940,24 +992,6 @@ class TKController extends Controller {
         }
         if (Object.keys(products).length == 0) return null;
         return products;
-    }
-
-    productListSettings() {
-        return {
-            access: true,
-            listContainer: 'ul#pagi-slide',
-            listElements: 'li',
-            fetchRequired: false,
-            fetchUrl: function (urlElem) {
-                return urlElem.href;
-            },
-            modelSelector: 'a.product-title[data-model]',
-            getModel: function(modelElement) {
-                let model = modelElement.dataset.model;
-                if(!model) return null;
-                return model;
-            }
-        };
     }
 
     getSelectorsForProductList() {
@@ -1175,10 +1209,16 @@ class TantisController extends Controller {
             listContainer: '.product-list-grid',
             listElements: '.card-body',
             fetchRequired: true,
-            fetchUrl: null,
+            fetchUrl: function(listElement) {
+                return listElement.querySelector('.product-img-container > a').href;
+            },
             modelSelector: null,
-            getModel: function() {
+            getModelFromSelector: function() {
                 return null;
+            },
+            getModelFromURL: async(url) => {
+                let dom = await fetchPageDOM(url);
+                return this.productModel(dom);
             }
         };
     }
@@ -1560,6 +1600,5 @@ function basicInit(department) {
     app.navBox();
     app.productBox();
     app.salesBox();
-    let productList = await app.productListBox();
-    console.log(productList);
+    // let productList = await app.productListBox();
 })();
