@@ -342,6 +342,9 @@ class App {
             case isBEE():
                 this.ctrl = new BEEController;
                 break;
+            case isCurrentPage('fantastyczneswiaty.pl'):
+                this.ctrl = new FantastyczneSwiatyController;
+                break;
             case isCurrentPage('bonito.pl'):
                 this.ctrl = new BonitoController;
                 break;
@@ -721,6 +724,7 @@ class HTMLBuilder {
 
 class Controller {
 
+
     constructor() {
         this.init();
     }
@@ -747,11 +751,12 @@ class Controller {
             fetchRequired: false,
             fetchUrl: function (listElement) { return null },
             modelSelector: null,
-            getModel: async function (modelElement) { return null; }
+            getModel: function (modelElement) { return null; }
         };
     }
    
     modifyProductList(show = true) {
+        if(this.cfg.access === false) return null;
         let list = this.cfg.productBoxesArray;
         list.map(el => {
             let infoBox = el.parentElement.querySelector('.tomczuk-product-info-box');
@@ -766,6 +771,10 @@ class Controller {
             infoBox.classList.toggle('tomczuk-hidden', !show);
         });
         return list;
+    }
+
+    mainContainerSelectors() {
+        return null;
     }
 
     spaceForPanel() {
@@ -851,7 +860,7 @@ class TKController extends Controller {
             fetchRequired: false,
             fetchUrl: function (listElement) { return null },
             modelSelector: 'a[data-model]',
-            getModel: async function (modelElement) {
+            getModel: function (modelElement) {
                 return modelElement.querySelector(this.modelSelector)?.dataset.model;
             }
         }
@@ -997,7 +1006,7 @@ class BEEController extends Controller {
             fetchRequired: false,
             fetchUrl: function (listElement) { return null },
             modelSelector: 'a[data-model]',
-            getModel: async function (modelElement) {
+            getModel: function (modelElement) {
                 return modelElement.querySelector(this.modelSelector)?.dataset.model;
             }
         }
@@ -1080,6 +1089,48 @@ class BEEController extends Controller {
         return products;
     }
 
+}
+
+class FantastyczneSwiatyController extends Controller {
+    mainContainerSelectors() {
+        return [
+            '.page div.header.container',
+            '#header > div.container.clearfix'
+        ];
+    }
+
+    productModel() {
+        let match = document.body.innerText.match(/Model:\s+([\d\w@_]{3,30})/);
+        if(!match) return null;
+        if(match.length < 2) return null;
+        let model = match[1];
+        return model;
+    }
+
+    getCfg() {
+        return {
+            access: true,
+            productListContainerSelector: '.category-products .products-grid',
+            productListContainerElement: null,
+            productListElementSelector: 'li.item',
+            productListElementsArray: [],
+            productBoxSelector: '.item-area',
+            productBoxesArray: [],
+            fetchRequired: false,
+            fetchUrl: function (listElement) { return null },
+            modelSelector: 'a.product-image img',
+            getModel: function (modelElement) {
+                let el =  modelElement.querySelector(this.modelSelector);
+                if(!el) return null;
+                console.log(el);
+                let match = el.dataset?.src?.match(/\/([^\/]{3,30})\.jpg/i);
+                if(!match) return null;
+                if(match.length < 2) return null;
+                let model = match[1];
+                return model;
+            }
+        }
+    };
 }
 
 class BonitoController extends Controller {
