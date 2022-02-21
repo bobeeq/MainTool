@@ -272,13 +272,10 @@ function useTomczukToolbarStyles() {
             display: flex;
             flex-direction: column;
             max-height: 120px;
-            opacity: 1;
-            transition: 1s;
         }
         
         .tomczuk-product-info-box.tomczuk-hidden {
-            max-height: 0;
-            opacity: 0;
+            display: none;
         }
         
         .tomczuk-product-info-box>.tomczuk-box-child {
@@ -584,7 +581,7 @@ class App {
 
         reCacheBtn.addEventListener('click', async e => {
             const basicUrl = window.location.href.match(/^https?:\/\/[^\/]*/);
-            try { await fetch(basicUrl + '/?ReCache=1'); } catch (e) {}
+            try { await fetch(basicUrl + '/?ReCache=1'); } catch (e) { }
             window.location.reload();
         });
 
@@ -610,12 +607,12 @@ class App {
             if (!mobileBtn.classList.contains('tomczuk-mobile-mode')) {
                 mobileBtn.classList.add('tomczuk-mobile-mode');
                 sessionStorage.tomczukMobileMode = 'true';
-                try { await fetch(basicUrl + '/?Theme=Mobile'); } catch (e) {}
+                try { await fetch(basicUrl + '/?Theme=Mobile'); } catch (e) { }
                 window.location.reload(true);
             } else {
                 mobileBtn.classList.remove('tomczuk-mobile-mode');
                 sessionStorage.tomczukMobileMode = 'false';
-                try { await fetch(basicUrl + '/?Theme='); } catch (e) {}
+                try { await fetch(basicUrl + '/?Theme='); } catch (e) { }
 
                 window.location.reload(true);
             }
@@ -658,9 +655,6 @@ class App {
     }
 
     async productListBox() {
-        let productList = await this.ctrl.modifyProductList();
-        if (!productList) return;
-
         const productListBox = box('Lista produktów');
         const btnsContainer = html('div', { classes: 'tomczuk-product-btns-container tomczuk-row-btns' });
         const copyListBtn = html('a', { innerHTML: '&#128203;', classes: 'tomczuk-btn tomczuk-copy-product-list' });
@@ -689,12 +683,10 @@ class App {
         copyListBtn.addEventListener('click', e => {
             e.preventDefault();
             copyListBtn.classList.add('tomczuk-hidden');
-            let copyTextContent = copyListBtn.textContent;
             setTimeout(() => {
                 copyListBtn.classList.remove('tomczuk-hidden');
-                copyListBtn.textContent = copyTextContent;
             }, 1200);
-            navigator.clipboard.writeText(this.ctrl.objToXls(productList));
+            navigator.clipboard.writeText(this.ctrl.objToXls(this.ctrl.productList()));
         });
 
         productListBox.container.append(btnsContainer);
@@ -702,6 +694,7 @@ class App {
         btnsContainer.append(modifyListBtn);
         this.rightPanel.container.primary.append(productListBox);
     };
+
 
     salesBox() {
         const allowed = this.allow([
@@ -727,14 +720,15 @@ class HTMLBuilder {
 }
 
 class Controller {
+
     constructor() {
         this.init();
     }
 
     init() {
         this.cfg = this.getCfg();
-        if(this.cfg.access === false) return;
-        
+        if (this.cfg.access === false) return;
+
         this.cfg.productListContainerElement = document.querySelector(this.cfg.productListContainerSelector);
         this.cfg.productListElementsArray = Array.from(this.cfg.productListContainerElement?.querySelectorAll(this.cfg.productListElementSelector) ?? []);
         this.cfg.productBoxesArray = Array.from(document.querySelectorAll(this.cfg.productBoxSelector) ?? []);
@@ -751,19 +745,34 @@ class Controller {
             productBoxSelector: null,
             productBoxesArray: [],
             fetchRequired: false,
-            fetchUrl: function(listElement) { return null },
+            fetchUrl: function (listElement) { return null },
             modelSelector: null,
-            getModel: async function(modelElement) { return null; }
+            getModel: async function (modelElement) { return null; }
         };
+    }
+   
+    modifyProductList(show = true) {
+        let list = this.cfg.productBoxesArray;
+        list.map(el => {
+            let infoBox = el.parentElement.querySelector('.tomczuk-product-info-box');
+
+            if(!infoBox) {
+                let model = this.cfg.getModel(el);
+                infoBox = html('div', { classes: 'tomczuk-product-info-box' });
+                el.before(infoBox);
+                let url = model ? `https://cba.kierus.com.pl/?p=EditProduct&load=*${model}` : '';
+                infoBox.append(html('a', { classes: 'tomczuk-box-child', textContent: 'idź do cba', href: url }));
+            }
+            infoBox.classList.toggle('tomczuk-hidden', !show);
+        });
+        return list;
     }
 
     spaceForPanel() {
         let selectors = this.mainContainerSelectors();
-        let selector;
-        if (!Array.isArray(selectors)) selector = selectors;
-        else {
-            selector = selectors.find(sel => document.querySelector(sel));
-        }
+        let selector = (!Array.isArray(selectors)) 
+            ? selectors 
+            : selectors.find(sel => document.querySelector(sel));
 
         if (!selector) return null;
         let container = document.querySelector(selector);
@@ -772,17 +781,7 @@ class Controller {
         return ((noPx(window.getComputedStyle(document.body).width) - container.clientWidth) / 2 - 10);
     }
 
-    mainContainerSelectors() { return null; }
-
-    productListElement() {
-        return null;
-    }
-
     productModel(dom = null) {
-        return null;
-    }
-
-    productList() {
         return null;
     }
 
@@ -793,9 +792,10 @@ class Controller {
         if (!url) return;
         window.location.href = url;
     }
-    isSearchPage() {}
-    searchText() {}
-    searchedElementUrl() {}
+
+    isSearchPage() { }
+    searchText() { }
+    searchedElementUrl() { }
 
     objToXls(obj) {
         let models = Object.keys(obj).filter(model => model !== 'keys');
@@ -812,54 +812,19 @@ class Controller {
         return string;
     }
 
-    async productListObj() {
-        const cfg = this.productListSettings();
-        if (!cfg.access) return false;
-
-        let obj = {};
-        obj.listContainer = document.querySelector(cfg.listContainer);
-        if (!obj.listContainer) return null;
-        obj.listElements = obj.listContainer.querySelectorAll(cfg.listElements);
-        if (!obj.listElements) return null;
-        obj.listElements = Array.from(obj.listElements);
-        let objects = [];
-        for (let [i, el] of obj.listElements.entries()) {
-            let elObj = {};
-            elObj.productBox = el;
-            if (cfg.fetchRequired) {
-                let url = cfg.fetchUrl(el);
-                let model = await cfg.getModelFromURL(url);
-                elObj.model = model;
-            } else {
-                elObj.model = cfg.getModelFromSelector(el);
-            }
-            objects.push(elObj);
-        };
-
-        return objects;
-    }
-
-    async modifyProductList(modify = true) {
-        let productList = await this.productListObj();
-        for (const obj in productList) {
-            console.log(obj);
+    featuresPermissions() {
+        return {
+            accepted: [],
+            forbidden: [
+                'mobileBtn',
+                'reCacheBtn'
+            ]
         }
     }
 
-    forbiddenFeatures() {
-        return [
-            'reCacheBtn',
-            'mobileBtn'
-        ];
-    }
-
-    acceptedFeatures() {
-        return [];
-    }
-
     showFeature(feature) {
-        const accepted = this.acceptedFeatures();
-        const forbidden = this.forbiddenFeatures();
+        const { accepted, forbidden } = this.featuresPermissions();
+
         if (forbidden.length > 0) {
             if (forbidden.find(el => el === feature)) return false;
             else return true;
@@ -884,34 +849,13 @@ class TKController extends Controller {
             productBoxSelector: '.product-container',
             productBoxesArray: [],
             fetchRequired: false,
-            fetchUrl: function(listElement) { return null },
+            fetchUrl: function (listElement) { return null },
             modelSelector: 'a[data-model]',
-            getModel: async function(modelElement) { 
+            getModel: async function (modelElement) {
                 return modelElement.querySelector(this.modelSelector)?.dataset.model;
             }
         }
     };
-    
-    // productListSettings() {
-    //     return {
-    //         access: true,
-    //         listContainer: 'ul#pagi-slide',
-    //         listElements: 'li',
-    //         fetchRequired: false,
-    //         fetchUrl: function(listElement) {
-    //             return null;
-    //         },
-    //         modelSelector: 'a.product-title[data-model]',
-    //         getModelFromSelector: function(el) {
-    //             return el.querySelector(this.modelSelector).dataset.model;
-    //         },
-    //         getModel: function(modelElement) {
-    //             let model = modelElement.dataset.model;
-    //             if (!model) return null;
-    //             return model;
-    //         }
-    //     };
-    // }
 
     mainContainerSelectors() {
         if (sessionStorage.tomczukMobileMode === 'true') return '#header > .container';
@@ -948,13 +892,9 @@ class TKController extends Controller {
     }
 
     productList() {
-        const listElem = this.productListSettings();
-        if (!listElem) return null;
+        console.log('go go productList()');
+        let els = this.cfg.productListElementsArray;
 
-        let els = listElem.querySelectorAll('li');
-        if (!els) return null;
-
-        els = Array.from(els);
         let products = {};
         products.keys = ['title', 'price', 'discount', 'category', 'author', 'availability', 'url'];
         for (let prod of els) {
@@ -994,12 +934,11 @@ class TKController extends Controller {
         return products;
     }
 
-    getSelectorsForProductList() {
-        return { listContainer: 'ul#pagi-slide', listElements: 'li' };
-    }
-
-    forbiddenFeatures() {
-        return [];
+    featuresPermissions() {
+        return {
+            accepted: [],
+            forbidden: []
+        };
     }
 }
 
@@ -1045,6 +984,24 @@ class BEEController extends Controller {
         if (sessionStorage.tomczukMobileMode === 'true') return '#header .container';
         return '#header .container';
     }
+
+    getCfg() { // @todo: przerobić na bee.
+        return {
+            access: true,
+            productListContainerSelector: 'div.product_list.row',
+            productListContainerElement: null,
+            productListElementSelector: '.product-container',
+            productListElementsArray: [],
+            productBoxSelector: '.product-container',
+            productBoxesArray: [],
+            fetchRequired: false,
+            fetchUrl: function (listElement) { return null },
+            modelSelector: 'a[data-model]',
+            getModel: async function (modelElement) {
+                return modelElement.querySelector(this.modelSelector)?.dataset.model;
+            }
+        }
+    };
 
     productModel() {
         let meta = document.querySelector('meta[itemprop="productID"]');
@@ -1209,14 +1166,14 @@ class TantisController extends Controller {
             listContainer: '.product-list-grid',
             listElements: '.card-body',
             fetchRequired: true,
-            fetchUrl: function(listElement) {
+            fetchUrl: function (listElement) {
                 return listElement.querySelector('.product-img-container > a').href;
             },
             modelSelector: null,
-            getModelFromSelector: function() {
+            getModelFromSelector: function () {
                 return null;
             },
-            getModelFromURL: async(url) => {
+            getModelFromURL: async (url) => {
                 let dom = await fetchPageDOM(url);
                 return this.productModel(dom);
             }
@@ -1600,5 +1557,5 @@ function basicInit(department) {
     app.navBox();
     app.productBox();
     app.salesBox();
-    // let productList = await app.productListBox();
+    let productList = await app.productListBox();
 })();
