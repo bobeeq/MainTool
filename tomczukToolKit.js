@@ -735,7 +735,7 @@ class Controller {
 
         this.cfg.productListContainerElement = document.querySelector(this.cfg.productListContainerSelector);
         this.cfg.productListElementsArray = Array.from(this.cfg.productListContainerElement?.querySelectorAll(this.cfg.productListElementSelector) ?? []);
-        this.cfg.productBoxesArray = Array.from(document.querySelectorAll(this.cfg.productBoxSelector) ?? []);
+        this.getBoxesArray();
         console.log(this.cfg);
     }
 
@@ -753,6 +753,40 @@ class Controller {
             modelSelector: null,
             getModel: function (modelElement) { return null; }
         };
+    }
+
+    getBoxesArray() {
+        this.cfg.productBoxesArray = Array.from(document.querySelectorAll(this.cfg.productBoxSelector) ?? []);
+        // setInterval(() => {
+        //     CONFIG.cfg = Array.from(document.querySelectorAll(this.cfg.productBoxSelector) ?? []);
+        //     console.log(CONFIG);
+        // }, 4000);
+        // Select the node that will be observed for mutations
+
+        let selector = this.cfg.productBoxSelector;
+
+        const targetNode = document.body;
+
+        // Options for the observer (which mutations to observe)
+        const config = { attributes: true, childList: true, subtree: true };
+
+        // Callback function to execute when mutations are observed
+        const callback = function(mutationsList, observer) {
+            // Use traditional 'for loops' for IE 11
+            for(const mutation of mutationsList) {
+                if(mutation.type === 'childList' && mutation.addedNodes){
+                    for(let elem of Array.from(mutation.addedNodes)) {
+                        if(elem.querySelector('.product-container')) console.log(elem);
+                    }
+                }
+            }
+        };
+
+        // Create an observer instance linked to the callback function
+        const observer = new MutationObserver(callback);
+
+        // Start observing the target node for configured mutations
+        observer.observe(targetNode, config);
     }
    
     modifyProductList(show = true) {
