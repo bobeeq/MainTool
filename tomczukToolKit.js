@@ -6,7 +6,7 @@
 
 // ========================== CONFIG ==========================
 
-const CONFIG = {};
+const CONFIG = {elems: []};
 
 // ========================== CONFIG ==========================
 
@@ -723,8 +723,6 @@ class HTMLBuilder {
 }
 
 class Controller {
-
-
     constructor() {
         this.init();
     }
@@ -734,7 +732,7 @@ class Controller {
         if (this.cfg.access === false) return;
 
         this.cfg.productListContainerElement = document.querySelector(this.cfg.productListContainerSelector);
-        this.cfg.productListElementsArray = Array.from(this.cfg.productListContainerElement?.querySelectorAll(this.cfg.productListElementSelector) ?? []);
+        this.cfg.productListElementsArray = [...this.cfg.productListContainerElement?.querySelectorAll(this.cfg.productListElementSelector) ?? []];
         this.getBoxesArray();
         console.log(this.cfg);
     }
@@ -749,61 +747,52 @@ class Controller {
             productBoxSelector: null,
             productBoxesArray: [],
             fetchRequired: false,
+            mutationObserverRequired: false,
             fetchUrl: function (listElement) { return null },
             modelSelector: null,
-            getModel: function (modelElement) { return null; }
+            getModel: async function (modelElement) { return null; }
         };
     }
 
     getBoxesArray() {
-        this.cfg.productBoxesArray = Array.from(document.querySelectorAll(this.cfg.productBoxSelector) ?? []);
-        // setInterval(() => {
-        //     CONFIG.cfg = Array.from(document.querySelectorAll(this.cfg.productBoxSelector) ?? []);
-        //     console.log(CONFIG);
-        // }, 4000);
-        // Select the node that will be observed for mutations
+        this.cfg.productBoxesArray = [...document.querySelectorAll(this.cfg.productBoxSelector) ?? []];
+        if(this.cfg.mutationObserverRequired == false) return this.cfg.productBoxesArray;
 
-        let selector = this.cfg.productBoxSelector;
-
-        const targetNode = document.body;
-
-        // Options for the observer (which mutations to observe)
-        const config = { attributes: true, childList: true, subtree: true };
-
-        // Callback function to execute when mutations are observed
-        const callback = function(mutationsList, observer) {
-            // Use traditional 'for loops' for IE 11
+        const callback = function(mutationsList) {
             for(const mutation of mutationsList) {
-                if(mutation.type === 'childList' && mutation.addedNodes){
-                    for(let elem of Array.from(mutation.addedNodes)) {
-                        if(elem.querySelector('.product-container')) console.log(elem);
-                    }
-                }
+                console.log('mutation');
+                if(mutation.type !== 'childList' || [...mutation.addedNodes].length > 4) return;
+                let neededNodes = [...mutation.target.querySelectorAll(CONFIG.app.ctrl.cfg.productBoxSelector)]
+                if(neededNodes.length === 0) return;
+                CONFIG.app.ctrl.cfg.productBoxesArray = [...new Set([
+                    ...neededNodes,
+                    ...CONFIG.app.ctrl.cfg.productBoxesArray
+                ])];
+
+                CONFIG.app.ctrl.modifyProductList(storage('productListMode'));
             }
         };
-
-        // Create an observer instance linked to the callback function
         const observer = new MutationObserver(callback);
-
-        // Start observing the target node for configured mutations
-        observer.observe(targetNode, config);
+        observer.observe(document.body, { childList: true, subtree: true });
     }
    
     modifyProductList(show = true) {
         if(this.cfg.access === false) return null;
-        let list = this.cfg.productBoxesArray;
-        list.map(el => {
-            let infoBox = el.parentElement.querySelector('.tomczuk-product-info-box');
 
-            if(!infoBox) {
-                let model = this.cfg.getModel(el);
-                infoBox = html('div', { classes: 'tomczuk-product-info-box' });
-                el.before(infoBox);
-                let url = model ? `https://cba.kierus.com.pl/?p=EditProduct&load=*${model}` : '';
-                infoBox.append(html('a', { classes: 'tomczuk-box-child', textContent: 'idź do cba', href: url }));
+        let list = this.cfg.productBoxesArray;
+        for(let el of list) {
+            let infoBox = el.parentElement.querySelector('.tomczuk-product-info-box');
+            if(infoBox) infoBox.classList.toggle('tomczuk-hidden', !show);
+            else {
+                this.cfg.getModel(el).then(model => {
+                    infoBox = html('div', { classes: 'tomczuk-product-info-box' });
+                    el.before(infoBox);
+                    let url = model ? `https://cba.kierus.com.pl/?p=EditProduct&load=*${model}` : '';
+                    infoBox.append(html('a', { classes: 'tomczuk-box-child', textContent: `cba: ${model}`, href: url }));
+                    infoBox.classList.toggle('tomczuk-hidden', !show);
+                });
             }
-            infoBox.classList.toggle('tomczuk-hidden', !show);
-        });
+        }
         return list;
     }
 
@@ -892,9 +881,10 @@ class TKController extends Controller {
             productBoxSelector: '.product-container',
             productBoxesArray: [],
             fetchRequired: false,
+            mutationObserverRequired: false,
             fetchUrl: function (listElement) { return null },
             modelSelector: 'a[data-model]',
-            getModel: function (modelElement) {
+            getModel: async function (modelElement) {
                 return modelElement.querySelector(this.modelSelector)?.dataset.model;
             }
         }
@@ -935,7 +925,6 @@ class TKController extends Controller {
     }
 
     productList() {
-        console.log('go go productList()');
         let els = this.cfg.productListElementsArray;
 
         let products = {};
@@ -964,7 +953,7 @@ class TKController extends Controller {
                 let authorList = authors.querySelectorAll('a');
                 if (!authorList) break;
 
-                authorList = Array.from(authorList);
+                authorList = [...authorList];
 
                 let authorString = authorList.map(a => a.textContent.trim()).join(', ');
 
@@ -986,6 +975,25 @@ class TKController extends Controller {
 }
 
 class CMController extends Controller {
+    getCfg() {
+        return {
+            access: true,
+            productListContainerSelector: '#SearchProdDiv tbody',
+            productListContainerElement: null,
+            productListElementSelector: '#RowResultsWhite',
+            productListElementsArray: [],
+            productBoxSelector: 'a[data-model].cmp_m_prod_tytul',
+            productBoxesArray: [],
+            fetchRequired: false,
+            mutationObserverRequired: true,
+            fetchUrl: function (listElement) { return null },
+            modelSelector: 'a[data-model].cmp_m_prod_tytul',
+            getModel: async function (modelElement) {
+                return modelElement?.dataset.model;
+            }
+        }
+    };
+
     mainContainerSelectors() {
         return [
             'header#top',
@@ -1028,7 +1036,7 @@ class BEEController extends Controller {
         return '#header .container';
     }
 
-    getCfg() { // @todo: przerobić na bee.
+    getCfg() {
         return {
             access: true,
             productListContainerSelector: 'div.product_list.row',
@@ -1038,9 +1046,10 @@ class BEEController extends Controller {
             productBoxSelector: '.product-container',
             productBoxesArray: [],
             fetchRequired: false,
+            mutationObserverRequired: false,
             fetchUrl: function (listElement) { return null },
             modelSelector: 'a[data-model]',
-            getModel: function (modelElement) {
+            getModel: async function (modelElement) {
                 return modelElement.querySelector(this.modelSelector)?.dataset.model;
             }
         }
@@ -1081,14 +1090,14 @@ class BEEController extends Controller {
     productList() {
         let ul = document.querySelectorAll('div.row div.product_list');
         if (!ul) return null;
-        ul = Array.from(ul).filter(div => !div.classList.contains('products'));
+        ul = [...ul].filter(div => !div.classList.contains('products'));
 
         if (ul.length === 1) ul = ul[0];
         else return null;
 
         let els = ul.querySelectorAll('.product-container');
         if (!els) return null;
-        els = Array.from(els).filter(div => !div.classList.contains('productlike-adzone'));
+        els = [...els].filter(div => !div.classList.contains('productlike-adzone'));
 
         let products = {};
         products.keys = ['name', 'price', 'discount', 'category', 'brand', 'size', 'availability', 'url'];
@@ -1151,12 +1160,12 @@ class FantastyczneSwiatyController extends Controller {
             productBoxSelector: '.item-area',
             productBoxesArray: [],
             fetchRequired: false,
+            mutationObserverRequired: false,
             fetchUrl: function (listElement) { return null },
             modelSelector: 'a.product-image img',
-            getModel: function (modelElement) {
+            getModel: async function(modelElement) {
                 let el =  modelElement.querySelector(this.modelSelector);
                 if(!el) return null;
-                console.log(el);
                 let match = el.dataset?.src?.match(/\/([^\/]{3,30})\.jpg/i);
                 if(!match) return null;
                 if(match.length < 2) return null;
@@ -1204,7 +1213,7 @@ class GandalfController extends Controller {
 
         list = list.querySelectorAll('li > span.nowrap');
         if (!list.length) return null;
-        list = Array.from(list);
+        list = [...list];
         let el = list.find(el => el.textContent === 'ISBN:');
         return el.nextElementSibling.textContent.trim() || null;
     }
@@ -1223,8 +1232,30 @@ class SwiatKsiazkiController extends Controller {
     }
 }
 
-class TantisController extends Controller {
+class TantisController extends Controller { 
     mainContainerSelectors() { return '.header-main'; }
+
+    getCfg() {
+        return {
+            access: true,
+            productListContainerSelector: '#productGridRow .product-list-grid',
+            productListContainerElement: null,
+            productListElementSelector: '.product-box .card-body',
+            productListElementsArray: [],
+            productBoxSelector: '.product-box .card-body',
+            productBoxesArray: [],
+            fetchRequired: true,
+            mutationObserverRequired: false,
+            fetchUrl: function (listElement) { return listElement.querySelector('a')?.href },
+            modelSelector: 'a[data-model]',
+            getModel: async function (modelElement) {
+                let url = this.fetchUrl(modelElement);
+                let dom = await fetchPageDOM(url);
+                let model = CONFIG.app.ctrl.productModel(dom);
+                return model;
+            }
+        }
+    };
 
     productModel(dom = null) {
         if (!dom) dom = document;
@@ -1241,33 +1272,9 @@ class TantisController extends Controller {
         return json['@id'];
     }
 
-    getSelectorsForProductList() {
-        return { list: '.product-list-grid', container: '.card-body' };
-    }
-
-    productListSettings() {
-        return {
-            access: true,
-            listContainer: '.product-list-grid',
-            listElements: '.card-body',
-            fetchRequired: true,
-            fetchUrl: function (listElement) {
-                return listElement.querySelector('.product-img-container > a').href;
-            },
-            modelSelector: null,
-            getModelFromSelector: function () {
-                return null;
-            },
-            getModelFromURL: async (url) => {
-                let dom = await fetchPageDOM(url);
-                return this.productModel(dom);
-            }
-        };
-    }
-
     async productList() {
         let { list, container } = this.getSelectorsForProductList();
-        let elems = Array.from(document.querySelectorAll(`${list} ${container}`));
+        let elems = [...document.querySelectorAll(`${list} ${container}`)];
         for (let elem of elems) {
             let url = elem.querySelector('a').href;
             let dom = await fetchPageDOM(url);
@@ -1284,7 +1291,7 @@ class CzytamController extends Controller {
 
         let elements = details.querySelectorAll('span');
         if (!elements.length) return null;
-        elements = Array.from(elements);
+        elements = [...elements];
         let element = elements.find(el => el.textContent.match(/paskowy|isbn/i));
         return element.nextElementSibling.textContent.trim() || null;
     }
@@ -1637,6 +1644,7 @@ function basicInit(department) {
 
 (async function main() {
     let app = basicInit('handlowy');
+    CONFIG.app = app;
     if (!app) return;
     console.log('tomczukToolKit - Running...');
     app.navBox();
