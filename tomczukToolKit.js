@@ -760,8 +760,8 @@ class Controller {
 
         const callback = function(mutationsList) {
             for(const mutation of mutationsList) {
+                if(mutation.type !== 'childList') return;
                 console.log('mutation');
-                if(mutation.type !== 'childList' || [...mutation.addedNodes].length > 4) return;
                 let neededNodes = [...mutation.target.querySelectorAll(CONFIG.app.ctrl.cfg.productBoxSelector)]
                 if(neededNodes.length === 0) return;
                 CONFIG.app.ctrl.cfg.productBoxesArray = [...new Set([
@@ -778,14 +778,17 @@ class Controller {
    
     modifyProductList(show = true) {
         if(this.cfg.access === false) return null;
-
+        
         let list = this.cfg.productBoxesArray;
         for(let el of list) {
-            let infoBox = el.parentElement.querySelector('.tomczuk-product-info-box');
-            if(infoBox) infoBox.classList.toggle('tomczuk-hidden', !show);
-            else {
+            let infoBoxes = [...el.parentElement.querySelectorAll('.tomczuk-product-info-box')];
+            if(infoBoxes.length > 0) {
+                let infoBox = infoBoxes.pop();
+                infoBox.classList.toggle('tomczuk-hidden', !show);
+                infoBoxes.map(box => box.remove());
+            } else {
                 this.cfg.getModel(el).then(model => {
-                    infoBox = html('div', { classes: 'tomczuk-product-info-box' });
+                    let infoBox = html('div', { classes: 'tomczuk-product-info-box' });
                     el.before(infoBox);
                     let url = model ? `https://cba.kierus.com.pl/?p=EditProduct&load=*${model}` : '';
                     infoBox.append(html('a', { classes: 'tomczuk-box-child', textContent: `cba: ${model}`, href: url }));
@@ -985,7 +988,7 @@ class CMController extends Controller {
             productBoxSelector: 'a[data-model].cmp_m_prod_tytul',
             productBoxesArray: [],
             fetchRequired: false,
-            mutationObserverRequired: true,
+            mutationObserverRequired: false,
             fetchUrl: function (listElement) { return null },
             modelSelector: 'a[data-model].cmp_m_prod_tytul',
             getModel: async function (modelElement) {
@@ -1046,7 +1049,7 @@ class BEEController extends Controller {
             productBoxSelector: '.product-container',
             productBoxesArray: [],
             fetchRequired: false,
-            mutationObserverRequired: false,
+            mutationObserverRequired: true,
             fetchUrl: function (listElement) { return null },
             modelSelector: 'a[data-model]',
             getModel: async function (modelElement) {
