@@ -758,10 +758,9 @@ class Controller {
         this.cfg.productBoxesArray = [...document.querySelectorAll(this.cfg.productBoxSelector) ?? []];
         if(this.cfg.mutationObserverRequired == false) return this.cfg.productBoxesArray;
 
-        const callback = function(mutationsList) {
+        const callback = async function(mutationsList) {
             for(const mutation of mutationsList) {
                 if(mutation.type !== 'childList') return;
-                console.log('mutation');
                 let neededNodes = [...mutation.target.querySelectorAll(CONFIG.app.ctrl.cfg.productBoxSelector)]
                 if(neededNodes.length === 0) return;
                 CONFIG.app.ctrl.cfg.productBoxesArray = [...new Set([
@@ -769,32 +768,30 @@ class Controller {
                     ...CONFIG.app.ctrl.cfg.productBoxesArray
                 ])];
 
-                CONFIG.app.ctrl.modifyProductList(storage('productListMode'));
+                await CONFIG.app.ctrl.modifyProductList(storage('productListMode'));
             }
         };
         const observer = new MutationObserver(callback);
         observer.observe(document.body, { childList: true, subtree: true });
     }
    
-    modifyProductList(show = true) {
+    async modifyProductList(show = true) {
         if(this.cfg.access === false) return null;
         
         let list = this.cfg.productBoxesArray;
         for(let el of list) {
-            let infoBoxes = [...el.parentElement.querySelectorAll('.tomczuk-product-info-box')];
-            if(infoBoxes.length > 0) {
-                let infoBox = infoBoxes.pop();
-                infoBox.classList.toggle('tomczuk-hidden', !show);
-                infoBoxes.map(box => box.remove());
-            } else {
-                this.cfg.getModel(el).then(model => {
-                    let infoBox = html('div', { classes: 'tomczuk-product-info-box' });
-                    el.before(infoBox);
-                    let url = model ? `https://cba.kierus.com.pl/?p=EditProduct&load=*${model}` : '';
-                    infoBox.append(html('a', { classes: 'tomczuk-box-child', textContent: `cba: ${model}`, href: url }));
-                    infoBox.classList.toggle('tomczuk-hidden', !show);
-                });
+            if(el.modifiedBox === true) {
+                el.parentElement.querySelector('.tomczuk-product-info-box').classList.toggle('tomczuk-hidden', !show);
+                continue;
             }
+            this.cfg.getModel(el).then(model => {
+                el.modifiedBox = true;
+                let infoBox = html('div', { classes: 'tomczuk-product-info-box' });
+                el.before(infoBox);
+                let url = model ? `https://cba.kierus.com.pl/?p=EditProduct&load=*${model}` : '';
+                infoBox.append(html('a', { classes: 'tomczuk-box-child', textContent: `cba: ${model}`, href: url }));
+                infoBox.classList.toggle('tomczuk-hidden', !show);
+            });
         }
         return list;
     }
@@ -1133,6 +1130,13 @@ class BEEController extends Controller {
         }
 
         return products;
+    }
+
+    featuresPermissions() {
+        return {
+            accepted: [],
+            forbidden: []
+        };
     }
 
 }
