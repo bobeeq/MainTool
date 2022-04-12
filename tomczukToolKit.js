@@ -708,9 +708,10 @@ class App {
         let model = this.ctrl.productModel();
         if (isDev() && !model) model = '9788382158106';
         if (model) {
+            console.log('powinno działać');
             const salesBox = box('Sprzedaż');
-            const resultBox = html('div', { classes: 'tomczuk-sales-result-box', text: 'Sprzedaż z X dni:' });
-
+            const resultBox = html('div', { classes: 'tomczuk-sales-result-box'});
+            getSellReportForModel(model, resultBox);
             salesBox.append(resultBox);
 
             this.rightPanel.container.secondary.append(salesBox);
@@ -1574,6 +1575,17 @@ function selfCopyInput({ value, classes = '', id = null }) {
     return input;
 }
 
+async function getReport(url) {
+    let finalOptions = { method: 'get', credentials: 'include', mode: 'cors' };
+
+    let html = await fetch(url, finalOptions);
+    let buffer = await html.arrayBuffer();
+    let text = new TextDecoder('iso-8859-2').decode(buffer);
+    let dom = new DOMParser().parseFromString(text, 'text/html');
+  	let rawReport = dom.querySelector('textarea#SqlReport').value;
+    return rawReport;
+}
+
 async function getReportFromURL(url, additionalOptions = null) {
     let dom = await fetchPageDOM(url, additionalOptions);
     let rawReport = dom.querySelector('textarea#SqlReport').value;
@@ -1587,6 +1599,30 @@ async function getReportFromURL(url, additionalOptions = null) {
         result.push(obj);
     });
     return result;
+}
+
+function getSellReportForModel(model, box) {
+    // let endDate = new Date();
+    // let startDate = new Date();
+    // startDate.setDate(startDate.getDate() - parseInt(14));
+    // startDate = startDate.toLocaleDateString('fr-CA');
+    // endDate = endDate.toLocaleDateString('fr-CA');
+    // let sellUrl = 'https://cba.kierus.com.pl/?p=ShowSqlReport&r=ilosc+zamowionych+produktow+i+unikalnych+zamowien&lista_produktow=' + model
+    //     + '&data_od=' + startDate
+    //     + '&data_do=' + endDate + '&promo=&sklep=-1&source=-1&csv=0';
+
+    // let report = await getReport(sellUrl);
+
+    let report = [1,2,3,4,5,6,7,8,9,10,11,12,13].join("\t");
+    let reportArr = report.split("\t");
+
+    box.innerHTML = '';
+    box.innerHTML += reportArr[3] + ' szt. / ' + reportArr[4] + " zam.<br>";
+    box.innerHTML +="Sprzedaż dzienna: <strong>" + reportArr[3] + '</strong><br>';
+    box.innerHTML += 'Śr. cena sprz: <strong>' + String((parseFloat(reportArr[5]) / parseFloat(reportArr[3])).toFixed(2)).replace('.',',') + '</strong> zł<br>';
+    box.innerHTML += 'Stan: <strong>' + reportArr[9] + '</strong><br>';
+    box.innerHTML += '<span style="color: red;">Zapas na <strong>' + reportArr[3] + '</strong> dni</span><br>';
+    box.innerHTML += '<span style="color:green;">Zapotrz. (14 dni): <strong>' + reportArr[3] + '</strong></span><br>';
 }
 
 async function fetchPageDOM(url, additionalOptions = null) {
