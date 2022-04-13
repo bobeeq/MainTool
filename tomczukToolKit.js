@@ -172,7 +172,7 @@ function useTomczukToolbarStyles() {
             padding: 5px;
             overflow: hidden;
             opacity: 1;
-            max-height: 120px;
+            max-height: 160px;
             pointer-events: inherit;
             transition: .5s;
         }
@@ -710,11 +710,9 @@ class App {
         if (model) {
             console.log('powinno działać');
             const salesBox = box('Sprzedaż');
-            const resultBox = html('div', { classes: 'tomczuk-sales-result-box'});
-            getSellReportForModel(model, resultBox);
-            salesBox.append(resultBox);
+            getSellReportForModel(model, salesBox.container);
 
-            this.rightPanel.container.secondary.append(salesBox);
+            this.rightPanel.container.primary.append(salesBox);
         }
     }
 }
@@ -1601,7 +1599,7 @@ async function getReportFromURL(url, additionalOptions = null) {
     return result;
 }
 
-function getSellReportForModel(model, box) {
+async function getSellReportForModel(model, box) {
     // let endDate = new Date();
     // let startDate = new Date();
     // startDate.setDate(startDate.getDate() - parseInt(14));
@@ -1612,17 +1610,19 @@ function getSellReportForModel(model, box) {
     //     + '&data_do=' + endDate + '&promo=&sklep=-1&source=-1&csv=0';
 
     // let report = await getReport(sellUrl);
-
+    let cont = html('div');
     let report = [1,2,3,4,5,6,7,8,9,10,11,12,13].join("\t");
     let reportArr = report.split("\t");
 
-    box.innerHTML = '';
-    box.innerHTML += reportArr[3] + ' szt. / ' + reportArr[4] + " zam.<br>";
-    box.innerHTML +="Sprzedaż dzienna: <strong>" + reportArr[3] + '</strong><br>';
-    box.innerHTML += 'Śr. cena sprz: <strong>' + String((parseFloat(reportArr[5]) / parseFloat(reportArr[3])).toFixed(2)).replace('.',',') + '</strong> zł<br>';
-    box.innerHTML += 'Stan: <strong>' + reportArr[9] + '</strong><br>';
-    box.innerHTML += '<span style="color: red;">Zapas na <strong>' + reportArr[3] + '</strong> dni</span><br>';
-    box.innerHTML += '<span style="color:green;">Zapotrz. (14 dni): <strong>' + reportArr[3] + '</strong></span><br>';
+    cont.innerHTML = '';
+    cont.innerHTML += reportArr[3] + ' szt. / ' + reportArr[4] + " zam.<br>";
+    cont.innerHTML +="Sprzedaż dzienna: <strong>" + reportArr[3] + '</strong><br>';
+    cont.innerHTML += 'Śr. cena sprz: <strong>' + String((parseFloat(reportArr[5]) / parseFloat(reportArr[3])).toFixed(2)).replace('.',',') + '</strong> zł<br>';
+    cont.innerHTML += 'Stan: <strong>' + reportArr[9] + '</strong><br>';
+    cont.innerHTML += '<span style="color: red;">Zapas na <strong>' + reportArr[3] + '</strong> dni</span><br>';
+    cont.innerHTML += '<span>Zapotrz. (14 dni): <strong>' + reportArr[3] + '</strong></span><br>';
+    
+    box.append(cont);
 }
 
 async function fetchPageDOM(url, additionalOptions = null) {
