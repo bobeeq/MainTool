@@ -223,6 +223,21 @@
     padding: 5px;
 }
 
+.tomczuk-sale-control-panel-container {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.tomczuk-input-ctrl {
+    all: initial;
+    background-color: white;
+    transform: scale(1.4);
+    padding: 2px;
+    margin: 5px 20px;
+    text-align: center;
+    border-radius: 3px!important;
+}
+
 .tomczuk-mobile-mode {
     background-color: greenyellow;
     border-color: var(--red-color);

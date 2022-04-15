@@ -240,6 +240,21 @@ function useTomczukToolbarStyles() {
             padding: 5px;
         }
         
+        .tomczuk-sale-control-panel-container {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        }
+        
+        .tomczuk-input-ctrl {
+            all: initial;
+            background-color: white;
+            transform: scale(1.4);
+            padding: 2px;
+            margin: 5px 20px;
+            text-align: center;
+            border-radius: 3px!important;
+        }
+        
         .tomczuk-mobile-mode {
             background-color: greenyellow;
             border-color: var(--red-color);
@@ -348,6 +363,9 @@ class App {
             case isCurrentPage('bonito.pl'):
                 this.ctrl = new BonitoController;
                 break;
+            case isCurrentPage('nowe.bonito.pl'):
+                this.ctrl = new NoweBonitoController;
+                break;
             case isCurrentPage('gandalf.com.pl'):
                 this.ctrl = new GandalfController;
                 break;
@@ -371,6 +389,9 @@ class App {
                 break;
             case isCurrentPage('matras.pl'):
                 this.ctrl = new MatrasController;
+                break;
+            case isCurrentPage('lubimyczytac.pl'):
+                this.ctrl = new LubimyCzytacController;
                 break;
             default:
                 this.ctrl = new BasicController;
@@ -701,8 +722,8 @@ class App {
 
     salesBox() {
         const allowed = this.allow([
-            'handlowy'
-        ], 'salesBox')
+            'handlowy',
+        ], 'salesBox');
         if (!allowed) return;
 
         let model = this.ctrl.productModel();
@@ -710,10 +731,42 @@ class App {
         if (model) {
             console.log('powinno działać');
             const salesBox = box('Sprzedaż');
+            salesBox.controlPanel = this.getSalesControlPanel();
+
+            salesBox.container.before(salesBox.controlPanel);
             getSaleReportForModel(model, salesBox.container);
 
             this.rightPanel.container.primary.append(salesBox);
         }
+    }
+
+    getSalesControlPanel() {
+        let container = html('div', {
+            classes: 'tomczuk-sale-control-panel-container',
+        });
+        container.append(html('span', {innerText: 'wstecz'}));
+        container.append(html('span', {innerText: 'dni'}));
+
+        let delayInput = html('input', {
+            type: 'number',
+            min: '-1',
+            value: '20',
+            classes: 'tomczuk-input-ctrl tomczuk-delay'
+        });
+        delayInput.addEventListener('click', () => delayInput.select())
+        container.append(delayInput);
+
+        let durationInput = html('input', {
+            type: 'number',
+            min: '0',
+            value: '20',
+            step: '7',
+            classes: 'tomczuk-input-ctrl tomczuk-duration'
+        });
+        durationInput.addEventListener('click', () => durationInput.select());
+        container.append(durationInput);
+
+        return container;
     }
 }
 
@@ -1030,6 +1083,12 @@ class AllegroController extends Controller {
             let matches = box.innerText.match(/kod\s*producenta\:?\s*(\d+)/i);
             if(matches) return matches[1];
         }
+        let description = document.querySelector('[data-box-name="Container Description"]');
+        if( ! description) return null;
+
+        let ean = description.innerText.match(/(?=ean)?(?=[\s\:\-]*)(\d{13,18})/i);
+        if(ean.length > 1) return ean[1];
+
         return null;
     }
 }
@@ -1191,7 +1250,33 @@ class BonitoController extends Controller {
     mainContainerSelectors() { return 'body > div.container'; }
 
     productModel() {
+        let meta = document.querySelector('meta[itemprop="gtin"]');
+        if (!meta) return null;
+
+        let ean = meta.getAttribute('content');
+        if (!ean) return null;
+        return ean;
+    }
+}
+
+class NoweBonitoController extends Controller {
+    mainContainerSelectors() { return 'body > div.container'; }
+
+    productModel() {
         let meta = document.querySelector('meta[property="og:upc"]');
+        if (!meta) return null;
+
+        let ean = meta.getAttribute('content');
+        if (!ean) return null;
+        return ean;
+    }
+}
+
+class LubimyCzytacController extends Controller {
+    mainContainerSelectors() { return 'body > div.content > header > .container'; }
+
+    productModel() {
+        let meta = document.querySelector('meta[property="books:isbn"]');
         if (!meta) return null;
 
         let ean = meta.getAttribute('content');
@@ -1294,17 +1379,12 @@ class TantisController extends Controller {
 }
 
 class CzytamController extends Controller {
-    mainContainerSelectors() { return '#header-logo'; }
+    mainContainerSelectors() { return 'body > header > div.container:first-child'; }
 
     productModel() {
-        let details = document.querySelector('div.show-for-medium-up div#opis blockquote.size-12');
-        if (!details) return null;
-
-        let elements = details.querySelectorAll('span');
-        if (!elements.length) return null;
-        elements = [...elements];
-        let element = elements.find(el => el.textContent.match(/paskowy|isbn/i));
-        return element.nextElementSibling.textContent.trim() || null;
+        let meta = document.querySelector('#schemaimage')?.getAttribute('content').match(/\d{13,18}/)[0] ?? null;
+        if(meta) return meta;
+        return null;
     }
 }
 
@@ -1608,8 +1688,10 @@ async function getSaleReportForModel(model, box, duration = 14, delay = 0) {
     let [startDate, endDate] = prepareDates(duration, delay);
     let sellUrl = `https://cba.kierus.com.pl/?p=ShowSqlReport&r=ilosc+zamowionych+produktow+i+unikalnych+zamowien&lista_produktow=${model}&data_od=${startDate}&data_do=${endDate}&promo=&sklep=-1&source=-1&csv=0`;
     let report = await getReport(sellUrl);
-    if( ! report) return null;
-    console.debug(report);
+    if( ! report) {
+        box.innerText = 'Nie mogę pobrać raportu.';
+        return null;
+    };
     
     box.innerHTML += report.ilosc_zamowionych + ' szt. / ' + report.ilosc_unikalnych_zamowien + " zam.<br>";
     
