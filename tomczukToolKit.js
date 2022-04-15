@@ -710,7 +710,7 @@ class App {
         if (model) {
             console.log('powinno działać');
             const salesBox = box('Sprzedaż');
-            getSellReportForModel(model, salesBox.container);
+            getSaleReportForModel(model, salesBox.container);
 
             this.rightPanel.container.primary.append(salesBox);
         }
@@ -1007,7 +1007,13 @@ class CMController extends Controller {
 }
 
 class CBAController extends Controller {
+    productModel() {
+        return document.querySelector('input[name="products_model"]')?.value.trim();
+    }
 
+    mainContainerSelectors() {
+        return 'document > center > table';
+    }
 }
 
 class AllegroController extends Controller {
@@ -1016,16 +1022,15 @@ class AllegroController extends Controller {
     }
 
     productModel() {
-        let boxes = [];
-        let desc = boxes.push(document.querySelector('div[data-box-name="Container Description"]'));
-        if (!desc) return null;
+        let boxes = [...document.querySelectorAll(
+            '[data-box-name="Parameters"] div[data-role="app-container"] ul li div div ul li')
+        ];
 
-        boxes.push(document.querySelector('div[data-box-name="Container Parameters"]'));
-        boxes.push(desc);
-
-        let string = boxes.map(el => el.innerText).join('');
-        string = string.replaceAll(/[\s\-]/g, '').match(/[^\d](\d{13})[^\d]/);
-        return string.length === 0 ? null : string[1];
+        for(let box of boxes) {
+            let matches = box.innerText.match(/kod\s*producenta\:?\s*(\d+)/i);
+            if(matches) return matches[1];
+        }
+        return null;
     }
 }
 
@@ -1573,56 +1578,62 @@ function selfCopyInput({ value, classes = '', id = null }) {
     return input;
 }
 
-async function getReport(url) {
-    let finalOptions = { method: 'get', credentials: 'include', mode: 'cors' };
-
-    let html = await fetch(url, finalOptions);
-    let buffer = await html.arrayBuffer();
-    let text = new TextDecoder('iso-8859-2').decode(buffer);
-    let dom = new DOMParser().parseFromString(text, 'text/html');
-  	let rawReport = dom.querySelector('textarea#SqlReport').value;
-    return rawReport;
+async function getRawReport(url, additionalOptions = null) {
+    let dom = await fetchPageDOM(url, additionalOptions);
+  	return {
+        labels: dom?.querySelector('textarea#LabelsNames')?.value, 
+        report: dom?.querySelector('textarea#SqlReport')?.value
+    };
 }
 
-async function getReportFromURL(url, additionalOptions = null) {
-    let dom = await fetchPageDOM(url, additionalOptions);
-    let rawReport = dom.querySelector('textarea#SqlReport').value;
-    let labels = dom.querySelector('textarea#LabelsNames').value.trim().split("\t").map(label => label.toLowerCase());
+async function getReport(url, additionalOptions = null) {
+    let {labels, report} = await getRawReport(url, additionalOptions);
+    if( ! labels || ! report) return null;
+    labels = labels.split("\t").map(label => label.toLowerCase().trim());
     let result = [];
-    rawReport.split("\n").forEach(row => {
+    report.split("\n").forEach(row => {
         let obj = {};
         row.split("\t").forEach((value, i) => {
             obj[labels[i]] = value;
         });
         result.push(obj);
     });
+
+    if(result.length === 0) return null;
+    if(result.length === 1) return result[0];
     return result;
 }
 
-async function getSellReportForModel(model, box) {
-    // let endDate = new Date();
-    // let startDate = new Date();
-    // startDate.setDate(startDate.getDate() - parseInt(14));
-    // startDate = startDate.toLocaleDateString('fr-CA');
-    // endDate = endDate.toLocaleDateString('fr-CA');
-    // let sellUrl = 'https://cba.kierus.com.pl/?p=ShowSqlReport&r=ilosc+zamowionych+produktow+i+unikalnych+zamowien&lista_produktow=' + model
-    //     + '&data_od=' + startDate
-    //     + '&data_do=' + endDate + '&promo=&sklep=-1&source=-1&csv=0';
-
-    // let report = await getReport(sellUrl);
-    let cont = html('div');
-    let report = [1,2,3,4,5,6,7,8,9,10,11,12,13].join("\t");
-    let reportArr = report.split("\t");
-
-    cont.innerHTML = '';
-    cont.innerHTML += reportArr[3] + ' szt. / ' + reportArr[4] + " zam.<br>";
-    cont.innerHTML +="Sprzedaż dzienna: <strong>" + reportArr[3] + '</strong><br>';
-    cont.innerHTML += 'Śr. cena sprz: <strong>' + String((parseFloat(reportArr[5]) / parseFloat(reportArr[3])).toFixed(2)).replace('.',',') + '</strong> zł<br>';
-    cont.innerHTML += 'Stan: <strong>' + reportArr[9] + '</strong><br>';
-    cont.innerHTML += '<span style="color: red;">Zapas na <strong>' + reportArr[3] + '</strong> dni</span><br>';
-    cont.innerHTML += '<span>Zapotrz. (14 dni): <strong>' + reportArr[3] + '</strong></span><br>';
+async function getSaleReportForModel(model, box, duration = 14, delay = 0) {
+    let [startDate, endDate] = prepareDates(duration, delay);
+    let sellUrl = `https://cba.kierus.com.pl/?p=ShowSqlReport&r=ilosc+zamowionych+produktow+i+unikalnych+zamowien&lista_produktow=${model}&data_od=${startDate}&data_do=${endDate}&promo=&sklep=-1&source=-1&csv=0`;
+    let report = await getReport(sellUrl);
+    if( ! report) return null;
+    console.debug(report);
     
-    box.append(cont);
+    box.innerHTML += report.ilosc_zamowionych + ' szt. / ' + report.ilosc_unikalnych_zamowien + " zam.<br>";
+    
+    box.innerHTML += "Sprzedaż dzienna: <strong>" + String(parseFloat(parseInt(report.ilosc_zamowionych) / duration).toFixed(1)).replace('.',',') + '</strong><br>';
+
+    box.innerHTML += 'Śr. cena sprz: <strong>' + String((parseFloat(report.wartosc_produktow) / parseFloat(report.ilosc_zamowionych)).toFixed(2)).replace('.',',') + '</strong> zł<br>';
+
+    box.innerHTML += 'Stan: <strong>' + report.na_mag_i_zapas_z_kolejka + '</strong><br>';
+    //@todo: sprawdzić czy na_mag_i_zapas czy na_mag_i_zapas_z_kolejka
+    console.error('na_mag_i_zapas?');
+
+    box.innerHTML += '<span style="color: red;">Zapas na <strong>' + parseFloat(report.na_mag_i_zapas_z_kolejka / parseFloat(parseInt(report.ilosc_zamowionych) / duration).toFixed(1)).toFixed(0) + '</strong> dni</span><br>';
+    box.innerHTML += '<span style="color:green;">Zapotrz. (' + duration + ' dni): <strong>' + parseInt((parseFloat(parseInt(report.ilosc_zamowionych)/duration).toFixed(1)  * parseFloat(duration)) - parseFloat(report.na_mag_i_zapas_z_kolejka)) + '</strong></span><br>';
+    if(sellInput.value != '14') box.innerHTML += '<span style="color:blue;">Zapotrz. (14 dni): <strong>' + parseInt((parseFloat(parseInt(report.ilosc_zamowionych)/duration).toFixed(1)  * 14) - parseFloat(report.prop)) + '</strong></span><br>';
+}
+
+function prepareDates(duration, delay) {
+    let endDate = new Date();
+    let startDate = new Date();
+    startDate.setDate(startDate.getDate() - delay - duration);
+    endDate.setDate(endDate.getDate() - delay);
+    startDate = startDate.toLocaleDateString('fr-CA');
+    endDate = endDate.toLocaleDateString('fr-CA');
+    return [startDate, endDate];
 }
 
 async function fetchPageDOM(url, additionalOptions = null) {
