@@ -167,6 +167,13 @@
     max-height: 0;
 }
 
+.tomczuk-sales-box > .tomczuk-box-container {
+    background-color: #000;
+    margin: 3px;
+    padding: 4px;
+    border-radius: 5px;
+}
+
 .tomczuk-self-input {
     border: 1px solid black;
     text-align: center;
@@ -231,7 +238,7 @@
 .tomczuk-input-ctrl {
     all: initial;
     background-color: white;
-    transform: scale(1.4);
+    transform: scale(1.2);
     padding: 2px;
     margin: 5px 20px;
     text-align: center;

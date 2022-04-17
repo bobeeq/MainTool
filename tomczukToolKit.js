@@ -184,6 +184,13 @@ function useTomczukToolbarStyles() {
             max-height: 0;
         }
         
+        .tomczuk-sales-box > .tomczuk-box-container {
+            background-color: #000;
+            margin: 3px;
+            padding: 4px;
+            border-radius: 5px;
+        }
+        
         .tomczuk-self-input {
             border: 1px solid black;
             text-align: center;
@@ -248,7 +255,7 @@ function useTomczukToolbarStyles() {
         .tomczuk-input-ctrl {
             all: initial;
             background-color: white;
-            transform: scale(1.4);
+            transform: scale(1.2);
             padding: 2px;
             margin: 5px 20px;
             text-align: center;
@@ -726,17 +733,16 @@ class App {
         ], 'salesBox');
         if (!allowed) return;
 
-        let model = this.ctrl.productModel();
+        let model = CONFIG.model;
         if (isDev() && !model) model = '9788382158106';
         if (model) {
-            console.log('powinno działać');
             const salesBox = box('Sprzedaż');
+            salesBox.classList.add('tomczuk-sales-box');
             salesBox.controlPanel = this.getSalesControlPanel();
-
             salesBox.container.before(salesBox.controlPanel);
-            getSaleReportForModel(model, salesBox.container);
-
             this.rightPanel.container.primary.append(salesBox);
+            this.rightPanel.container.primary.salesBox = salesBox;
+            getSaleReportForProduct();
         }
     }
 
@@ -750,20 +756,22 @@ class App {
         let delayInput = html('input', {
             type: 'number',
             min: '-1',
-            value: '20',
+            value: storage('tomczuk-sale-report-delay') ?? '0',
             classes: 'tomczuk-input-ctrl tomczuk-delay'
         });
-        delayInput.addEventListener('click', () => delayInput.select())
+        delayInput.addEventListener('click', () => delayInput.select());
+        delayInput.addEventListener('change', getSaleReportForProduct);
         container.append(delayInput);
 
         let durationInput = html('input', {
             type: 'number',
             min: '0',
-            value: '20',
+            value: storage('tomczuk-sale-report-duration') ?? '14',
             step: '7',
             classes: 'tomczuk-input-ctrl tomczuk-duration'
         });
         durationInput.addEventListener('click', () => durationInput.select());
+        durationInput.addEventListener('change', getSaleReportForProduct);
         container.append(durationInput);
 
         return container;
@@ -1684,8 +1692,21 @@ async function getReport(url, additionalOptions = null) {
     return result;
 }
 
-async function getSaleReportForModel(model, box, duration = 14, delay = 0) {
+async function getSaleReportForProduct(model = null) {
+    if(model === null) model = CONFIG.model;
+    if(!model) return null;
+    let delay = CONFIG.rightPanel?.querySelector('.tomczuk-delay')?.value;
+    let duration = CONFIG.rightPanel?.querySelector('.tomczuk-duration')?.value;
+    
+    delay = delay ? parseInt(delay) : 0;
+    duration = duration ? parseInt(duration) : 14;
+    if(duration < 1) duration = 1;
+    CONFIG.rightPanel.querySelector('.tomczuk-duration').value = duration;
+
+    storage('tomczuk-sale-report-delay', delay);
+    storage('tomczuk-sale-report-duration', duration);
     let [startDate, endDate] = prepareDates(duration, delay);
+    let box = CONFIG.rightPanel.container.primary.salesBox.container;
     let sellUrl = `https://cba.kierus.com.pl/?p=ShowSqlReport&r=ilosc+zamowionych+produktow+i+unikalnych+zamowien&lista_produktow=${model}&data_od=${startDate}&data_do=${endDate}&promo=&sklep=-1&source=-1&csv=0`;
     let report = await getReport(sellUrl);
     if( ! report) {
@@ -1765,12 +1786,15 @@ function setInitListeners() {
     });
 }
 
-function basicInit(department) {
+async function basicInit(department) {
     if (!isDev()) useTomczukToolbarStyles();
     const app = new App(department);
     app.ctrl.redirectFromSearchPage();
     setInitListeners();
     app.getInvisibleBtn();
+    
+    CONFIG.model = await app.ctrl.productModel();
+    if (isDev() && ! CONFIG.model) CONFIG.model = '9788382158106';
     return app;
 }
 
@@ -1779,7 +1803,7 @@ function basicInit(department) {
 
 
 (async function main() {
-    let app = basicInit('handlowy');
+    let app = await basicInit('handlowy');
     CONFIG.app = app;
     if (!app) return;
     console.log('tomczukToolKit - Running...');
