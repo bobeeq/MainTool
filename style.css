@@ -171,6 +171,7 @@
     background-color: #000;
     margin: 3px;
     padding: 4px;
+                display: block;
     border-radius: 5px;
 }
 
@@ -236,13 +237,16 @@
 }
 
 .tomczuk-input-ctrl {
-    all: initial;
-    background-color: white;
-    transform: scale(1.2);
-    padding: 2px;
-    margin: 5px 20px;
-    text-align: center;
+    all: initial!important;
+    background-color: white!important;
+    transform: scale(1.2)!important;
+    padding: 2px!important;
+    margin: 5px 20px!important;
+    text-align: center!important;
     border-radius: 3px!important;
+                -webkit-appearance: auto!important;
+             -moz-appearance: auto!important;
+      appearance: auto!important;
 }
 
 .tomczuk-mobile-mode {
@@ -277,13 +281,14 @@
     display: flex;
     flex-direction: column;
     max-height: 120px;
+                margin: 3px 1px;
 }
 
 .tomczuk-product-info-box.tomczuk-hidden {
     display: none;
 }
 
-.tomczuk-product-info-box>.tomczuk-box-child {
+.tomczuk-product-info-box > .tomczuk-box-child {
     margin: 3px;
     background: green;
     color: white;

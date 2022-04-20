@@ -4,11 +4,11 @@
 // @grant    none
 // ==/UserScript==
 
-// ========================== CONFIG ==========================
+// ========================== GLOBAL ==========================
 
-const CONFIG = {elems: []};
+var app;
 
-// ========================== CONFIG ==========================
+// ========================== GLOBAL ==========================
 
 
 function useTomczukToolbarStyles() {
@@ -188,6 +188,7 @@ function useTomczukToolbarStyles() {
             background-color: #000;
             margin: 3px;
             padding: 4px;
+						display: block;
             border-radius: 5px;
         }
         
@@ -253,13 +254,16 @@ function useTomczukToolbarStyles() {
         }
         
         .tomczuk-input-ctrl {
-            all: initial;
-            background-color: white;
-            transform: scale(1.2);
-            padding: 2px;
-            margin: 5px 20px;
-            text-align: center;
+            all: initial!important;
+            background-color: white!important;
+            transform: scale(1.2)!important;
+            padding: 2px!important;
+            margin: 5px 20px!important;
+            text-align: center!important;
             border-radius: 3px!important;
+						-webkit-appearance: auto!important;
+     				-moz-appearance: auto!important;
+          	appearance: auto!important;
         }
         
         .tomczuk-mobile-mode {
@@ -294,13 +298,14 @@ function useTomczukToolbarStyles() {
             display: flex;
             flex-direction: column;
             max-height: 120px;
+						margin: 3px 1px;
         }
         
         .tomczuk-product-info-box.tomczuk-hidden {
             display: none;
         }
         
-        .tomczuk-product-info-box>.tomczuk-box-child {
+        .tomczuk-product-info-box > .tomczuk-box-child {
             margin: 3px;
             background: green;
             color: white;
@@ -359,6 +364,7 @@ class App {
                 this.ctrl = new CBAController;
                 break;
             case isTK():
+          	case isCurrentPage('tk.dev.kierushop'):
                 this.ctrl = new TKController;
                 break;
             case isBEE():
@@ -416,7 +422,7 @@ class App {
 
     getRightPanel() {
         let rightPanel = html('div', { classes: 'tomczuk-right-panel' });
-        CONFIG.rightPanel = this.rightPanel = rightPanel;
+        this.rightPanel = rightPanel;
 
         rightPanel.adjustWidth = () => {
             if (rightPanel.classList.contains('tomczuk-pinned')) return;
@@ -656,7 +662,7 @@ class App {
         const allowed = this.forbid([], 'productBox');
         if (!allowed) return;
 
-        let model = this.ctrl.productModel();
+        let model = app.model;
         if (isDev() && !model) model = '9788382158106';
         if (!model) return;
 
@@ -733,15 +739,15 @@ class App {
         ], 'salesBox');
         if (!allowed) return;
 
-        let model = CONFIG.model;
+        let model = app.model;
         if (isDev() && !model) model = '9788382158106';
         if (model) {
             const salesBox = box('Sprzedaż');
             salesBox.classList.add('tomczuk-sales-box');
-            salesBox.controlPanel = this.getSalesControlPanel();
-            salesBox.container.before(salesBox.controlPanel);
-            this.rightPanel.container.primary.append(salesBox);
-            this.rightPanel.container.primary.salesBox = salesBox;
+            salesBox.container.controlPanel = this.getSalesControlPanel();
+            salesBox.container.append(salesBox.container.controlPanel);
+            app.rightPanel.container.primary.append(salesBox);
+            app.rightPanel.container.primary.salesBox = salesBox;
             getSaleReportForProduct();
         }
     }
@@ -794,7 +800,7 @@ class Controller {
         this.cfg.productListContainerElement = document.querySelector(this.cfg.productListContainerSelector);
         this.cfg.productListElementsArray = [...this.cfg.productListContainerElement?.querySelectorAll(this.cfg.productListElementSelector) ?? []];
         this.getBoxesArray();
-        console.log(this.cfg);
+        this.adjustListElements();
     }
 
     getCfg() {
@@ -821,18 +827,22 @@ class Controller {
         const callback = async function(mutationsList) {
             for(const mutation of mutationsList) {
                 if(mutation.type !== 'childList') return;
-                let neededNodes = [...mutation.target.querySelectorAll(CONFIG.app.ctrl.cfg.productBoxSelector)]
+                let neededNodes = [...mutation.target.querySelectorAll(app.ctrl.cfg.productBoxSelector)]
                 if(neededNodes.length === 0) return;
-                CONFIG.app.ctrl.cfg.productBoxesArray = [...new Set([
+                app.ctrl.cfg.productBoxesArray = [...new Set([
                     ...neededNodes,
-                    ...CONFIG.app.ctrl.cfg.productBoxesArray
+                    ...app.ctrl.cfg.productBoxesArray
                 ])];
 
-                await CONFIG.app.ctrl.modifyProductList(storage('productListMode'));
+                await app.ctrl.modifyProductList(storage('productListMode'));
             }
         };
         const observer = new MutationObserver(callback);
         observer.observe(document.body, { childList: true, subtree: true });
+    }
+
+    adjustListElements() {
+        return null;
     }
    
     async modifyProductList(show = true) {
@@ -849,7 +859,15 @@ class Controller {
                 let infoBox = html('div', { classes: 'tomczuk-product-info-box' });
                 el.before(infoBox);
                 let url = model ? `https://cba.kierus.com.pl/?p=EditProduct&load=*${model}` : '';
-                infoBox.append(html('a', { classes: 'tomczuk-box-child', textContent: `cba: ${model}`, href: url }));
+                infoBox.append(html('a', { classes: 'tomczuk-box-child', textContent: 'idź do cba', href: url }));
+								let btn = html('button', {innerText: `kopiuj: ${model}`, style: 'font-size: .8rem; cursor: pointer;'});
+								btn.addEventListener('click', e => {
+									e.preventDefault();
+                  navigator.clipboard.writeText(model);
+									btn.disabled = true;
+                  setTimeout(() => { btn.disabled = false; }, 500);
+								});
+								infoBox.append(btn);
                 infoBox.classList.toggle('tomczuk-hidden', !show);
             });
         }
@@ -949,6 +967,11 @@ class TKController extends Controller {
             }
         }
     };
+
+    adjustListElements() {
+        this.cfg.productListElementsArray.map(e => e.style.height = 'auto');
+        this.cfg.productBoxesArray.map(e => e.style.height = 'auto');
+    }
 
     mainContainerSelectors() {
         if (sessionStorage.tomczukMobileMode === 'true') return '#header > .container';
@@ -1355,7 +1378,7 @@ class TantisController extends Controller {
             getModel: async function (modelElement) {
                 let url = this.fetchUrl(modelElement);
                 let dom = await fetchPageDOM(url);
-                let model = CONFIG.app.ctrl.productModel(dom);
+                let model = app.ctrl.productModel(dom);
                 return model;
             }
         }
@@ -1520,6 +1543,11 @@ function isCurrentPage(page) {
     page = page.replaceAll('.', '\.').replaceAll('/', '\/');
     let regexp = new RegExp(page, 'ig');
     return Boolean(window.location.href.match(regexp));
+}
+
+function log(string, type = 0) {
+    if(type === 1) console.error(string);
+    if(type === 0) console.debug(string);
 }
 
 function isTK() { return isCurrentPage('taniaksiazka.pl'); }
@@ -1692,27 +1720,49 @@ async function getReport(url, additionalOptions = null) {
     return result;
 }
 
-async function getSaleReportForProduct(model = null) {
-    if(model === null) model = CONFIG.model;
+async function getSalesBundleReport(models, duration = 14, delay = 0) {
+    let reqBody = new FormData();
+    reqBody.append('lista_modeli', models.join("\r\n"));
+    reqBody.append('sklep', '2');
+    reqBody.append('csv', '0');
+    let [startDate, endDate] = prepareDates(duration, delay);
+    let url = ``;
+
+
+    let report = await getReport(url, { method: 'post', body: reqBody });
+    if(!report) return null;
+
+    return report;
+}
+
+async function getSaleReportForProduct() {
+    model = app.model;
     if(!model) return null;
-    let delay = CONFIG.rightPanel?.querySelector('.tomczuk-delay')?.value;
-    let duration = CONFIG.rightPanel?.querySelector('.tomczuk-duration')?.value;
+    let delay = app.rightPanel?.querySelector('.tomczuk-delay')?.value;
+    let duration = app.rightPanel?.querySelector('.tomczuk-duration')?.value;
     
     delay = delay ? parseInt(delay) : 0;
     duration = duration ? parseInt(duration) : 14;
     if(duration < 1) duration = 1;
-    CONFIG.rightPanel.querySelector('.tomczuk-duration').value = duration;
+    app.rightPanel.querySelector('.tomczuk-duration').value = duration;
 
     storage('tomczuk-sale-report-delay', delay);
     storage('tomczuk-sale-report-duration', duration);
     let [startDate, endDate] = prepareDates(duration, delay);
-    let box = CONFIG.rightPanel.container.primary.salesBox.container;
+    let box = app.rightPanel.container.primary.salesBox.container.querySelector('.tomczuk-sale-report-container');
+    if(!box) {
+        box = html('div', {classes: 'tomczuk-sale-report-container'});
+    }
+    app.rightPanel.container.primary.salesBox.container.append(box);
+    
     let sellUrl = `https://cba.kierus.com.pl/?p=ShowSqlReport&r=ilosc+zamowionych+produktow+i+unikalnych+zamowien&lista_produktow=${model}&data_od=${startDate}&data_do=${endDate}&promo=&sklep=-1&source=-1&csv=0`;
-    let report = await getReport(sellUrl);
+
+	let report = await getReport(sellUrl);
     if( ! report) {
         box.innerText = 'Nie mogę pobrać raportu.';
         return null;
     };
+	box.innerHTML = '';
     
     box.innerHTML += report.ilosc_zamowionych + ' szt. / ' + report.ilosc_unikalnych_zamowien + " zam.<br>";
     
@@ -1722,11 +1772,11 @@ async function getSaleReportForProduct(model = null) {
 
     box.innerHTML += 'Stan: <strong>' + report.na_mag_i_zapas_z_kolejka + '</strong><br>';
     //@todo: sprawdzić czy na_mag_i_zapas czy na_mag_i_zapas_z_kolejka
-    console.error('na_mag_i_zapas?');
+    log('na_mag_i_zapas?', 1);
 
     box.innerHTML += '<span style="color: red;">Zapas na <strong>' + parseFloat(report.na_mag_i_zapas_z_kolejka / parseFloat(parseInt(report.ilosc_zamowionych) / duration).toFixed(1)).toFixed(0) + '</strong> dni</span><br>';
     box.innerHTML += '<span style="color:green;">Zapotrz. (' + duration + ' dni): <strong>' + parseInt((parseFloat(parseInt(report.ilosc_zamowionych)/duration).toFixed(1)  * parseFloat(duration)) - parseFloat(report.na_mag_i_zapas_z_kolejka)) + '</strong></span><br>';
-    if(sellInput.value != '14') box.innerHTML += '<span style="color:blue;">Zapotrz. (14 dni): <strong>' + parseInt((parseFloat(parseInt(report.ilosc_zamowionych)/duration).toFixed(1)  * 14) - parseFloat(report.prop)) + '</strong></span><br>';
+    if(duration != '14') box.innerHTML += '<span style="color:greenyellow;">Zapotrz. (14 dni): <strong>' + parseInt((parseFloat(parseInt(report.ilosc_zamowionych)/duration).toFixed(1)  * 14) - parseFloat(report.prop)) + '</strong></span><br>';
 }
 
 function prepareDates(duration, delay) {
@@ -1763,7 +1813,7 @@ function showGoUpBtn() {
 }
 
 function setInitListeners() {
-    let rightPanel = CONFIG.rightPanel;
+    let rightPanel = app.rightPanel;
     document.addEventListener('click', e => {
         if (e.target.closest('.tomczuk-right-panel')) return;
         rightPanel.adjustWidth();
@@ -1788,27 +1838,25 @@ function setInitListeners() {
 
 async function basicInit(department) {
     if (!isDev()) useTomczukToolbarStyles();
-    const app = new App(department);
+    app = new App(department);
     app.ctrl.redirectFromSearchPage();
     setInitListeners();
     app.getInvisibleBtn();
     
-    CONFIG.model = await app.ctrl.productModel();
-    if (isDev() && ! CONFIG.model) CONFIG.model = '9788382158106';
-    return app;
+    app.model = await app.ctrl.productModel();
+    if (isDev() && ! app.model) app.model = '9788382158106';
 }
 
 
 //START APP
 
 
-(async function main() {
-    let app = await basicInit('handlowy');
-    CONFIG.app = app;
-    if (!app) return;
-    console.log('tomczukToolKit - Running...');
+(async function run(department = 'handlowy') {
+    await basicInit(department);
+    log('tomczukToolKit - Running...');
     app.navBox();
     app.productBox();
     app.salesBox();
-    let productList = await app.productListBox();
+    await app.productListBox();
+    log(app);
 })();
