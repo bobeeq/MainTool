@@ -460,7 +460,7 @@ class App {
         rightPanel.unpin = () => {
             rightPanel.classList.remove('tomczuk-pinned');
             rightPanel.fullWidth();
-            storage('tomczukPanelToggler', 'unpinned')
+            storage('tomczukPanelToggler', 'unpinned');
         }
 
         if (storage('tomczukPanelToggler') == 'pinned') {
@@ -475,8 +475,7 @@ class App {
             }, 800);
         });
 
-        rightPanel.addEventListener('mouseover', e => clearTimeout(timeOutId));
-
+        rightPanel.addEventListener('mouseover', () => clearTimeout(timeOutId));
 
         rightPanel.addEventListener('click', e => {
             let classes = e.target.classList;
@@ -527,11 +526,9 @@ class App {
 
     makeUtilityContainer() {
         const container = html('div', { classes: 'tomczuk-utility-container' });
-        const primary = this.getPrimary();
-        const secondary = this.getSecondary();
-        container.primary = primary;
-        container.secondary = secondary;
-        container.append(primary, secondary);
+        container.primary = html('div', { classes: 'tomczuk-primary' });
+        container.secondary = html('div', { classes: 'tomczuk-secondary' });
+        container.append(container.primary, container.secondary);
         this.rightPanel.append(container);
         this.rightPanel.container = container;
     }
@@ -565,16 +562,6 @@ class App {
         return panelToggler;
     }
 
-    getPrimary() {
-        const primary = html('div', { classes: 'tomczuk-primary' });
-        return primary;
-    }
-
-    getSecondary() {
-        const secondary = html('div', { classes: 'tomczuk-secondary' });
-        return secondary;
-    }
-
     navBox() {
         const allowed = this.forbid([], 'navBox');
 
@@ -593,7 +580,7 @@ class App {
             innerHTML: '&#11014;&#65039;',
             classes: 'tomczuk-btn tomczuk-nav-btn tomczuk-goup-btn'
         });
-        goUpBtn.classList.toggle('tomczuk-hidden', !window.scrollY);
+        goUpBtn.classList.toggle('tomczuk-hidden', ! window.scrollY);
 
 
         goUpBtn.addEventListener('click', e => {
@@ -692,6 +679,9 @@ class App {
     }
 
     async productListBox() {
+        const allowed = this.forbid([], 'productListBox');
+        if (!allowed) return;
+        
         const productListBox = box('Lista produktów');
         const btnsContainer = html('div', { classes: 'tomczuk-product-btns-container tomczuk-row-btns' });
         const copyListBtn = html('a', { innerHTML: '&#128203;', classes: 'tomczuk-btn tomczuk-copy-product-list' });
@@ -927,7 +917,8 @@ class Controller {
             accepted: [],
             forbidden: [
                 'mobileBtn',
-                'reCacheBtn'
+                'reCacheBtn',
+                'productListBox'
             ]
         }
     }
@@ -1088,6 +1079,13 @@ class CMController extends Controller {
         let meta = document.querySelector('meta[itemprop="productID"]');
         return meta ? meta.getAttribute('content') : null;
     }
+
+    featuresPermissions() {
+        return {
+            accepted: [],
+            forbidden: []
+        };
+    }
 }
 
 class CBAController extends Controller {
@@ -1097,6 +1095,17 @@ class CBAController extends Controller {
 
     mainContainerSelectors() {
         return 'document > center > table';
+    }
+
+    featuresPermissions() {
+        return {
+            accepted: [],
+            forbidden: [
+                'mobileBtn',
+                'reCacheBtn',
+                'productListBox'
+            ]
+        }
     }
 }
 
@@ -1118,9 +1127,15 @@ class AllegroController extends Controller {
         if( ! description) return null;
 
         let ean = description.innerText.match(/(?=ean)?(?=[\s\:\-]*)(\d{13,18})/i);
-        if(ean.length > 1) return ean[1];
+        if(ean && ean.length > 1) return ean[1];
 
         return null;
+    }
+
+    featuresPermissions() {
+        let permissions = super.featuresPermissions();
+        permissions.forbidden.push('productListBox');
+        return permissions;
     }
 }
 
@@ -1232,7 +1247,6 @@ class BEEController extends Controller {
             forbidden: []
         };
     }
-
 }
 
 class FantastyczneSwiatyController extends Controller {
@@ -1275,6 +1289,13 @@ class FantastyczneSwiatyController extends Controller {
             }
         }
     };
+
+    featuresPermissions() {
+        return {
+            accepted: [],
+            forbidden: []
+        };
+    }
 }
 
 class BonitoController extends Controller {
@@ -1385,16 +1406,17 @@ class TantisController extends Controller {
     };
 
     productModel(dom = null) {
+        log('go model');
         if (!dom) dom = document;
         let json = dom.head.querySelector('script[type="application/ld+json"]');
         if (!json) return null;
 
         json = JSON.parse(json.textContent);
+        log(json);
         if (!json) return null;
         if (!json.hasOwnProperty('@graph')) return null;
-        json = json['@graph'];
-        if (!json.hasOwnProperty('5')) return null;
-        json = json['5'];
+        if(!Array.isArray(json['@graph'])) return null;
+        json = json['@graph'].pop();
         if (!json.hasOwnProperty('@id')) return null;
         return json['@id'];
     }
@@ -1776,7 +1798,7 @@ async function getSaleReportForProduct() {
 
     box.innerHTML += '<span style="color: red;">Zapas na <strong>' + parseFloat(report.na_mag_i_zapas_z_kolejka / parseFloat(parseInt(report.ilosc_zamowionych) / duration).toFixed(1)).toFixed(0) + '</strong> dni</span><br>';
     box.innerHTML += '<span style="color:green;">Zapotrz. (' + duration + ' dni): <strong>' + parseInt((parseFloat(parseInt(report.ilosc_zamowionych)/duration).toFixed(1)  * parseFloat(duration)) - parseFloat(report.na_mag_i_zapas_z_kolejka)) + '</strong></span><br>';
-    if(duration != '14') box.innerHTML += '<span style="color:greenyellow;">Zapotrz. (14 dni): <strong>' + parseInt((parseFloat(parseInt(report.ilosc_zamowionych)/duration).toFixed(1)  * 14) - parseFloat(report.prop)) + '</strong></span><br>';
+    if(duration != '14') box.innerHTML += '<span style="color:greenyellow;">Zapotrz. (14 dni): <strong>' + parseInt((parseFloat(parseInt(report.ilosc_zamowionych)/duration).toFixed(1)  * 14) - parseFloat(report.na_mag_i_zapas_z_kolejka)) + '</strong></span><br>';
 }
 
 function prepareDates(duration, delay) {
@@ -1808,8 +1830,7 @@ async function fetchPageDOM(url, additionalOptions = null) {
 function showGoUpBtn() {
     const btn = document.querySelector('.tomczuk-goup-btn');
     if (!btn) return false;
-    let scrollVal = window.scrollY;
-    btn.classList.toggle('tomczuk-hidden', !scrollVal);
+    btn.classList.toggle('tomczuk-hidden', !window.scrollY);
 }
 
 function setInitListeners() {
