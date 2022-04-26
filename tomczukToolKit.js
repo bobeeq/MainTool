@@ -468,7 +468,7 @@ class App {
         } else rightPanel.adjustWidth();
 
         let timeOutId;
-        rightPanel.addEventListener('mouseleave', e => {
+        rightPanel.addEventListener('mouseleave', () => {
             if (rightPanel.classList.contains('tomczuk-pinned')) return;
             timeOutId = setTimeout(() => {
                 rightPanel.adjustWidth();
@@ -510,7 +510,7 @@ class App {
             btn.innerHTML = '&#128316;';
         }
 
-        btn.addEventListener('click', e => {
+        btn.addEventListener('click', () => {
             this.rightPanel.classList.toggle('tomczuk-invisible');
             if (this.rightPanel.classList.contains('tomczuk-invisible')) {
                 btn.innerHTML = '&#128316;';
@@ -550,7 +550,7 @@ class App {
 
         if (pinned == 'pinned') panelToggler.classList.add(activeClass);
 
-        panelToggler.addEventListener('click', e => {
+        panelToggler.addEventListener('click', () => {
             if (panelToggler.classList.contains(activeClass)) {
                 this.rightPanel.unpin();
                 panelToggler.classList.remove(activeClass);
@@ -603,7 +603,7 @@ class App {
             innerHTML: '&#128260;'
         });
 
-        reCacheBtn.addEventListener('click', async e => {
+        reCacheBtn.addEventListener('click', async () => {
             const basicUrl = window.location.href.match(/^https?:\/\/[^\/]*/);
             try { await fetch(basicUrl + '/?ReCache=1'); } catch (e) { }
             window.location.reload();
@@ -626,7 +626,7 @@ class App {
         } else {
             mobileBtn.classList.add('tomczuk-mobile-mode');
         }
-        mobileBtn.addEventListener('click', async e => {
+        mobileBtn.addEventListener('click', async () => {
             const basicUrl = window.location.href.match(/^https?:\/\/[^\/]*/);
             if (!mobileBtn.classList.contains('tomczuk-mobile-mode')) {
                 mobileBtn.classList.add('tomczuk-mobile-mode');
@@ -695,7 +695,7 @@ class App {
             this.ctrl.modifyProductList(false);
         }
 
-        modifyListBtn.addEventListener('click', async e => {
+        modifyListBtn.addEventListener('click', async () => {
             if (!modifyListBtn.classList.contains('tomczuk-product-list-mode')) {
                 modifyListBtn.classList.add('tomczuk-product-list-mode');
                 storage('productListMode', 'true');
@@ -783,13 +783,15 @@ class Controller {
         this.init();
     }
 
-    init() {
+    async init() {
         this.cfg = this.getCfg();
         if (this.cfg.access === false) return;
 
         this.cfg.productListContainerElement = document.querySelector(this.cfg.productListContainerSelector);
         this.cfg.productListElementsArray = [...this.cfg.productListContainerElement?.querySelectorAll(this.cfg.productListElementSelector) ?? []];
         this.getBoxesArray();
+        this.cfg.productList = this.getDataFromProductList();
+        await this.getReportForProductList();
         this.adjustListElements();
     }
 
@@ -850,18 +852,84 @@ class Controller {
                 el.before(infoBox);
                 let url = model ? `https://cba.kierus.com.pl/?p=EditProduct&load=*${model}` : '';
                 infoBox.append(html('a', { classes: 'tomczuk-box-child', textContent: 'idź do cba', href: url }));
-								let btn = html('button', {innerText: `kopiuj: ${model}`, style: 'font-size: .8rem; cursor: pointer;'});
-								btn.addEventListener('click', e => {
-									e.preventDefault();
-                  navigator.clipboard.writeText(model);
-									btn.disabled = true;
-                  setTimeout(() => { btn.disabled = false; }, 500);
-								});
-								infoBox.append(btn);
+                let btn = html('button', {innerText: `kopiuj: ${model}`, style: 'font-size: .8rem; cursor: pointer;'});
+                btn.addEventListener('click', e => {
+                    e.preventDefault();
+                    navigator.clipboard.writeText(model);
+                    btn.disabled = true;
+                    setTimeout(() => { btn.disabled = false; }, 500);
+                });
+                infoBox.append(btn);
                 infoBox.classList.toggle('tomczuk-hidden', !show);
             });
         }
         return list;
+    }
+
+    getDataFromProductList() {
+        if(this.cfg.productBoxesArray.lenght === 0) return null;
+        
+        let data = new Map();
+        for(let box of this.cfg.productBoxesArray) {
+            let singleProductData = this.getDataFromSingleProductBox(box);
+            if( ! singleProductData) continue;
+            let model = singleProductData.get('model');
+            if( ! model) continue;
+            singleProductData.delete('model');
+            if( ! data.labels) data.labels = [...singleProductData.keys()];
+
+            singleProductData.set('element', box.parentElement);
+            data.set(model, singleProductData);
+        }
+
+        return data;
+    }
+
+    async getReportForProductList() {
+        let models = [...this.cfg.productList.keys()];
+        let reqBody = new FormData();
+        reqBody.append('lista_modeli', models.join("\r\n"));
+        reqBody.append('sklep', '2');
+        reqBody.append('csv', '0');
+
+        // let report = await getReport(url, { method: 'post', body: reqBody });
+        let report = [{
+            tytul: "Żabki grają w łapki. Maluszki ćwiczą rączki, nóżki i paluszki",
+            model: "9788382404036",
+            ean: "9788382404036",
+            ilosc_zamowionych: "251",
+            ilosc_unikalnych_zamowien: "227",
+            wartosc_produktow: "6548.5100",
+            wartosc_zamowien: "39086.6200",
+            ilosc_zamowionych_w_promocji: "239",
+            wartosc_produktow_w_promocji: "6202.3800",
+            na_mag_i_zapas: "92",
+            w_koszykach_z_zapasu: "0",
+            w_kolejce: "106",
+            na_mag_i_zapas_z_kolejka: "198"
+          },{
+            tytul: "Najszczęśliwsza książka pod chmurką",
+            model: "9788382511468",
+            ean: "9788382511468",
+            ilosc_zamowionych: "251",
+            ilosc_unikalnych_zamowien: "227",
+            wartosc_produktow: "6548.5100",
+            wartosc_zamowien: "39086.6200",
+            ilosc_zamowionych_w_promocji: "239",
+            wartosc_produktow_w_promocji: "6202.3800",
+            na_mag_i_zapas: "92",
+            w_koszykach_z_zapasu: "0",
+            w_kolejce: "106",
+            na_mag_i_zapas_z_kolejka: "198"
+        }];
+        for(let row of report) {
+            this.cfg.productList.get(row.model).set('saleReport', row);
+        }
+
+    }
+
+    getDataFromSingleProductBox(box) {
+        return null;
     }
 
     mainContainerSelectors() {
@@ -1038,6 +1106,33 @@ class TKController extends Controller {
         }
         if (Object.keys(products).length == 0) return null;
         return products;
+    }
+
+    getDataFromSingleProductBox(box) {
+        let data = new Map();
+        let model = box.querySelector('[data-model]')?.dataset.model;
+        if( ! model) return null;
+
+        data.set('model', model);
+
+        let price = box.querySelector('[data-price]')?.dataset.price;
+        if(price) price = price.replace('.', ',');
+        data.set('cena_nasza', price);
+
+        let retail = box.querySelector('.product-main-bottom span del:last-child')?.innerText;
+        if(retail) retail = retail.replace('.',',').replace(/[^\d,]+/, '');
+        else retail = price;
+        data.set('cena_okladkowa', retail);
+
+        let title = box.querySelector('[data-name]')?.dataset.name;
+        data.set('tytul', title);
+
+        let authors = [...box.querySelectorAll('.product-authors a')];
+        let author = authors.length === 0 ? null : authors.map(el => el.innerText.trim()).join(', ');
+
+        data.set('autor', author);
+
+        return data;
     }
 
     featuresPermissions() {
@@ -1406,28 +1501,17 @@ class TantisController extends Controller {
     };
 
     productModel(dom = null) {
-        log('go model');
         if (!dom) dom = document;
         let json = dom.head.querySelector('script[type="application/ld+json"]');
         if (!json) return null;
 
         json = JSON.parse(json.textContent);
-        log(json);
         if (!json) return null;
         if (!json.hasOwnProperty('@graph')) return null;
         if(!Array.isArray(json['@graph'])) return null;
         json = json['@graph'].pop();
         if (!json.hasOwnProperty('@id')) return null;
         return json['@id'];
-    }
-
-    async productList() {
-        let { list, container } = this.getSelectorsForProductList();
-        let elems = [...document.querySelectorAll(`${list} ${container}`)];
-        for (let elem of elems) {
-            let url = elem.querySelector('a').href;
-            let dom = await fetchPageDOM(url);
-        }
     }
 }
 
@@ -1732,6 +1816,8 @@ async function getReport(url, additionalOptions = null) {
     report.split("\n").forEach(row => {
         let obj = {};
         row.split("\t").forEach((value, i) => {
+            if(/^\d{1,7}$/.test(value)) value = parseInt(value);
+            else if(/^\d+\.\d+$/.test(value)) value = parseFloat(value).toFixed(2);
             obj[labels[i]] = value;
         });
         result.push(obj);
@@ -1840,7 +1926,7 @@ function setInitListeners() {
         rightPanel.adjustWidth();
     });
 
-    window.addEventListener('resize', e => { rightPanel.adjustWidth(); });
+    window.addEventListener('resize', () => { rightPanel.adjustWidth(); });
 
     document.addEventListener('scroll', showGoUpBtn);
     document.addEventListener('resize', showGoUpBtn);
