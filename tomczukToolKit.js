@@ -649,7 +649,7 @@ class App {
         const allowed = this.forbid([], 'productBox');
         if (!allowed) return;
 
-        let model = app.model;
+        let model = app.ctrl.data.model;
         if (isDev() && !model) model = '9788382158106';
         if (!model) return;
 
@@ -729,7 +729,7 @@ class App {
         ], 'salesBox');
         if (!allowed) return;
 
-        let model = app.model;
+        let model = app.ctrl.data.model;
         if (isDev() && !model) model = '9788382158106';
         if (model) {
             const salesBox = box('Sprzedaż');
@@ -784,63 +784,121 @@ class Controller {
     }
 
     async init() {
-        this.cfg = this.getCfg();
+        this.cfg = this.defaultCfg();
+        this.overrideCfg();
+        this.data = this.getData();
         if (this.cfg.access === false) return;
 
-        this.cfg.productListContainerElement = document.querySelector(this.cfg.productListContainerSelector);
-        this.cfg.productListElementsArray = [...this.cfg.productListContainerElement?.querySelectorAll(this.cfg.productListElementSelector) ?? []];
-        this.getBoxesArray();
-        this.cfg.productList = this.getDataFromProductList();
-        await this.getReportForProductList();
+        this.data.productListContainer = document.querySelector(this.cfg.productListContainerSelector);
+        this.data.productListElements = [...this.data.productListContainer?.querySelectorAll(this.cfg.productListElementSelector) ?? []];
+        this.getProductBoxes();
+        this.data.productList = this.getDataFromProductList();
+        await this.getReportForProductList(2,0);
         this.adjustListElements();
     }
 
-    getCfg() {
+    defaultCfg() {
         return {
             access: false,
             productListContainerSelector: null,
-            productListContainerElement: null,
             productListElementSelector: null,
-            productListElementsArray: [],
             productBoxSelector: null,
-            productBoxesArray: [],
             fetchRequired: false,
+            lowStockColorsCfg: [
+                {
+                    lowerThan: 3,
+                    css: {
+                        background: 'tomato',
+                        color: 'black'
+                    } 
+                }, {
+                    lowerThan: 5,
+                    css: {
+                        background: 'salmon',
+                        color: 'black'
+                    }
+                }, {
+                    lowerThan: 10,
+                    css: {
+                        background: 'pink',
+                        color: 'black'
+                    }
+                }, {
+                    lowerThan: null,
+                    css: {
+                        background: 'green',
+                        color: 'black'
+                    }
+                }
+            ],
             mutationObserverRequired: false,
             fetchUrl: function (listElement) { return null },
             modelSelector: null,
-            getModel: async function (modelElement) { return null; }
+            getModel: async function (modelElement) { return null; },
         };
     }
 
-    getBoxesArray() {
-        this.cfg.productBoxesArray = [...document.querySelectorAll(this.cfg.productBoxSelector) ?? []];
-        if(this.cfg.mutationObserverRequired == false) return this.cfg.productBoxesArray;
+    getCfg() {
+        return {};
+    }
+
+    overrideCfg() {
+        let cfg = this.getCfg();
+        for(let setting of Object.keys(cfg)) {
+            this.cfg[setting] = cfg[setting];
+        }
+    }
+
+    getData() {
+        return {
+            productListContainer: null,
+            productListElements: [],
+            productBoxes: [],
+            model: null
+        }
+    }
+
+    getProductBoxes() {
+        this.data.productBoxes = [...document.querySelectorAll(this.cfg.productBoxSelector) ?? []];
+        if(this.cfg.mutationObserverRequired == false) return this.cfg.productBoxes;
 
         const callback = async function(mutationsList) {
             for(const mutation of mutationsList) {
                 if(mutation.type !== 'childList') return;
                 let neededNodes = [...mutation.target.querySelectorAll(app.ctrl.cfg.productBoxSelector)]
                 if(neededNodes.length === 0) return;
-                app.ctrl.cfg.productBoxesArray = [...new Set([
+                app.ctrl.data.productBoxes = [...new Set([
                     ...neededNodes,
-                    ...app.ctrl.cfg.productBoxesArray
+                    ...app.ctrl.data.productBoxes
                 ])];
 
                 await app.ctrl.modifyProductList(storage('productListMode'));
             }
         };
         const observer = new MutationObserver(callback);
-        observer.observe(document.body, { childList: true, subtree: true });
+        observer.observe(document.body, { childList: true });
     }
 
     adjustListElements() {
         return null;
     }
+
+    paintLowStockElem(element, stockForDays) {
+        for(let days of this.cfg.lowStockColorsCfg) {
+            if(stockForDays < days.lowerThan) {
+                for(let property of Object.keys(days.css)) {
+                    element.style[property] = days.css[property];
+                }
+            }
+        }
+        log(element);
+        return element;
+    }
    
     async modifyProductList(show = true) {
         if(this.cfg.access === false) return null;
         
-        let list = this.cfg.productBoxesArray;
+        let list = this.data.productBoxes;
         for(let el of list) {
             if(el.modifiedBox === true) {
                 el.parentElement.querySelector('.tomczuk-product-info-box').classList.toggle('tomczuk-hidden', !show);
@@ -867,10 +925,10 @@ class Controller {
     }
 
     getDataFromProductList() {
-        if(this.cfg.productBoxesArray.lenght === 0) return null;
+        if(this.data.productBoxes.lenght === 0) return null;
         
         let data = new Map();
-        for(let box of this.cfg.productBoxesArray) {
+        for(let box of this.data.productBoxes) {
             let singleProductData = this.getDataFromSingleProductBox(box);
             if( ! singleProductData) continue;
             let model = singleProductData.get('model');
@@ -885,11 +943,17 @@ class Controller {
         return data;
     }
 
-    async getReportForProductList() {
-        let models = [...this.cfg.productList.keys()];
+    async getReportForProductList(duration, delay) {
+        let models = [...this.data.productList.keys()];
+        let url = 'https://cba.kierus.com.pl/?p=ShowSqlReport&r=ilosc+zamowionych+produktow+i+unikalnych+zamowien';
         let reqBody = new FormData();
-        reqBody.append('lista_modeli', models.join("\r\n"));
-        reqBody.append('sklep', '2');
+        let [startDate, endDate] = prepareDates(duration, delay);
+        reqBody.append('lista_produktow', models.join("\r\n"));
+        reqBody.append('data_od', startDate);
+        reqBody.append('data_do', endDate);
+        reqBody.append('promo', '');
+        reqBody.append('sklep', '-1');
+        reqBody.append('source', '-1');
         reqBody.append('csv', '0');
 
         // let report = await getReport(url, { method: 'post', body: reqBody });
@@ -907,7 +971,7 @@ class Controller {
             w_koszykach_z_zapasu: "0",
             w_kolejce: "106",
             na_mag_i_zapas_z_kolejka: "198"
-          },{
+          }, {
             tytul: "Najszczęśliwsza książka pod chmurką",
             model: "9788382511468",
             ean: "9788382511468",
@@ -922,10 +986,11 @@ class Controller {
             w_kolejce: "106",
             na_mag_i_zapas_z_kolejka: "198"
         }];
-        for(let row of report) {
-            this.cfg.productList.get(row.model).set('saleReport', row);
-        }
 
+        if( ! Array.isArray(report) || report.length === 0) return null;
+        for(let row of report) {
+            this.data.productList.get(row.model)?.set('saleReport', row);
+        }
     }
 
     getDataFromSingleProductBox(box) {
@@ -1011,14 +1076,11 @@ class TKController extends Controller {
     getCfg() {
         return {
             access: true,
-            productListContainerSelector: 'ul#pagi-slide',
-            productListContainerElement: null,
-            productListElementSelector: 'li',
-            productListElementsArray: [],
+            productListContainerSelector: '.container.with-below-header',
+            productListElementSelector: '.product-container',
             productBoxSelector: '.product-container',
-            productBoxesArray: [],
             fetchRequired: false,
-            mutationObserverRequired: false,
+            mutationObserverRequired: true,
             fetchUrl: function (listElement) { return null },
             modelSelector: 'a[data-model]',
             getModel: async function (modelElement) {
@@ -1028,8 +1090,8 @@ class TKController extends Controller {
     };
 
     adjustListElements() {
-        this.cfg.productListElementsArray.map(e => e.style.height = 'auto');
-        this.cfg.productBoxesArray.map(e => e.style.height = 'auto');
+        this.data.productListElements.map(e => e.style.height = 'auto');
+        this.data.productBoxes.map(e => e.style.height = 'auto');
     }
 
     mainContainerSelectors() {
@@ -1067,7 +1129,7 @@ class TKController extends Controller {
     }
 
     productList() {
-        let els = this.cfg.productListElementsArray;
+        let els = this.data.productListElements;
 
         let products = {};
         products.keys = ['title', 'price', 'discount', 'category', 'author', 'availability', 'url'];
@@ -1148,11 +1210,8 @@ class CMController extends Controller {
         return {
             access: true,
             productListContainerSelector: '#SearchProdDiv tbody',
-            productListContainerElement: null,
             productListElementSelector: '#RowResultsWhite',
-            productListElementsArray: [],
             productBoxSelector: 'a[data-model].cmp_m_prod_tytul',
-            productBoxesArray: [],
             fetchRequired: false,
             mutationObserverRequired: false,
             fetchUrl: function (listElement) { return null },
@@ -1244,11 +1303,8 @@ class BEEController extends Controller {
         return {
             access: true,
             productListContainerSelector: 'div.product_list.row',
-            productListContainerElement: null,
             productListElementSelector: '.product-container',
-            productListElementsArray: [],
             productBoxSelector: '.product-container',
-            productBoxesArray: [],
             fetchRequired: false,
             mutationObserverRequired: true,
             fetchUrl: function (listElement) { return null },
@@ -1364,11 +1420,8 @@ class FantastyczneSwiatyController extends Controller {
         return {
             access: true,
             productListContainerSelector: '.category-products .products-grid',
-            productListContainerElement: null,
             productListElementSelector: 'li.item',
-            productListElementsArray: [],
             productBoxSelector: '.item-area',
-            productBoxesArray: [],
             fetchRequired: false,
             mutationObserverRequired: false,
             fetchUrl: function (listElement) { return null },
@@ -1482,11 +1535,8 @@ class TantisController extends Controller {
         return {
             access: true,
             productListContainerSelector: '#productGridRow .product-list-grid',
-            productListContainerElement: null,
             productListElementSelector: '.product-box .card-body',
-            productListElementsArray: [],
             productBoxSelector: '.product-box .card-body',
-            productBoxesArray: [],
             fetchRequired: true,
             mutationObserverRequired: false,
             fetchUrl: function (listElement) { return listElement.querySelector('a')?.href },
@@ -1844,7 +1894,7 @@ async function getSalesBundleReport(models, duration = 14, delay = 0) {
 }
 
 async function getSaleReportForProduct() {
-    model = app.model;
+    model = app.ctrl.data.model;
     if(!model) return null;
     let delay = app.rightPanel?.querySelector('.tomczuk-delay')?.value;
     let duration = app.rightPanel?.querySelector('.tomczuk-duration')?.value;
@@ -1905,7 +1955,7 @@ async function fetchPageDOM(url, additionalOptions = null) {
             finalOptions[property] = additionalOptions[property];
         }
     }
-
+    log(['go report', url, finalOptions]);
     let html = await fetch(url, finalOptions);
     let buffer = await html.arrayBuffer();
     let text = new TextDecoder('iso-8859-2').decode(buffer);
@@ -1950,8 +2000,8 @@ async function basicInit(department) {
     setInitListeners();
     app.getInvisibleBtn();
     
-    app.model = await app.ctrl.productModel();
-    if (isDev() && ! app.model) app.model = '9788382158106';
+    app.ctrl.data.model = await app.ctrl.productModel();
+    if (isDev() && ! app.ctrl.data.model) app.ctrl.data.model = '9788382158106';
 }
 
 
@@ -1965,5 +2015,8 @@ async function basicInit(department) {
     app.productBox();
     app.salesBox();
     await app.productListBox();
+
+    app.ctrl.paintLowStockElem(document.body, 4);
+
     log(app);
 })();
