@@ -831,6 +831,7 @@ class Controller {
                     }
                 }
             ],
+            lowStockColorsElem: document.body,
             mutationObserverRequired: false,
             fetchUrl: function (listElement) { return null },
             modelSelector: null,
@@ -883,8 +884,12 @@ class Controller {
         return null;
     }
 
-    paintLowStockElem(element, stockForDays) {
-        for(let days of this.cfg.lowStockColorsCfg) {
+    paintLowStockElem(stockForDays) {
+        let element = this.cfg.lowStockColorsElem ?? null;
+        if( ! element) return null;
+        let cfg = this.cfg?.lowStockColorsCfg;
+        if( ! cfg) return null;
+        for(let days of cfg) {
             if(stockForDays < days.lowerThan) {
                 for(let property of Object.keys(days.css)) {
                     element.style[property] = days.css[property];
@@ -1590,7 +1595,9 @@ class MatrasController extends Controller {
 }
 
 class BasicController extends Controller {
-
+    defaultCfg() {
+        return {}
+    }
 }
 
 //-------------------------------------------------------------- STORAGE
@@ -2015,8 +2022,5 @@ async function basicInit(department) {
     app.productBox();
     app.salesBox();
     await app.productListBox();
-
-    app.ctrl.paintLowStockElem(document.body, 4);
-
     log(app);
 })();
