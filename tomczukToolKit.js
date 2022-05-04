@@ -1761,11 +1761,6 @@ function userSelection(strong = false, exceptions = '') {
     return result;
 }
 
-function getInterface() {
-    let interfaceContainer = document.createElement('div');
-    let minimize = document.createElement('div');
-}
-
 function getCloseBtn() {
     let close = document.createElement('div');
     close.classList.add('close-box');
@@ -1891,7 +1886,7 @@ async function getSalesBundleReport(models, duration = 14, delay = 0) {
     reqBody.append('sklep', '2');
     reqBody.append('csv', '0');
     let [startDate, endDate] = prepareDates(duration, delay);
-    let url = ``;
+    let url = `https://cba.kierus.com.pl/?p=ShowSqlReport&r=ilosc+zamowionych+produktow+i+unikalnych+zamowien`;
 
 
     let report = await getReport(url, { method: 'post', body: reqBody });
@@ -1900,15 +1895,17 @@ async function getSalesBundleReport(models, duration = 14, delay = 0) {
     return report;
 }
 
-async function getSaleReportForProduct() {
-    model = app.ctrl.data.model;
+async function getSaleReportForProduct(model = null, duration = null, delay = null) {
+    if(model === null) model = app.ctrl.data.model;
     if(!model) return null;
-    let delay = app.rightPanel?.querySelector('.tomczuk-delay')?.value;
-    let duration = app.rightPanel?.querySelector('.tomczuk-duration')?.value;
+    if(delay === null) delay = app.rightPanel?.querySelector('.tomczuk-delay')?.value;
+    if(duration === null) duration =  app.rightPanel?.querySelector('.tomczuk-duration')?.value;
+    if( ! delay || ! duration) return null;
     
-    delay = delay ? parseInt(delay) : 0;
-    duration = duration ? parseInt(duration) : 14;
+    delay = parseInt(delay);
+    duration = parseInt(duration);
     if(duration < 1) duration = 1;
+
     app.rightPanel.querySelector('.tomczuk-duration').value = duration;
 
     storage('tomczuk-sale-report-delay', delay);
