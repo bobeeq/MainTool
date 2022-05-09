@@ -358,6 +358,7 @@ function useTomczukToolbarStyles() {
 class App {
     constructor(department) {
         this.department = department;
+        this.storage = new Storage();
 
         switch (true) {
             case isCBA():
@@ -534,14 +535,13 @@ class App {
     }
 
     getHeader() {
-        const rightPanel = this.rightPanel;
         const header = html('div', { classes: 'tomczuk-right-panel-header' });
         header.append(html('div', { textContent: '.tomczukToolKit', classes: 'tomczuk-right-panel-header-title' }));
         const panelToggler = this.getPanelToggler(storage('tomczukPanelToggler'));
 
         header.prepend(panelToggler);
-        rightPanel.append(header);
-        rightPanel.header = header;
+        this.rightPanel.append(header);
+        this.rightPanel.header = header;
     }
 
     getPanelToggler(pinned) {
@@ -662,13 +662,9 @@ class App {
         if (!isTK()) btnsContainer.append(btn({ value: 'tk', url: `https://www.taniaksiazka.pl/Szukaj/q-${model}` }));
         if (!isBEE()) btnsContainer.append(btn({ value: 'bee', url: `https://www.bee.pl/Szukaj/q-${model}?pf-size=24&pf-page=1` }))
 
-
         const comingBasketsUrlBtn = this.comingBasketsUrlBtn(model);
-
         productBox.container.append(btnsContainer);
-
         if (comingBasketsUrlBtn) productBox.container.append(comingBasketsUrlBtn);
-
         this.rightPanel.container.primary.append(productBox);
     }
 
@@ -772,10 +768,6 @@ class App {
 
         return container;
     }
-}
-
-class HTMLBuilder {
-
 }
 
 class Controller {
@@ -1025,10 +1017,8 @@ class Controller {
 
     redirectFromSearchPage() {
         if (!this.isSearchPage()) return;
-        const searchText = this.searchText();
-        const url = this.searchedElementUrl(searchText);
-        if (!url) return;
-        window.location.href = url;
+        const url = this.searchedElementUrl(this.searchText());
+        if (url) window.location.href = url;
     }
 
     isSearchPage() { }
@@ -1063,16 +1053,8 @@ class Controller {
 
     showFeature(feature) {
         const { accepted, forbidden } = this.featuresPermissions();
-
-        if (forbidden.length > 0) {
-            if (forbidden.find(el => el === feature)) return false;
-            else return true;
-        }
-
-        if (accepted.length > 0) {
-            if (accepted.find(el => el === feature)) return true;
-            else return false;
-        }
+        if (forbidden.length > 0) return ! forbidden.find(el => el === feature);
+        if (accepted.length > 0) return accepted.find(el => el === feature);
         return true;
     }
 }
@@ -1100,19 +1082,12 @@ class TKController extends Controller {
     }
 
     mainContainerSelectors() {
-        if (sessionStorage.tomczukMobileMode === 'true') return '#header > .container';
-        return 'header#top';
+        return sessionStorage.tomczukMobileMode === 'true' ? '#header > .container' : 'header#top';
     }
 
     productModel(dom = null) {
         if (!dom) dom = document;
-
-        let meta = dom.querySelector('meta[itemprop="productID"]');
-        if (!meta) return null;
-
-        let model = meta.getAttribute('content');
-        if (!model) return null;
-        return model;
+        return dom.querySelector('meta[itemprop="productID"]')?.getAttribute('content');
     }
 
     isSearchPage() {
@@ -1120,25 +1095,18 @@ class TKController extends Controller {
     }
 
     searchText() {
-        let searchText = document.querySelector('div.text.search-results.text-with-border > strong');
-        if (!searchText) return null;
-        searchText = searchText.textContent;
-        if (!searchText) return null;
-        return searchText;
+        return document.querySelector('div.text.search-results.text-with-border > strong')?.textContent;
     }
 
     searchedElementUrl(searchText) {
         const searchedElement = document.querySelector(`a[data-model="${searchText}"]`);
-        if (!searchedElement) return false;
-        return searchedElement.href;
+        return searchedElement ? searchedElement.href : null;
     }
 
     productList() {
-        let els = this.data.productListElements;
-
         let products = {};
         products.keys = ['title', 'price', 'discount', 'category', 'author', 'availability', 'url'];
-        for (let prod of els) {
+        for (let prod of this.data.productListElements) {
             let obj = {};
             let a = prod.querySelector('a[data-model]');
             if (!a) continue;
@@ -1321,13 +1289,7 @@ class BEEController extends Controller {
     };
 
     productModel() {
-        let meta = document.querySelector('meta[itemprop="productID"]');
-        if (!meta) return false;
-
-        let model = meta.getAttribute('content');
-        if (!model) return false;
-
-        return model;
+        return document.querySelector('meta[itemprop="productID"]')?.getAttribute('content');
     }
 
     isSearchPage() {
@@ -1335,17 +1297,11 @@ class BEEController extends Controller {
     }
 
     searchText() {
-        let url = window.location.href;
-        let searchText = url.match(/Szukaj\/q\-([^\?]*)/i);
-        if (!searchText) return null;
-        searchText = searchText[1];
-        return searchText;
+        return window.location.href.match(/Szukaj\/q\-([^\?]*)/i)[1] ?? null;
     }
 
     searchedElementUrl(searchText) {
-        const searchedElement = document.querySelector(`a[data-model="${searchText}"]`);
-        if (!searchedElement) return false;
-        return searchedElement.href;
+        return document.querySelector(`a[data-model="${searchText}"]`)?.href;
     }
 
     getSelectorsForProductList() {
@@ -1353,12 +1309,9 @@ class BEEController extends Controller {
     }
 
     productList() {
-        let ul = document.querySelectorAll('div.row div.product_list');
-        if (!ul) return null;
-        ul = [...ul].filter(div => !div.classList.contains('products'));
-
-        if (ul.length === 1) ul = ul[0];
-        else return null;
+        let ul = [...document.querySelectorAll('div.row div.product_list')]
+                .filter(div => !div.classList.contains('products'))[0] ?? null;
+        if(! ul) return null;
 
         let els = ul.querySelectorAll('.product-container');
         if (!els) return null;
@@ -1414,11 +1367,7 @@ class FantastyczneSwiatyController extends Controller {
     }
 
     productModel() {
-        let match = document.body.innerText.match(/Model:\s+([\d\w@_]{3,30})/);
-        if(!match) return null;
-        if(match.length < 2) return null;
-        let model = match[1];
-        return model;
+        return document.body.innerText.match(/Model:\s+([\d\w@_]{3,30})/)[1] ?? null;
     }
 
     getCfg() {
@@ -1431,14 +1380,9 @@ class FantastyczneSwiatyController extends Controller {
             mutationObserverRequired: false,
             fetchUrl: function (listElement) { return null },
             modelSelector: 'a.product-image img',
-            getModel: async function(modelElement) {
-                let el =  modelElement.querySelector(this.modelSelector);
-                if(!el) return null;
-                let match = el.dataset?.src?.match(/\/([^\/]{3,30})\.jpg/i);
-                if(!match) return null;
-                if(match.length < 2) return null;
-                let model = match[1];
-                return model;
+            getModel: async function(el) {
+                let modelEl = el.querySelector(this.modelSelector);
+                return modelEl?.dataset?.src?.match(/\/([^\/]{3,30})\.jpg/i)[1] ?? null;
             }
         }
     };
@@ -1455,12 +1399,7 @@ class BonitoController extends Controller {
     mainContainerSelectors() { return 'body > div.container'; }
 
     productModel() {
-        let meta = document.querySelector('meta[itemprop="gtin"]');
-        if (!meta) return null;
-
-        let ean = meta.getAttribute('content');
-        if (!ean) return null;
-        return ean;
+        return document.querySelector('meta[itemprop="gtin"]')?.getAttribute('content');
     }
 }
 
@@ -1468,12 +1407,7 @@ class NoweBonitoController extends Controller {
     mainContainerSelectors() { return 'body > div.container'; }
 
     productModel() {
-        let meta = document.querySelector('meta[property="og:upc"]');
-        if (!meta) return null;
-
-        let ean = meta.getAttribute('content');
-        if (!ean) return null;
-        return ean;
+        return document.querySelector('meta[property="og:upc"]')?.getAttribute('content');
     }
 }
 
@@ -1481,12 +1415,7 @@ class LubimyCzytacController extends Controller {
     mainContainerSelectors() { return 'body > div.content > header > .container'; }
 
     productModel() {
-        let meta = document.querySelector('meta[property="books:isbn"]');
-        if (!meta) return null;
-
-        let ean = meta.getAttribute('content');
-        if (!ean) return null;
-        return ean;
+        return document.querySelector('meta[property="books:isbn"]')?.getAttribute('content');
     }
 }
 
@@ -1494,13 +1423,8 @@ class WKController extends Controller {
     mainContainerSelectors() { return '.blog-header > div.container'; }
 
     productModel() {
-        let tds = document.querySelectorAll('table.shop_attributes > tbody > tr > td');
-        if (!tds) return null;
-        tds = [...tds].map(el => el.innerText.replaceAll('-', '').trim());
-        let text = tds.find(el => el.match(/^\d{13,}$/));
-        if (!text) return null;
-
-        return text;
+        return [...document.querySelectorAll('table.shop_attributes > tbody > tr > td')]
+            ?.map(el => el.innerText.replaceAll('-', '').trim()).find(el => el.match(/^\d{13,}$/));
     }
 }
 
@@ -1508,15 +1432,9 @@ class GandalfController extends Controller {
     mainContainerSelectors() { return '.top-menu > .container:not(.infoheader)'; }
 
     productModel() {
-        let list = document.querySelector('div#product-details.details-list');
-
-        if (!list) return null;
-
-        list = list.querySelectorAll('li > span.nowrap');
-        if (!list.length) return null;
-        list = [...list];
-        let el = list.find(el => el.textContent === 'ISBN:');
-        return el.nextElementSibling.textContent.trim() || null;
+        let list = document.querySelector('div#product-details.details-list')?.querySelectorAll('li > span.nowrap');
+        return list ? [...list].find(el => el.textContent === 'ISBN:')
+            ?.nextElementSibling.textContent.trim() : null;
     }
 }
 
@@ -1524,12 +1442,7 @@ class SwiatKsiazkiController extends Controller {
     mainContainerSelectors() { return '.header.content'; }
 
     productModel() {
-        let meta = document.querySelector('meta[itemprop="gtin13"]')
-        if (!meta) return null;
-
-        let content = meta.getAttribute('content');
-        if (!content) return null;
-        return content;
+        return document.querySelector('meta[itemprop="gtin13"]')?.getAttribute('content');
     }
 }
 
@@ -1556,17 +1469,16 @@ class TantisController extends Controller {
     };
 
     productModel(dom = null) {
-        if (!dom) dom = document;
-        let json = dom.head.querySelector('script[type="application/ld+json"]');
-        if (!json) return null;
-
-        json = JSON.parse(json.textContent);
-        if (!json) return null;
-        if (!json.hasOwnProperty('@graph')) return null;
-        if(!Array.isArray(json['@graph'])) return null;
+        if(!dom) dom = document;
+        let json = dom.head.querySelector('script[type="application/ld+json"]')?.textContent;
+        json = json ? JSON.parse(json) : null;
+        if(
+            ! json ||
+            ! json.hasOwnProperty('@graph') ||
+            ! Array.isArray(json['@graph'])
+        ) return null;
         json = json['@graph'].pop();
-        if (!json.hasOwnProperty('@id')) return null;
-        return json['@id'];
+        return json['@id'] ?? null;
     }
 }
 
@@ -1574,9 +1486,7 @@ class CzytamController extends Controller {
     mainContainerSelectors() { return 'body > header > div.container:first-child'; }
 
     productModel() {
-        let meta = document.querySelector('#schemaimage')?.getAttribute('content').match(/\d{13,18}/)[0] ?? null;
-        if(meta) return meta;
-        return null;
+        return document.querySelector('#schemaimage')?.getAttribute('content')?.match(/\d{13,18}/)[0] ?? null;
     }
 }
 
@@ -1584,13 +1494,8 @@ class MatrasController extends Controller {
     mainContainerSelectors() { return 'header.mainHeader'; }
 
     productModel() {
-        let infoBox = document.querySelector('div.content div.colsInfo');
-        if (!infoBox) return null;
-
-        let model = infoBox.innerText.replaceAll('-', '').match(/[^\d](\d{13})[^\d]?/);
-
-        if (model.length === 0) return null;
-        return model[1];
+        return document.querySelector('div.content div.colsInfo')?.innerText
+            .replaceAll('-', '').match(/[^\d](\d{13})[^\d]?/)[1] ?? null;
     }
 }
 
@@ -1601,17 +1506,68 @@ class BasicController extends Controller {
 }
 
 //-------------------------------------------------------------- STORAGE
+class Storage {
+    constructor() {
+        if(window.localStorage) {
+            this.type = 'localStorage';
+        } else if(window.sessionStorage) {
+            this.type = 'sessionStorage';
+        } else {
+            this.type = null;
+            this.storage = null;
+        }
 
+        if(this.type && !window[this.type].getItem('tomczukToolKit')) {
+            window[this.type].setItem('tomczukToolKit', '');
+        }
+
+        this.set('toBedzieFloat', '12.83');
+        log(this.str());
+    }
+
+    str() {
+        if( ! this.type) return null;
+        return window[this.type].getItem('tomczukToolKit') ?? '';
+    }
+
+    set(key, value) {
+        if( ! this.type) return false;
+        let keyVal = `${key}=${value}`;
+        if(this.str().length === 0) {
+            window[this.type].setItem('tomczukToolKit', keyVal);
+            return;
+        }
+        let match = this.str().match(new RegExp(`(.*)(${key}=[^=&]+)(.*)`, 'i'));
+        log(match);
+        if( ! match) {
+            window[this.type].setItem(
+                'tomczukToolKit',
+                window[this.type].getItem('tomczukToolKit') + `&${keyVal}`
+            );
+        } else {
+            match.shift();
+            match[1] = keyVal;
+            window[this.type].setItem('tomczukToolKit', match.join(''));
+        }
+    }
+    
+    get(key) {
+        if( ! this.type) return false;
+        let match = this.str().match(new RegExp(`(?:${key}\=)([^=&]+)`, 'i'))[1]?.trim() ?? null;
+        if(match === null) return null;
+        if(match === 'true') return true;
+        if(match === 'false') return false;
+        if(/^\d+$/.test(match)) return parseInt(match);
+        if(/^\d+\.\d+$/.test(match)) return parseFloat(match);
+        return match;
+    }
+}
 function storage(key, value = null) {
-    if (value === null) return getFromLocalStorage(key);
-    return setToLocalStorage(key, value);
+    return value === null ? getFromLocalStorage(key) : setToLocalStorage(key, value);
 }
 
 function getFromLocalStorage(key) {
-    let storage = storageObj();
-    if (!storage) return null;
-    if (!storage.hasOwnProperty(key)) null;
-    return storage[key];
+    return storageObj()[key] ?? null;
 }
 
 function setToLocalStorage(key, value) {
@@ -1636,12 +1592,13 @@ function setToLocalStorage(key, value) {
 }
 
 function storageObj() {
-    const storageStr = localStorage.tomczukToolKit;
+    let storage = getStorage();
+    const storageStr = storage.tomczukToolKit;
     if (!storageStr) return null;
     let resultObj = {};
 
     for (const pair of storageStr.split('&')) {
-        let [key, val] = pair.split('=');
+        let [key, val] = pair.split('=').map(e => e.trim());
 
         if (val.match(/^\d*$/)) {
             resultObj[key] = parseInt(val);
@@ -1661,9 +1618,12 @@ function storageObj() {
     return resultObj;
 }
 
+function getStorage() {
+    return window.localStorage ?? window.sessionStorage ?? null
+}
+
 function emptyStorage() {
-    delete localStorage.tomczukToolKit;
-    return true;
+    delete getStorage()?.tomczukToolKit;
 }
 
 //-------------------------------------------------------------- STORAGE
@@ -1708,9 +1668,9 @@ function isCurrentPage(page) {
     return Boolean(window.location.href.match(regexp));
 }
 
-function log(string, type = 0) {
-    if(type === 1) console.error(string);
-    if(type === 0) console.debug(string);
+function log(message, type = 0) {
+    if(type === 1) console.error(message);
+    if(type === 0) console.debug(message);
 }
 
 function isTK() { return isCurrentPage('taniaksiazka.pl'); }
@@ -1720,9 +1680,7 @@ function isCBA() { return isCurrentPage('cba.kierus.com.pl'); }
 function isBEE() { return isCurrentPage('bee.pl'); }
 
 function isDev() {
-    let env = document.querySelector('meta[env="dev"]');
-    if (env) return env.getAttribute('env') == 'dev';
-    return false;
+    return document.querySelector('meta[env="dev"]')?.getAttribute('env') == 'dev';
 }
 
 function arrivingBasketsUrl(model) {
@@ -1734,13 +1692,10 @@ function px(value) { return value + 'px' }
 function noPx(value) {
     if (typeof value === 'number') return value;
     if (typeof value === 'string') {
-        let regexed = value.match(/(\d+\.?\d*)px/i);
+        let regexed = value.match(/(\d+\.?\d*)px/i)[1] ?? null;
         if (!regexed) throw new Error('Błędny argument dla funkcji noPx');
-        regexed = regexed[1];
-        if (regexed.match(/\./)) regexed = parseFloat(regexed);
-        else regexed = parseInt(regexed);
-        return regexed;
-    };
+        return regexed.match(/\./) ? parseFloat(regexed) : parseInt(regexed);
+    }
 }
 
 function userSelection(strong = false, exceptions = '') {
@@ -1874,10 +1829,7 @@ async function getReport(url, additionalOptions = null) {
         });
         result.push(obj);
     });
-
-    if(result.length === 0) return null;
-    if(result.length === 1) return result[0];
-    return result;
+    return result[0] ?? null;
 }
 
 async function getSalesBundleReport(models, duration = 14, delay = 0) {
@@ -1888,11 +1840,7 @@ async function getSalesBundleReport(models, duration = 14, delay = 0) {
     let [startDate, endDate] = prepareDates(duration, delay);
     let url = `https://cba.kierus.com.pl/?p=ShowSqlReport&r=ilosc+zamowionych+produktow+i+unikalnych+zamowien`;
 
-
-    let report = await getReport(url, { method: 'post', body: reqBody });
-    if(!report) return null;
-
-    return report;
+    return await getReport(url, { method: 'post', body: reqBody });
 }
 
 async function getSaleReportForProduct(model = null, duration = null, delay = null) {
@@ -1918,8 +1866,8 @@ async function getSaleReportForProduct(model = null, duration = null, delay = nu
     app.rightPanel.container.primary.salesBox.container.append(box);
     
     let sellUrl = `https://cba.kierus.com.pl/?p=ShowSqlReport&r=ilosc+zamowionych+produktow+i+unikalnych+zamowien&lista_produktow=${model}&data_od=${startDate}&data_do=${endDate}&promo=&sklep=-1&source=-1&csv=0`;
-
-	let report = await getReport(sellUrl);
+    let report = null;
+	// let report = await getReport(sellUrl);
     if( ! report) {
         box.innerText = 'Nie mogę pobrać raportu.';
         return null;
@@ -1968,9 +1916,8 @@ async function fetchPageDOM(url, additionalOptions = null) {
 }
 
 function showGoUpBtn() {
-    const btn = document.querySelector('.tomczuk-goup-btn');
-    if (!btn) return false;
-    btn.classList.toggle('tomczuk-hidden', !window.scrollY);
+    document.querySelector('.tomczuk-goup-btn')
+        ?.classList.toggle('tomczuk-hidden', !window.scrollY);
 }
 
 function setInitListeners() {
