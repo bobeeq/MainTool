@@ -455,16 +455,16 @@ class App {
             rightPanel.removeAttribute('style');
             rightPanel.classList.add('tomczuk-pinned');
             rightPanel.classList.remove('tomczuk-full', 'tomczuk-hidden');
-            storage('tomczukPanelToggler', 'pinned')
+            this.storage.set('panelToggler', 'pinned')
         }
 
         rightPanel.unpin = () => {
             rightPanel.classList.remove('tomczuk-pinned');
             rightPanel.fullWidth();
-            storage('tomczukPanelToggler', 'unpinned');
+            this.storage.set('panelToggler', 'unpinned');
         }
 
-        if (storage('tomczukPanelToggler') == 'pinned') {
+        if (this.storage.get('panelToggler') == 'pinned') {
             rightPanel.pin();
         } else rightPanel.adjustWidth();
 
@@ -502,12 +502,12 @@ class App {
 
     getInvisibleBtn() {
         let btn = html('a', { classes: 'tomczuk-invisible-btn tomczuk-invisible' });
-        if (storage('tomczukRightPanelInvisible') == false) {
+        if (this.storage.get('rightPanelInvisible') == false) {
             this.rightPanel.classList.remove('tomczuk-invisible');
             btn.innerHTML = '&#128317;';
         } else {
             this.rightPanel.classList.add('tomczuk-invisible');
-            storage('tomczukRightPanelInvisible', 'true');
+            this.storage.set('rightPanelInvisible', 'true');
             btn.innerHTML = '&#128316;';
         }
 
@@ -515,10 +515,10 @@ class App {
             this.rightPanel.classList.toggle('tomczuk-invisible');
             if (this.rightPanel.classList.contains('tomczuk-invisible')) {
                 btn.innerHTML = '&#128316;';
-                storage('tomczukRightPanelInvisible', 'true');
+                this.storage.set('rightPanelInvisible', 'true');
             } else {
                 btn.innerHTML = '&#128317;'
-                storage('tomczukRightPanelInvisible', 'false');
+                this.storage.set('rightPanelInvisible', 'false');
             }
         });
 
@@ -537,7 +537,7 @@ class App {
     getHeader() {
         const header = html('div', { classes: 'tomczuk-right-panel-header' });
         header.append(html('div', { textContent: '.tomczukToolKit', classes: 'tomczuk-right-panel-header-title' }));
-        const panelToggler = this.getPanelToggler(storage('tomczukPanelToggler'));
+        const panelToggler = this.getPanelToggler(this.storage.get('panelToggler'));
 
         header.prepend(panelToggler);
         this.rightPanel.append(header);
@@ -582,12 +582,10 @@ class App {
         });
         goUpBtn.classList.toggle('tomczuk-hidden', ! window.scrollY);
 
-
         goUpBtn.addEventListener('click', e => {
             e.preventDefault();
             window.scrollTo(0, 0);
         });
-
 
         navBtnsContainer.append(goUpBtn);
 
@@ -683,7 +681,7 @@ class App {
         const copyListBtn = html('a', { innerHTML: '&#128203;', classes: 'tomczuk-btn tomczuk-copy-product-list' });
         const modifyListBtn = html('a', { innerHTML: '&#128200;', classes: 'tomczuk-btn tomczuk-modify-product-list' });
 
-        if (storage('productListMode') == true) {
+        if (this.storage.get('productListMode') == true) {
             modifyListBtn.classList.add('tomczuk-product-list-mode');
             this.ctrl.modifyProductList(true);
         } else {
@@ -694,11 +692,11 @@ class App {
         modifyListBtn.addEventListener('click', async () => {
             if (!modifyListBtn.classList.contains('tomczuk-product-list-mode')) {
                 modifyListBtn.classList.add('tomczuk-product-list-mode');
-                storage('productListMode', 'true');
+                this.storage.set('productListMode', 'true');
                 this.ctrl.modifyProductList(true);
             } else {
                 modifyListBtn.classList.remove('tomczuk-product-list-mode');
-                storage('productListMode', 'false');
+                this.storage.set('productListMode', 'false');
                 this.ctrl.modifyProductList(false);
             }
         });
@@ -748,7 +746,7 @@ class App {
         let delayInput = html('input', {
             type: 'number',
             min: '-1',
-            value: storage('tomczuk-sale-report-delay') ?? '0',
+            value: this.storage.get('saleReportDelay') ?? '0',
             classes: 'tomczuk-input-ctrl tomczuk-delay'
         });
         delayInput.addEventListener('click', () => delayInput.select());
@@ -758,7 +756,7 @@ class App {
         let durationInput = html('input', {
             type: 'number',
             min: '0',
-            value: storage('tomczuk-sale-report-duration') ?? '14',
+            value: this.storage.get('saleReportDuration') ?? '14',
             step: '7',
             classes: 'tomczuk-input-ctrl tomczuk-duration'
         });
@@ -865,7 +863,7 @@ class Controller {
                     ...app.ctrl.data.productBoxes
                 ])];
 
-                await app.ctrl.modifyProductList(storage('productListMode'));
+                await app.ctrl.modifyProductList(app.storage.get('productListMode'));
             }
         };
         const observer = new MutationObserver(callback);
@@ -1505,7 +1503,6 @@ class BasicController extends Controller {
     }
 }
 
-//-------------------------------------------------------------- STORAGE
 class Storage {
     constructor() {
         if(window.localStorage) {
@@ -1520,13 +1517,10 @@ class Storage {
         if(this.type && !window[this.type].getItem('tomczukToolKit')) {
             window[this.type].setItem('tomczukToolKit', '');
         }
-
-        this.set('toBedzieFloat', '12.83');
-        log(this.str());
     }
 
     str() {
-        if( ! this.type) return null;
+        if( ! this.type) return undefined;
         return window[this.type].getItem('tomczukToolKit') ?? '';
     }
 
@@ -1538,7 +1532,6 @@ class Storage {
             return;
         }
         let match = this.str().match(new RegExp(`(.*)(${key}=[^=&]+)(.*)`, 'i'));
-        log(match);
         if( ! match) {
             window[this.type].setItem(
                 'tomczukToolKit',
@@ -1553,7 +1546,8 @@ class Storage {
     
     get(key) {
         if( ! this.type) return false;
-        let match = this.str().match(new RegExp(`(?:${key}\=)([^=&]+)`, 'i'))[1]?.trim() ?? null;
+        let match = this.str()?.match(new RegExp(`(?:${key}\=)([^=&]+)`, 'i'));
+        if(match) match = match[1];
         if(match === null) return null;
         if(match === 'true') return true;
         if(match === 'false') return false;
@@ -1562,71 +1556,6 @@ class Storage {
         return match;
     }
 }
-function storage(key, value = null) {
-    return value === null ? getFromLocalStorage(key) : setToLocalStorage(key, value);
-}
-
-function getFromLocalStorage(key) {
-    return storageObj()[key] ?? null;
-}
-
-function setToLocalStorage(key, value) {
-    let storage = storageObj();
-    if (!storage) {
-        localStorage.tomczukToolKit = `${key}=${value}`;
-        return true;
-    }
-    if (storage[key] !== undefined) {
-        storage[key] = value;
-
-        let storageStr = '';
-        for (const storageKey in storage) {
-            storageStr += `${storageKey}=${storage[storageKey]}&`;
-        }
-        localStorage.tomczukToolKit = storageStr.slice(0, -1);
-
-        return true;
-    };
-    localStorage.tomczukToolKit += '&' + key + '=' + value;
-    return true;
-}
-
-function storageObj() {
-    let storage = getStorage();
-    const storageStr = storage.tomczukToolKit;
-    if (!storageStr) return null;
-    let resultObj = {};
-
-    for (const pair of storageStr.split('&')) {
-        let [key, val] = pair.split('=').map(e => e.trim());
-
-        if (val.match(/^\d*$/)) {
-            resultObj[key] = parseInt(val);
-            continue;
-        }
-        if (val.match(/^\d*\.\d*$/)) {
-            resultObj[key] = parseFloat(val);
-            continue;
-        }
-        if (val.match(/^true|false$/i)) {
-            resultObj[key] = val.match(/true/i) ? true : false;
-            continue;
-        }
-
-        resultObj[key] = val;
-    }
-    return resultObj;
-}
-
-function getStorage() {
-    return window.localStorage ?? window.sessionStorage ?? null
-}
-
-function emptyStorage() {
-    delete getStorage()?.tomczukToolKit;
-}
-
-//-------------------------------------------------------------- STORAGE
 
 function pl2url(string) {
     let utf = {
@@ -1753,8 +1682,8 @@ function box(title) {
     box.append(titleDiv, container);
 
 
-    let minimizeOptName = title.toLowerCase() + '-boxMinimized';
-    if (storage(minimizeOptName) == true) {
+    let minimizeOptName = title.toLowerCase() + 'BoxMinimized';
+    if (app.storage.get(minimizeOptName) == true) {
         titleDiv.classList.add('minimized');
         container.classList.add('tomczuk-minimized-box');
         arrow.classList.add('arrow-minimized');
@@ -1767,8 +1696,8 @@ function box(title) {
         const container = titleDiv.nextElementSibling;
         container.classList.toggle('tomczuk-minimized-box');
 
-        if (titleDiv.classList.contains('minimized')) storage(minimizeOptName, 'true');
-        else storage(minimizeOptName, 'false');
+        if (titleDiv.classList.contains('minimized')) app.storage.set(minimizeOptName, 'true');
+        else app.storage.set(minimizeOptName, 'false');
     });
     return box;
 }
@@ -1856,8 +1785,8 @@ async function getSaleReportForProduct(model = null, duration = null, delay = nu
 
     app.rightPanel.querySelector('.tomczuk-duration').value = duration;
 
-    storage('tomczuk-sale-report-delay', delay);
-    storage('tomczuk-sale-report-duration', duration);
+    app.storage.set('saleReportDelay', delay);
+    app.storage.set('saleReportDuration', duration);
     let [startDate, endDate] = prepareDates(duration, delay);
     let box = app.rightPanel.container.primary.salesBox.container.querySelector('.tomczuk-sale-report-container');
     if(!box) {
