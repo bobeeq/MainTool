@@ -777,6 +777,9 @@ class Controller {
         this.cfg = this.defaultCfg();
         this.overrideCfg();
         this.data = this.getData();
+        this.addTestConsole();
+        this.runListsObserver();
+
         if (this.cfg.access === false) return;
 
         this.data.productListContainer = document.querySelector(this.cfg.productListContainerSelector);
@@ -789,11 +792,11 @@ class Controller {
 
     defaultCfg() {
         return {
+            testMode: true,
             access: false,
-            productListContainerSelector: null,
-            productListElementSelector: null,
-            productBoxSelector: null,
             fetchRequired: false,
+            listsObserverIntervalMs: 500,
+            salesReportAfterIntervals: 5,
             lowStockColorsCfg: [
                 {
                     lowerThan: 3,
@@ -822,7 +825,6 @@ class Controller {
                 }
             ],
             lowStockColorsElem: document.body,
-            mutationObserverRequired: false,
             fetchUrl: function (listElement) { return null },
             modelSelector: null,
             getModel: async function (modelElement) { return null; },
@@ -833,6 +835,45 @@ class Controller {
         return {};
     }
 
+    addTestConsole() {
+        if( ! window.location.href.match('taniaksiazka.pl')) return;
+        
+        let consoleBox = html('div', {
+            style: `
+                position: fixed;
+                z-index: 999999;
+                background: rgba(40,40,40,.85);
+                color: white;
+                top: -50vh;
+                left: 0;
+                overflow-y: scroll;
+                height: 45vh;
+                width: 100vw;
+                padding: 5px;
+                transition: 320ms ease-in;
+            `
+        });
+        document.addEventListener('keyup', e => {
+            if(e.key == '`') {
+                if(consoleBox.style.top == '0px') consoleBox.style.top = '-50vh';
+                else consoleBox.style.top = '0px';
+                log(consoleBox.style.top);
+            }
+        });
+        document.body.append(consoleBox);
+        this.cfg.console = consoleBox;
+    }
+
+    log(text, color = 'white') {
+        let span = html('span', { style: `
+            display:block;
+            padding: 1px;
+            font-size: 14px;
+            color: ${color};
+        `, textContent: (new Date()).toLocaleTimeString() + ': ' + text});
+        this.cfg.console.prepend(span);
+    }
+ 
     overrideCfg() {
         let cfg = this.getCfg();
         for(let setting of Object.keys(cfg)) {
@@ -847,6 +888,19 @@ class Controller {
             productBoxes: [],
             model: null
         }
+    }
+
+    runListsObserver() {
+        let interval = setInterval(() => {
+            if(this.cfg.salesReportAfterIntervals == 0) {
+                clearInterval(interval);
+                //fireReport();
+                return;
+            }
+            this.log(this.cfg.salesReportAfterIntervals);
+            //observeForNewBoxes();
+            this.cfg.salesReportAfterIntervals--;
+        }, this.cfg.mutationObserverIntervalMs)
     }
 
     getProductBoxes() {
