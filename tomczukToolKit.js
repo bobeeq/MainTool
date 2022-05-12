@@ -335,8 +335,8 @@ function useTomczukToolbarStyles() {
         }`;
 
     style.textContent = css;
-    let head = document.querySelector('head');
-    let body = document.querySelector('body');
+    let head = qs('head');
+    let body = qs('body');
     if (head) {
         head.append(style);
     } else {
@@ -415,10 +415,10 @@ class App {
     }
 
     allow(departments, feature) {
-        return (departments.includes(this.department) && this.ctrl.showFeature(feature));
+        return (departments.includes(this.department) && this.ctrl.__showFeature(feature));
     }
     forbid(departments, feature) {
-        return (!departments.includes(this.department) && this.ctrl.showFeature(feature));
+        return (!departments.includes(this.department) && this.ctrl.__showFeature(feature));
     }
 
     getRightPanel() {
@@ -429,7 +429,7 @@ class App {
             if (rightPanel.classList.contains('tomczuk-pinned')) return;
             let panelWidth = 400;
             let minSpace = 30;
-            let space = this.ctrl.spaceForPanel();
+            let space = this.ctrl.native.spaceForPanel();
             if (!space) {
                 rightPanel.hide();
             } else {
@@ -768,26 +768,26 @@ class App {
     }
 }
 
-class Controller {
-    constructor() {
-        this.init();
+class NativeCtrl {
+    constructor(controller) {
+        this.ctrl = controller;
     }
 
     async init() {
-        this.cfg = this.defaultCfg();
+        this.ctrl.cfg = this.defaultCfg();
         this.overrideCfg();
-        this.data = this.getData();
-        this.addTestConsole();
+        this.ctrl.data = this.ctrl.getData();
+        this.addDebugConsole();
         this.runListsObserver();
 
-        if (this.cfg.access === false) return;
+        if (this.ctrl.cfg.access === false) return;
 
-        this.data.productListContainer = document.querySelector(this.cfg.productListContainerSelector);
-        this.data.productListElements = [...this.data.productListContainer?.querySelectorAll(this.cfg.productListElementSelector) ?? []];
+        this.ctrl.data.productListContainer = qs(this.ctrl.cfg.productListContainerSelector);
+        this.ctrl.data.productListElements = [...this.ctrl.data.productListContainer?.querySelectorAll(this.ctrl.cfg.productListElementSelector) ?? []];
         this.getProductBoxes();
-        this.data.productList = this.getDataFromProductList();
-        await this.getReportForProductList(2,0);
-        this.adjustListElements();
+        this.ctrl.data.productList = this.ctrl.getDataFromProductList();
+        await this.ctrl.getReportForProductList(2,0);
+        this.ctrl.adjustListElements();
     }
 
     defaultCfg() {
@@ -831,13 +831,48 @@ class Controller {
         };
     }
 
-    getCfg() {
-        return {};
+    overrideCfg() {
+        let cfg = this.ctrl.getCfg();
+        for(let setting of Object.keys(cfg)) {
+            this.ctrl.cfg[setting] = cfg[setting];
+        }
     }
 
-    addTestConsole() {
-        if( ! window.location.href.match('taniaksiazka.pl')) return;
-        
+    runListsObserver() {
+        let interval = setInterval(() => {
+            if(this.ctrl.cfg.salesReportAfterIntervals == 0) {
+                clearInterval(interval);
+                //fireReport();
+                return;
+            }
+            this.log(this.ctrl.cfg.salesReportAfterIntervals);
+            //observeForNewBoxes();
+            this.ctrl.cfg.salesReportAfterIntervals--;
+        }, this.ctrl.cfg.mutationObserverIntervalMs)
+    }
+
+    getProductBoxes() {
+        this.ctrl.data.productBoxes = qsa(this.ctrl.cfg.productBoxSelector) ?? [];
+        if(this.ctrl.cfg.mutationObserverRequired == false) return this.ctrl.cfg.productBoxes;
+
+        const callback = async function(mutationsList) {
+            for(const mutation of mutationsList) {
+                if(mutation.type !== 'childList') return;
+                let neededNodes = [...mutation.target.querySelectorAll(app.ctrl.cfg.productBoxSelector)]
+                if(neededNodes.length === 0) return;
+                app.ctrl.data.productBoxes = [...new Set([
+                    ...neededNodes,
+                    ...app.ctrl.data.productBoxes
+                ])];
+
+                await app.ctrl.modifyProductList(app.storage.get('productListMode'));
+            }
+        };
+        const observer = new MutationObserver(callback);
+        observer.observe(document.body, { childList: true });
+    }
+    
+    addDebugConsole() {        
         let consoleBox = html('div', {
             style: `
                 position: fixed;
@@ -857,11 +892,10 @@ class Controller {
             if(e.key == '`') {
                 if(consoleBox.style.top == '0px') consoleBox.style.top = '-50vh';
                 else consoleBox.style.top = '0px';
-                log(consoleBox.style.top);
             }
         });
         document.body.append(consoleBox);
-        this.cfg.console = consoleBox;
+        this.ctrl.cfg.console = consoleBox;
     }
 
     log(text, color = 'white') {
@@ -869,16 +903,36 @@ class Controller {
             display:block;
             padding: 1px;
             font-size: 14px;
+            border-bottom: 1px solid #222;
             color: ${color};
-        `, textContent: (new Date()).toLocaleTimeString() + ': ' + text});
-        this.cfg.console.prepend(span);
+        `, textContent: (new Date()).toLocaleTimeString() + '___: ' + text});
+        this.ctrl.cfg.console.prepend(span);
     }
- 
-    overrideCfg() {
-        let cfg = this.getCfg();
-        for(let setting of Object.keys(cfg)) {
-            this.cfg[setting] = cfg[setting];
-        }
+    
+    spaceForPanel() {
+        let selectors = this.ctrl.mainContainerSelectors();
+        let selector = (!Array.isArray(selectors)) 
+            ? selectors 
+            : selectors.find(sel => qs(sel));
+
+        if (!selector) return null;
+        let container = qs(selector);
+        if (!container) return null;
+
+        return ((noPx(window.getComputedStyle(document.body).width) - container.clientWidth) / 2 - 10);
+    }
+}
+
+class Controller {
+    constructor() {
+        this.native = new NativeCtrl(this);
+        this.native.init();
+    }
+
+    log(text, color = 'white') {this.native.log(text, color);}
+
+    getCfg() {
+        return {};
     }
 
     getData() {
@@ -888,40 +942,6 @@ class Controller {
             productBoxes: [],
             model: null
         }
-    }
-
-    runListsObserver() {
-        let interval = setInterval(() => {
-            if(this.cfg.salesReportAfterIntervals == 0) {
-                clearInterval(interval);
-                //fireReport();
-                return;
-            }
-            this.log(this.cfg.salesReportAfterIntervals);
-            //observeForNewBoxes();
-            this.cfg.salesReportAfterIntervals--;
-        }, this.cfg.mutationObserverIntervalMs)
-    }
-
-    getProductBoxes() {
-        this.data.productBoxes = [...document.querySelectorAll(this.cfg.productBoxSelector) ?? []];
-        if(this.cfg.mutationObserverRequired == false) return this.cfg.productBoxes;
-
-        const callback = async function(mutationsList) {
-            for(const mutation of mutationsList) {
-                if(mutation.type !== 'childList') return;
-                let neededNodes = [...mutation.target.querySelectorAll(app.ctrl.cfg.productBoxSelector)]
-                if(neededNodes.length === 0) return;
-                app.ctrl.data.productBoxes = [...new Set([
-                    ...neededNodes,
-                    ...app.ctrl.data.productBoxes
-                ])];
-
-                await app.ctrl.modifyProductList(app.storage.get('productListMode'));
-            }
-        };
-        const observer = new MutationObserver(callback);
-        observer.observe(document.body, { childList: true });
     }
 
     adjustListElements() {
@@ -1050,19 +1070,6 @@ class Controller {
         return null;
     }
 
-    spaceForPanel() {
-        let selectors = this.mainContainerSelectors();
-        let selector = (!Array.isArray(selectors)) 
-            ? selectors 
-            : selectors.find(sel => document.querySelector(sel));
-
-        if (!selector) return null;
-        let container = document.querySelector(selector);
-        if (!container) return null;
-
-        return ((noPx(window.getComputedStyle(document.body).width) - container.clientWidth) / 2 - 10);
-    }
-
     productModel(dom = null) {
         return null;
     }
@@ -1103,7 +1110,7 @@ class Controller {
         }
     }
 
-    showFeature(feature) {
+    __showFeature(feature) {
         const { accepted, forbidden } = this.featuresPermissions();
         if (forbidden.length > 0) return ! forbidden.find(el => el === feature);
         if (accepted.length > 0) return accepted.find(el => el === feature);
@@ -1147,11 +1154,11 @@ class TKController extends Controller {
     }
 
     searchText() {
-        return document.querySelector('div.text.search-results.text-with-border > strong')?.textContent;
+        return qs('div.text.search-results.text-with-border > strong')?.textContent;
     }
 
     searchedElementUrl(searchText) {
-        const searchedElement = document.querySelector(`a[data-model="${searchText}"]`);
+        const searchedElement = qs(`a[data-model="${searchText}"]`);
         return searchedElement ? searchedElement.href : null;
     }
 
@@ -1160,7 +1167,7 @@ class TKController extends Controller {
         products.keys = ['title', 'price', 'discount', 'category', 'author', 'availability', 'url'];
         for (let prod of this.data.productListElements) {
             let obj = {};
-            let a = prod.querySelector('a[data-model]');
+            let a = qs('a[data-model]', prod);
             if (!a) continue;
             const model = a.dataset.model;
 
@@ -1255,7 +1262,7 @@ class CMController extends Controller {
     }
 
     productModel() {
-        let meta = document.querySelector('meta[itemprop="productID"]');
+        let meta = qs('meta[itemprop="productID"]');
         return meta ? meta.getAttribute('content') : null;
     }
 
@@ -1269,7 +1276,7 @@ class CMController extends Controller {
 
 class CBAController extends Controller {
     productModel() {
-        return document.querySelector('input[name="products_model"]')?.value.trim();
+        return qs('input[name="products_model"]')?.value.trim();
     }
 
     mainContainerSelectors() {
@@ -1294,15 +1301,15 @@ class AllegroController extends Controller {
     }
 
     productModel() {
-        let boxes = [...document.querySelectorAll(
-            '[data-box-name="Parameters"] div[data-role="app-container"] ul li div div ul li')
-        ];
+        let boxes = qsa(
+            '[data-box-name="Parameters"] div[data-role="app-container"] ul li div div ul li'
+        );
 
         for(let box of boxes) {
             let matches = box.innerText.match(/kod\s*producenta\:?\s*(\d+)/i);
             if(matches) return matches[1];
         }
-        let description = document.querySelector('[data-box-name="Container Description"]');
+        let description = qs('[data-box-name="Container Description"]');
         if( ! description) return null;
 
         let ean = description.innerText.match(/(?=ean)?(?=[\s\:\-]*)(\d{13,18})/i);
@@ -1341,7 +1348,7 @@ class BEEController extends Controller {
     };
 
     productModel() {
-        return document.querySelector('meta[itemprop="productID"]')?.getAttribute('content');
+        return qs('meta[itemprop="productID"]')?.getAttribute('content');
     }
 
     isSearchPage() {
@@ -1353,7 +1360,7 @@ class BEEController extends Controller {
     }
 
     searchedElementUrl(searchText) {
-        return document.querySelector(`a[data-model="${searchText}"]`)?.href;
+        return qs(`a[data-model="${searchText}"]`)?.href;
     }
 
     getSelectorsForProductList() {
@@ -1361,11 +1368,11 @@ class BEEController extends Controller {
     }
 
     productList() {
-        let ul = [...document.querySelectorAll('div.row div.product_list')]
+        let ul = qsa('div.row div.product_list')
                 .filter(div => !div.classList.contains('products'))[0] ?? null;
         if(! ul) return null;
 
-        let els = ul.querySelectorAll('.product-container');
+        let els = qsa('product-container', ul);
         if (!els) return null;
         els = [...els].filter(div => !div.classList.contains('productlike-adzone'));
 
@@ -1373,7 +1380,7 @@ class BEEController extends Controller {
         products.keys = ['name', 'price', 'discount', 'category', 'brand', 'size', 'availability', 'url'];
         for (let prod of els) {
             let obj = {};
-            let a = prod.querySelector('a.product-name[data-model]');
+            let a = qs('a.product-name[data-model]', prod);
             if (!a) continue;
             const model = a.dataset.model;
 
@@ -1381,19 +1388,19 @@ class BEEController extends Controller {
             obj.category = a.dataset.category ? a.dataset.category : '-';
             obj.price = a.dataset.price ? a.dataset.price : '-';
             let [brand, name, size] = [
-                a.querySelector('.products-title-prefix'),
-                a.querySelector('.products-title-name'),
-                a.querySelector('.products-title-suffix')
+                qs('.products-title-prefix', a),
+                qs('.products-title-name', a),
+                qs('.products-title-suffix', a)
             ];
 
             obj.brand = brand ? brand.textContent : '-';
             obj.name = name ? name.textContent : '-';
             obj.size = size ? size.textContent : '-';
 
-            let avail = prod.querySelector('.product-available');
+            let avail = qs('.product-available', prod);
             obj.availability = avail ? avail.textContent : '';
 
-            const discount = prod.querySelector('.product-discount');
+            const discount = qs('.product-discount', prod);
             obj.discount = discount ? discount.textContent.trim() : '-';
 
             products[model] = obj;
@@ -1433,7 +1440,7 @@ class FantastyczneSwiatyController extends Controller {
             fetchUrl: function (listElement) { return null },
             modelSelector: 'a.product-image img',
             getModel: async function(el) {
-                let modelEl = el.querySelector(this.modelSelector);
+                let modelEl = qs(this.modelSelector, el);
                 return modelEl?.dataset?.src?.match(/\/([^\/]{3,30})\.jpg/i)[1] ?? null;
             }
         }
@@ -1451,7 +1458,7 @@ class BonitoController extends Controller {
     mainContainerSelectors() { return 'body > div.container'; }
 
     productModel() {
-        return document.querySelector('meta[itemprop="gtin"]')?.getAttribute('content');
+        return qs('meta[itemprop="gtin"]')?.getAttribute('content');
     }
 }
 
@@ -1459,7 +1466,7 @@ class NoweBonitoController extends Controller {
     mainContainerSelectors() { return 'body > div.container'; }
 
     productModel() {
-        return document.querySelector('meta[property="og:upc"]')?.getAttribute('content');
+        return qs('meta[property="og:upc"]')?.getAttribute('content');
     }
 }
 
@@ -1467,7 +1474,7 @@ class LubimyCzytacController extends Controller {
     mainContainerSelectors() { return 'body > div.content > header > .container'; }
 
     productModel() {
-        return document.querySelector('meta[property="books:isbn"]')?.getAttribute('content');
+        return qs('meta[property="books:isbn"]')?.getAttribute('content');
     }
 }
 
@@ -1475,7 +1482,7 @@ class WKController extends Controller {
     mainContainerSelectors() { return '.blog-header > div.container'; }
 
     productModel() {
-        return [...document.querySelectorAll('table.shop_attributes > tbody > tr > td')]
+        return qsa('table.shop_attributes > tbody > tr > td')
             ?.map(el => el.innerText.replaceAll('-', '').trim()).find(el => el.match(/^\d{13,}$/));
     }
 }
@@ -1484,7 +1491,7 @@ class GandalfController extends Controller {
     mainContainerSelectors() { return '.top-menu > .container:not(.infoheader)'; }
 
     productModel() {
-        let list = document.querySelector('div#product-details.details-list')?.querySelectorAll('li > span.nowrap');
+        let list = qs('div#product-details.details-list')?.querySelectorAll('li > span.nowrap');
         return list ? [...list].find(el => el.textContent === 'ISBN:')
             ?.nextElementSibling.textContent.trim() : null;
     }
@@ -1494,7 +1501,7 @@ class SwiatKsiazkiController extends Controller {
     mainContainerSelectors() { return '.header.content'; }
 
     productModel() {
-        return document.querySelector('meta[itemprop="gtin13"]')?.getAttribute('content');
+        return qs('meta[itemprop="gtin13"]')?.getAttribute('content');
     }
 }
 
@@ -1538,7 +1545,7 @@ class CzytamController extends Controller {
     mainContainerSelectors() { return 'body > header > div.container:first-child'; }
 
     productModel() {
-        return document.querySelector('#schemaimage')?.getAttribute('content')?.match(/\d{13,18}/)[0] ?? null;
+        return qs('#schemaimage')?.getAttribute('content')?.match(/\d{13,18}/)[0] ?? null;
     }
 }
 
@@ -1546,7 +1553,7 @@ class MatrasController extends Controller {
     mainContainerSelectors() { return 'header.mainHeader'; }
 
     productModel() {
-        return document.querySelector('div.content div.colsInfo')?.innerText
+        return qs('div.content div.colsInfo')?.innerText
             .replaceAll('-', '').match(/[^\d](\d{13})[^\d]?/)[1] ?? null;
     }
 }
@@ -1663,7 +1670,7 @@ function isCBA() { return isCurrentPage('cba.kierus.com.pl'); }
 function isBEE() { return isCurrentPage('bee.pl'); }
 
 function isDev() {
-    return document.querySelector('meta[env="dev"]')?.getAttribute('env') == 'dev';
+    return qs('meta[env="dev"]')?.getAttribute('env') == 'dev';
 }
 
 function arrivingBasketsUrl(model) {
@@ -1898,8 +1905,18 @@ async function fetchPageDOM(url, additionalOptions = null) {
     return dom;
 }
 
+function qs(selector, el = document) {
+    if( ! el) return undefined;
+    return el.querySelector(selector);
+}
+
+function qsa(selector, el = document) {
+    if( ! el) return [];
+    return [...el.querySelectorAll(selector)];
+}
+
 function showGoUpBtn() {
-    document.querySelector('.tomczuk-goup-btn')
+    qs('.tomczuk-goup-btn')
         ?.classList.toggle('tomczuk-hidden', !window.scrollY);
 }
 
