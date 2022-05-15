@@ -343,80 +343,84 @@ function useTomczukToolbarStyles() {
 }
 
 class App {
+    testMode = true;
+
     constructor(department) {
-        this.department = department;
-        this.storage = new Storage();
+        app = this;
+        app.department = department;
+        app.storage = new Storage();
 
         switch (true) {
             case isCBA():
-                this.ctrl = new CBAController;
+                app.ctrl = new CBAController;
                 break;
             case isTK():
           	case isCurrentPage('tk.dev.kierushop'):
-                this.ctrl = new TKController;
+                app.ctrl = new TKController;
                 break;
             case isBEE():
-                this.ctrl = new BEEController;
+                app.ctrl = new BEEController;
                 break;
             case isCurrentPage('fantastyczneswiaty.pl'):
-                this.ctrl = new FantastyczneSwiatyController;
+                app.ctrl = new FantastyczneSwiatyController;
                 break;
             case isCurrentPage('bonito.pl'):
-                this.ctrl = new BonitoController;
+                app.ctrl = new BonitoController;
                 break;
             case isCurrentPage('nowe.bonito.pl'):
-                this.ctrl = new NoweBonitoController;
+                app.ctrl = new NoweBonitoController;
                 break;
             case isCurrentPage('gandalf.com.pl'):
-                this.ctrl = new GandalfController;
+                app.ctrl = new GandalfController;
                 break;
             case isCurrentPage('swiatksiazki.pl'):
-                this.ctrl = new SwiatKsiazkiController;
+                app.ctrl = new SwiatKsiazkiController;
                 break;
             case isCurrentPage('tantis.pl'):
-                this.ctrl = new TantisController;
+                app.ctrl = new TantisController;
                 break;
             case isCurrentPage('czytam.pl'):
-                this.ctrl = new CzytamController;
+                app.ctrl = new CzytamController;
                 break;
             case isCurrentPage('wydawnictwokobiece.pl'):
-                this.ctrl = new WKController;
+                app.ctrl = new WKController;
                 break;
             case isCurrentPage('czarymary.pl'):
-                this.ctrl = new CMController;
+                app.ctrl = new CMController;
                 break;
             case isCurrentPage('allegro.pl/oferta'):
-                this.ctrl = new AllegroController;
+                app.ctrl = new AllegroController;
                 break;
             case isCurrentPage('matras.pl'):
-                this.ctrl = new MatrasController;
+                app.ctrl = new MatrasController;
                 break;
             case isCurrentPage('lubimyczytac.pl'):
-                this.ctrl = new LubimyCzytacController;
+                app.ctrl = new LubimyCzytacController;
                 break;
             default:
-                this.ctrl = new BasicController;
+                app.ctrl = new BasicController;
         }
 
-        this.getRightPanel();
+        app.getRightPanel();
     }
 
     allow(departments, feature) {
-        return (departments.includes(this.department) && this.ctrl.native.showFeature(feature));
+        return (departments.includes(app.department) && app.ctrl.native.showFeature(feature));
     }
+
     forbid(departments, feature) {
-        return (!departments.includes(this.department) && this.ctrl.native.showFeature(feature));
+        return (!departments.includes(app.department) && app.ctrl.native.showFeature(feature));
     }
 
     getRightPanel() {
         let rightPanel = html('div', { classes: 'tomczuk-right-panel' });
-        this.rightPanel = rightPanel;
+        app.rightPanel = rightPanel;
 
         rightPanel.adjustWidth = () => {
             if (rightPanel.classList.contains('tomczuk-pinned')) return;
             let panelWidth = 400;
             let minSpace = 30;
-            let space = this.ctrl.native.spaceForPanel();
+            let space = app.ctrl.native.spaceForPanel();
             if (!space) {
                 rightPanel.hide();
             } else {
@@ -442,16 +446,16 @@ class App {
             rightPanel.removeAttribute('style');
             rightPanel.classList.add('tomczuk-pinned');
             rightPanel.classList.remove('tomczuk-full', 'tomczuk-hidden');
-            this.storage.set('panelToggler', 'pinned')
+            app.storage.set('panelToggler', 'pinned')
         }
 
         rightPanel.unpin = () => {
             rightPanel.classList.remove('tomczuk-pinned');
             rightPanel.fullWidth();
-            this.storage.set('panelToggler', 'unpinned');
+            app.storage.set('panelToggler', 'unpinned');
         }
 
-        if (this.storage.get('panelToggler') == 'pinned') {
+        if (app.storage.get('panelToggler') == 'pinned') {
             rightPanel.pin();
         } else rightPanel.adjustWidth();
 
@@ -481,35 +485,35 @@ class App {
             }
         });
 
-        this.getHeader();
-        this.makeUtilityContainer();
+        app.getHeader();
+        app.makeUtilityContainer();
         document.body.append(rightPanel);
         return rightPanel;
     }
 
     getInvisibleBtn() {
         let btn = html('a', { classes: 'tomczuk-invisible-btn tomczuk-invisible' });
-        if (this.storage.get('rightPanelInvisible') == false) {
-            this.rightPanel.classList.remove('tomczuk-invisible');
+        if (app.storage.get('rightPanelInvisible') == false) {
+            app.rightPanel.classList.remove('tomczuk-invisible');
             btn.innerHTML = '&#128317;';
         } else {
-            this.rightPanel.classList.add('tomczuk-invisible');
-            this.storage.set('rightPanelInvisible', 'true');
+            app.rightPanel.classList.add('tomczuk-invisible');
+            app.storage.set('rightPanelInvisible', 'true');
             btn.innerHTML = '&#128316;';
         }
 
         btn.addEventListener('click', () => {
-            this.rightPanel.classList.toggle('tomczuk-invisible');
-            if (this.rightPanel.classList.contains('tomczuk-invisible')) {
+            app.rightPanel.classList.toggle('tomczuk-invisible');
+            if (app.rightPanel.classList.contains('tomczuk-invisible')) {
                 btn.innerHTML = '&#128316;';
-                this.storage.set('rightPanelInvisible', 'true');
+                app.storage.set('rightPanelInvisible', 'true');
             } else {
                 btn.innerHTML = '&#128317;'
-                this.storage.set('rightPanelInvisible', 'false');
+                app.storage.set('rightPanelInvisible', 'false');
             }
         });
 
-        this.rightPanel.after(btn);
+        app.rightPanel.after(btn);
     }
 
     makeUtilityContainer() {
@@ -517,18 +521,18 @@ class App {
         container.primary = html('div', { classes: 'tomczuk-primary' });
         container.secondary = html('div', { classes: 'tomczuk-secondary' });
         container.append(container.primary, container.secondary);
-        this.rightPanel.append(container);
-        this.rightPanel.container = container;
+        app.rightPanel.append(container);
+        app.rightPanel.container = container;
     }
 
     getHeader() {
         const header = html('div', { classes: 'tomczuk-right-panel-header' });
         header.append(html('div', { textContent: '.tomczukToolKit', classes: 'tomczuk-right-panel-header-title' }));
-        const panelToggler = this.getPanelToggler(this.storage.get('panelToggler'));
+        const panelToggler = app.getPanelToggler(app.storage.get('panelToggler'));
 
         header.prepend(panelToggler);
-        this.rightPanel.append(header);
-        this.rightPanel.header = header;
+        app.rightPanel.append(header);
+        app.rightPanel.header = header;
     }
 
     getPanelToggler(pinned) {
@@ -539,10 +543,10 @@ class App {
 
         panelToggler.addEventListener('click', () => {
             if (panelToggler.classList.contains(activeClass)) {
-                this.rightPanel.unpin();
+                app.rightPanel.unpin();
                 panelToggler.classList.remove(activeClass);
             } else {
-                this.rightPanel.pin();
+                app.rightPanel.pin();
                 panelToggler.classList.add(activeClass);
             }
         });
@@ -550,17 +554,17 @@ class App {
     }
 
     navBox() {
-        const allowed = this.forbid([], 'navBox');
+        const allowed = app.forbid([], 'navBox');
 
         if (!allowed) return;
 
         let nav = box('Nawigacja');
         const navBtnsContainer = html('div', { classes: 'tomczuk-nav-btns-container tomczuk-row-btns' });
 
-        let reCacheBtn = this.getReCacheBtn();
+        let reCacheBtn = app.getReCacheBtn();
         if (reCacheBtn) navBtnsContainer.append(reCacheBtn);
 
-        const mobileBtn = this.getMobileBtn();
+        const mobileBtn = app.getMobileBtn();
         if (mobileBtn) navBtnsContainer.append(mobileBtn);
 
         const goUpBtn = html('a', {
@@ -577,11 +581,11 @@ class App {
         navBtnsContainer.append(goUpBtn);
 
         nav.container.append(navBtnsContainer);
-        this.rightPanel.container.primary.append(nav);
+        app.rightPanel.container.primary.append(nav);
     }
 
     getReCacheBtn() {
-        const allowed = this.forbid([], 'reCacheBtn');
+        const allowed = app.forbid([], 'reCacheBtn');
         if (!allowed) return null;
         const reCacheBtn = html('a', {
             classes: 'tomczuk-btn tomczuk-nav-btn tomczuk-recache-btn',
@@ -598,7 +602,7 @@ class App {
     }
 
     getMobileBtn() {
-        const allowed = this.forbid([], 'mobileBtn');
+        const allowed = app.forbid([], 'mobileBtn');
         if (!allowed) return null;
 
         const mobileBtn = html('a', {
@@ -631,7 +635,7 @@ class App {
     }
 
     productBox() {
-        const allowed = this.forbid([], 'productBox');
+        const allowed = app.forbid([], 'productBox');
         if (!allowed) return;
 
         let model = app.ctrl.data.model;
@@ -647,20 +651,20 @@ class App {
         if (!isTK()) btnsContainer.append(btn({ value: 'tk', url: `https://www.taniaksiazka.pl/Szukaj/q-${model}` }));
         if (!isBEE()) btnsContainer.append(btn({ value: 'bee', url: `https://www.bee.pl/Szukaj/q-${model}?pf-size=24&pf-page=1` }))
 
-        const comingBasketsUrlBtn = this.comingBasketsUrlBtn(model);
+        const comingBasketsUrlBtn = app.comingBasketsUrlBtn(model);
         productBox.container.append(btnsContainer);
         if (comingBasketsUrlBtn) productBox.container.append(comingBasketsUrlBtn);
-        this.rightPanel.container.primary.append(productBox);
+        app.rightPanel.container.primary.append(productBox);
     }
 
     comingBasketsUrlBtn(model) {
-        const allowed = this.allow('handlowy', 'comingBasketsUrlBtn');
+        const allowed = app.allow('handlowy', 'comingBasketsUrlBtn');
         if (!allowed) return null;
         return btn({ value: 'Jadące koszyki', url: arrivingBasketsUrl(model) });
     }
 
     async productListBox() {
-        const allowed = this.forbid([], 'productListBox');
+        const allowed = app.forbid([], 'productListBox');
         if (!allowed) return;
         
         const productListBox = box('Lista produktów');
@@ -668,23 +672,23 @@ class App {
         const copyListBtn = html('a', { innerHTML: '&#128203;', classes: 'tomczuk-btn tomczuk-copy-product-list' });
         const modifyListBtn = html('a', { innerHTML: '&#128200;', classes: 'tomczuk-btn tomczuk-modify-product-list' });
 
-        if (this.storage.get('productListMode') == true) {
+        if (app.storage.get('productListMode') == true) {
             modifyListBtn.classList.add('tomczuk-product-list-mode');
-            this.ctrl.modifyProductList(true);
+            app.ctrl.modifyProductList(true);
         } else {
             modifyListBtn.classList.remove('tomczuk-product-list-mode');
-            this.ctrl.modifyProductList(false);
+            app.ctrl.modifyProductList(false);
         }
 
         modifyListBtn.addEventListener('click', async () => {
             if (!modifyListBtn.classList.contains('tomczuk-product-list-mode')) {
                 modifyListBtn.classList.add('tomczuk-product-list-mode');
-                this.storage.set('productListMode', 'true');
-                this.ctrl.modifyProductList(true);
+                app.storage.set('productListMode', 'true');
+                app.ctrl.modifyProductList(true);
             } else {
                 modifyListBtn.classList.remove('tomczuk-product-list-mode');
-                this.storage.set('productListMode', 'false');
-                this.ctrl.modifyProductList(false);
+                app.storage.set('productListMode', 'false');
+                app.ctrl.modifyProductList(false);
             }
         });
 
@@ -694,18 +698,17 @@ class App {
             setTimeout(() => {
                 copyListBtn.classList.remove('tomczuk-hidden');
             }, 1200);
-            navigator.clipboard.writeText(this.ctrl.objToXls(this.ctrl.productList()));
+            navigator.clipboard.writeText(objToXls(app.ctrl.productList()));
         });
 
         productListBox.container.append(btnsContainer);
         btnsContainer.append(copyListBtn);
         btnsContainer.append(modifyListBtn);
-        this.rightPanel.container.primary.append(productListBox);
+        app.rightPanel.container.primary.append(productListBox);
     };
 
-
     salesBox() {
-        const allowed = this.allow([
+        const allowed = app.allow([
             'handlowy',
         ], 'salesBox');
         if (!allowed) return;
@@ -715,7 +718,7 @@ class App {
         if (model) {
             const salesBox = box('Sprzedaż');
             salesBox.classList.add('tomczuk-sales-box');
-            salesBox.container.controlPanel = this.getSalesControlPanel();
+            salesBox.container.controlPanel = app.getSalesControlPanel();
             salesBox.container.append(salesBox.container.controlPanel);
             app.rightPanel.container.primary.append(salesBox);
             app.rightPanel.container.primary.salesBox = salesBox;
@@ -733,7 +736,7 @@ class App {
         let delayInput = html('input', {
             type: 'number',
             min: '-1',
-            value: this.storage.get('saleReportDelay') ?? '0',
+            value: app.storage.get('saleReportDelay') ?? '0',
             classes: 'tomczuk-input-ctrl tomczuk-delay'
         });
         delayInput.addEventListener('click', () => delayInput.select());
@@ -743,7 +746,7 @@ class App {
         let durationInput = html('input', {
             type: 'number',
             min: '0',
-            value: this.storage.get('saleReportDuration') ?? '14',
+            value: app.storage.get('saleReportDuration') ?? '14',
             step: '7',
             classes: 'tomczuk-input-ctrl tomczuk-duration'
         });
@@ -761,13 +764,13 @@ class NativeCtrl {
     }
 
     async init() {
-        this.ctrl.cfg = this.getCfg();
+        this.ctrl.cfg = this.basicCfg();
         this.overrideCfg();
-        this.ctrl.data = this.ctrl.getData();
+        if (this.ctrl.cfg.access === false) return;
+
+        this.ctrl.data = this.ctrl.data();
         this.addDebugConsole();
         this.runListsObserver();
-
-        if (this.ctrl.cfg.access === false) return;
 
         this.ctrl.data.productListContainer = qs(this.ctrl.cfg.productListContainerSelector);
         log(this.ctrl.data.productListContainer);
@@ -781,7 +784,7 @@ class NativeCtrl {
     /**
      * Startowe ustawienia konfiguracyjne dla każdego Controllera
      */
-    getCfg() {
+    basicCfg() {
         return {
             testMode: true,
             access: false,
@@ -824,9 +827,9 @@ class NativeCtrl {
 
     /**
      * Nadpisuje Konfigurację z Native konfiguracją z Controllera.
-     * @see getCfg
-     * @see Controller.getCfg
-     * @see TKController.getCfg
+     * @see basicCfg
+     * @see Controller.cfg
+     * @see TKController.cfg
      */
     overrideCfg() {
         let cfg = this.ctrl.getCfg();
@@ -874,7 +877,8 @@ class NativeCtrl {
         observer.observe(document.body, { childList: true });
     }
     
-    addDebugConsole() {        
+    addDebugConsole() {
+        if( ! app.testMode) return;
         let consoleBox = html('div', {
             style: `
                 position: fixed;
@@ -897,10 +901,11 @@ class NativeCtrl {
             }
         });
         document.body.append(consoleBox);
-        this.ctrl.cfg.console = consoleBox;
+        app.console = consoleBox;
     }
 
     log(text, color = 'white') {
+        if( ! app.testMode) return;
         let span = html('span', { style: `
             display:block;
             padding: 1px;
@@ -908,7 +913,7 @@ class NativeCtrl {
             border-bottom: 1px solid #222;
             color: ${color};
         `, textContent: (new Date()).toLocaleTimeString() + '___: ' + text});
-        this.ctrl.cfg.console.prepend(span);
+        app.console.prepend(span);
     }
     
     spaceForPanel() {
@@ -960,7 +965,7 @@ class NativeCtrl {
     }
 
     redirectFromSearchPage() {
-        if (!this.ctrl.isSearchPage()) return;
+        if ( ! this.ctrl.isSearchPage()) return;
         const url = this.ctrl.searchedElementUrl(this.ctrl.searchText());
         if (url) window.location.href = url;
     }
@@ -985,9 +990,9 @@ class Controller {
         return {};
     }
 
-    getData() {
+    data() {
         return {
-            productListContainer: null,
+            productLists: new Map(),
             productListElements: [],
             productBoxes: [],
             model: null
@@ -1093,21 +1098,6 @@ class Controller {
     searchText() { return null; }
     searchedElementUrl() { return null; }
 
-    objToXls(obj) {
-        let models = Object.keys(obj).filter(model => model !== 'keys');
-
-        let string = "model\t" + obj.keys.join("\t");
-        for (let model of models) {
-            string += `\n${model}`;
-            for (let key of obj.keys) {
-                let value = obj[model][key];
-                if (key === 'price') value = value.replace('.', ',');
-                string += `\t${value}`;
-            }
-        }
-        return string;
-    }
-
     featuresPermissions() {
         return {
             accepted: [],
@@ -1135,7 +1125,7 @@ class TKController extends Controller {
                 return modelElement.qs(this.modelSelector)?.dataset.model;
             }
         }
-    };
+    }
 
     adjustListElements() {
         this.data.productListElements.map(e => e.style.height = 'auto');
@@ -1160,8 +1150,7 @@ class TKController extends Controller {
     }
 
     searchedElementUrl(searchText) {
-        const searchedElement = qs(`a[data-model="${searchText}"]`);
-        return searchedElement ? searchedElement.href : null;
+        return qs(`a[data-model="${searchText}"]`)?.href;
     }
 
     productList() {
@@ -1649,8 +1638,7 @@ function pl2url(string) {
 
 function isCurrentPage(page) {
     page = page.replaceAll('.', '\.').replaceAll('/', '\/');
-    let regexp = new RegExp(page, 'ig');
-    return Boolean(window.location.href.match(regexp));
+    return Boolean(window.location.href.match(new RegExp(page, 'ig')));
 }
 
 function log(message, type = 0) {
@@ -1708,7 +1696,7 @@ function html(tag, attributes = {}) {
         if (key !== 'classes') el[key] = value;
         else {
             let classes = value.split(' ');
-            if (!classes.length) break;
+            if (!classes.length) continue;
 
             if (classes.indexOf('tomczuk') > 0) classes.splice(classes.indexOf('tomczuk'), 1);
 
@@ -1758,12 +1746,10 @@ function btn({ value, url }) {
     if (value) attributes.textContent = value;
     attributes.classes = 'tomczuk-btn';
     if (url) attributes.href = url;
-    const btn = html('a', attributes);
-    return btn;
+    return html('a', attributes);
 }
 
 function selfCopyInput({ value, classes = '', id = null }) {
-    if (!value) throw new Exception("Atrybut 'value' jest wymagany");
     classes = classes ? classes + ' tomczuk-self-input' : 'tomczuk-self-input';
     const input = html('input', { value, classes, id });
 
@@ -1790,7 +1776,7 @@ function selfCopyInput({ value, classes = '', id = null }) {
 async function getRawReport(url, additionalOptions = null) {
     let dom = await fetchPageDOM(url, additionalOptions);
   	return {
-        labels: dom?.qs('textarea#LabelsNames')?.value, 
+        labels: dom?.qs('textarea#LabelsNames')?.value,
         report: dom?.qs('textarea#SqlReport')?.value
     };
 }
@@ -1870,13 +1856,27 @@ async function getSaleReportForProduct(model = null, duration = null, delay = nu
 }
 
 function prepareDates(duration, delay) {
-    let endDate = new Date();
-    let startDate = new Date();
+    let [startDate, endDate] = [new Date(), new Date()];
     startDate.setDate(startDate.getDate() - delay - duration);
     endDate.setDate(endDate.getDate() - delay);
     startDate = startDate.toLocaleDateString('fr-CA');
     endDate = endDate.toLocaleDateString('fr-CA');
     return [startDate, endDate];
+}
+
+function objToXls(obj) {
+    let models = Object.keys(obj).filter(key => key !== 'keys');
+
+    let string = "model\t" + obj.keys.join("\t");
+    for (let model of models) {
+        string += `\n${model}`;
+        for (let key of obj.keys) {
+            let value = obj[model][key];
+            if (/^\d+\.\d+/.test(value)) value = value.replace('.', ',');
+            string += `\t${value}`;
+        }
+    }
+    return string;
 }
 
 async function fetchPageDOM(url, additionalOptions = null) {
@@ -1900,8 +1900,7 @@ function qs(sel) { return document.querySelector(sel) };
 function qsa(sel) { return [...document.querySelectorAll(sel)]; }
 
 function showGoUpBtn() {
-    qs('.tomczuk-goup-btn')
-        ?.classList.toggle('tomczuk-hidden', !window.scrollY);
+    qs('.tomczuk-goup-btn')?.classList.toggle('tomczuk-hidden', ! window.scrollY);
 }
 
 function setInitListeners() {
@@ -1930,7 +1929,7 @@ function setInitListeners() {
 
 async function basicInit(department) {
     if (!isDev()) useTomczukToolbarStyles();
-    app = new App(department);
+    new App(department);
     app.ctrl.native.redirectFromSearchPage();
     setInitListeners();
     app.getInvisibleBtn();
