@@ -765,16 +765,22 @@ class NativeCtrl {
 
     async init() {
         this.ctrl.cfg = this.basicCfg();
+        this.ctrl.data = this.basicData();
         this.overrideCfg();
+        this.addDebugConsole();
         if (this.ctrl.cfg.access === false) return;
 
-        this.ctrl.data = this.ctrl.data();
-        this.addDebugConsole();
+        this.ctrl.data.model = await this.ctrl.productModel();
+        if (isDev() && ! this.ctrl.data.model) this.ctrl.data.model = '9788382158106';
+
+
         this.runListsObserver();
 
         this.ctrl.data.productListContainer = qs(this.ctrl.cfg.productListContainerSelector);
-        log(this.ctrl.data.productListContainer);
-        this.ctrl.data.productListElements = this.ctrl.data.productListContainer?.qsa(this.ctrl.cfg.productListElementSelector);
+        
+        this.ctrl.data.productListElements = this.ctrl.data.productListContainer
+            ?.qsa(this.ctrl.cfg.productListElementSelector);
+        
         this.getProductBoxes();
         this.ctrl.data.productList = this.getDataFromProductList();
         await this.ctrl.getReportForProductList(2,0);
@@ -825,6 +831,13 @@ class NativeCtrl {
         };
     }
 
+    basicData() {
+        return {
+            model: null,
+            productListsMap: new Map()
+        }
+    }
+
     /**
      * Nadpisuje Konfigurację z Native konfiguracją z Controllera.
      * @see basicCfg
@@ -838,10 +851,9 @@ class NativeCtrl {
         }
     }
 
-    /**
+    /** @TODO
      * Observer robi kilka interwałów zaraz po uruchomieniu strony, ładując boxy produktów,
      * zaimplementowane by uwzględnić produkty ładowane ajaxem.
-     * @todo
      */
     runListsObserver() {
         let interval = setInterval(() => {
@@ -851,9 +863,19 @@ class NativeCtrl {
                 return;
             }
             this.log(this.ctrl.cfg.salesReportAfterIntervals);
-            //observeForNewBoxes();
+            this.loadNewBoxes();
             this.ctrl.cfg.salesReportAfterIntervals--;
-        }, this.ctrl.cfg.mutationObserverIntervalMs)
+        }, this.ctrl.cfg.mutationObserverIntervalMs);
+    }
+
+    /** @TODO trzeba to jakoś poprawić, bo jest lipa.
+     * 
+     */
+    loadNewBoxes() {
+        this.ctrl.data.productListsMap.forEach(productList => {
+            productList.box = productList.getBox();
+            log(productList);
+        });
     }
 
     getProductBoxes() {
@@ -879,6 +901,7 @@ class NativeCtrl {
     
     addDebugConsole() {
         if( ! app.testMode) return;
+        log('odpalam konsolę');
         let consoleBox = html('div', {
             style: `
                 position: fixed;
@@ -889,8 +912,8 @@ class NativeCtrl {
                 left: 0;
                 overflow-y: scroll;
                 height: 45vh;
-                width: 100vw;
-                padding: 5px;
+                width: calc(100vw - 20px);
+                padding: 0;
                 transition: 320ms ease-in;
             `
         });
@@ -988,15 +1011,6 @@ class Controller {
 
     getCfg() {
         return {};
-    }
-
-    data() {
-        return {
-            productLists: new Map(),
-            productListElements: [],
-            productBoxes: [],
-            model: null
-        }
     }
 
     adjustListElements() {
@@ -1933,9 +1947,6 @@ async function basicInit(department) {
     app.ctrl.native.redirectFromSearchPage();
     setInitListeners();
     app.getInvisibleBtn();
-    
-    app.ctrl.data.model = await app.ctrl.productModel();
-    if (isDev() && ! app.ctrl.data.model) app.ctrl.data.model = '9788382158106';
 }
 
 
