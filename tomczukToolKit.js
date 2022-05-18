@@ -711,19 +711,15 @@ class App {
         const allowed = app.allow([
             'handlowy',
         ], 'salesBox');
-        if (!allowed) return;
-
-        let model = app.ctrl.data.model;
-        if (isDev() && !model) model = '9788382158106';
-        if (model) {
-            const salesBox = box('Sprzedaż');
-            salesBox.classList.add('tomczuk-sales-box');
-            salesBox.container.controlPanel = app.getSalesControlPanel();
-            salesBox.container.append(salesBox.container.controlPanel);
-            app.rightPanel.container.primary.append(salesBox);
-            app.rightPanel.container.primary.salesBox = salesBox;
-            getSaleReportForProduct();
-        }
+        if ( ! allowed || ! app.ctrl.data.model) return;
+        
+        const salesBox = box('Sprzedaż');
+        salesBox.classList.add('tomczuk-sales-box');
+        salesBox.container.controlPanel = app.getSalesControlPanel();
+        salesBox.container.append(salesBox.container.controlPanel);
+        app.rightPanel.container.primary.append(salesBox);
+        app.rightPanel.container.primary.salesBox = salesBox;
+        getSaleReportForProduct();
     }
 
     getSalesControlPanel() {
@@ -767,6 +763,7 @@ class NativeCtrl {
         this.ctrl.cfg = this.basicCfg();
         this.ctrl.data = this.basicData();
         this.overrideCfg();
+        this.ctrl.cfg.productsListsCfg = this.ctrl.getProductsListsCfg();
         this.addDebugConsole();
         if (this.ctrl.cfg.access === false) return;
 
@@ -868,16 +865,24 @@ class NativeCtrl {
         }, this.ctrl.cfg.mutationObserverIntervalMs);
     }
 
-    /** @TODO trzeba to jakoś poprawić, bo jest lipa.
+    /** @TODO Kontynuować...
      * 
      */
     loadNewBoxes() {
-        this.ctrl.data.productListsMap.forEach(productList => {
-            productList.box = productList.getBox();
-            log(productList);
-        });
+        for(let [name, config] of Object.entries(this.ctrl.cfg.productsListsCfg)) {
+            let containers = qsa(config.selectors.container);
+            containers = containers.map(container => {
+                let containerObj = {};
+                containerObj.element = container;
+                containerObj.children = container.qsa(config.selectors.box);
+                return containerObj;
+            });
+            log(containers);
+        }
     }
-
+    /** @TO DELETE
+     * 
+     */
     getProductBoxes() {
         this.ctrl.data.productBoxes = qsa(this.ctrl.cfg.productBoxSelector) ?? [];
         if(this.ctrl.cfg.mutationObserverRequired == false) return this.ctrl.cfg.productBoxes;
@@ -951,7 +956,9 @@ class NativeCtrl {
 
         return ((noPx(window.getComputedStyle(document.body).width) - container.clientWidth) / 2 - 10);
     }
-
+    /** @TO DELETE
+     * 
+     */
     getDataFromProductList() {
         if(this.ctrl.data.productBoxes.length === 0) return null;
         
@@ -1012,11 +1019,35 @@ class Controller {
     getCfg() {
         return {};
     }
+    /** @TODO
+     * 
+     */
+    getProductsListsCfg() {
+        return {
+            standard: {
+                selectors: {
+                    container: 'article.book-list',
+                    box: 'ul.toggle-view > li'
+                },
+                getModel: function (el) {
+                    return el.qs('[data-model]')?.dataset.model;
+                },
+                adjust: function (el) {
+                    el.style.background = 'salmon';
+                },
+                build: function(el) {
+                    el.style.border = '2px solid black';
+                }
+            }
+        }
+    }
 
     adjustListElements() {
         return null;
     }
-   
+   /** @TO DELETE
+    * 
+    */
     async modifyProductList(show = true) {
         if(this.cfg.access === false) return null;
         
@@ -1045,7 +1076,9 @@ class Controller {
         }
         return list;
     }
-
+    /** @TO DELETE
+     * 
+     */
     async getReportForProductList(duration, delay) {
         let models = [...this.data.productList.keys()];
         let url = 'https://cba.kierus.com.pl/?p=ShowSqlReport&r=ilosc+zamowionych+produktow+i+unikalnych+zamowien';
