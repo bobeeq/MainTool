@@ -8,7 +8,7 @@
 
 HTMLElement.prototype.qs = function(sel) { return this.querySelector(sel); }
 HTMLElement.prototype.qsa = function(sel) { return [...this.querySelectorAll(sel)]; }
-
+var run = true;
 var app;
 
 // ========================== GLOBAL ==========================
@@ -790,10 +790,9 @@ class NativeCtrl {
     basicCfg() {
         return {
             testMode: true,
-            access: false,
+            access: true,
             fetchRequired: false,
-            listsObserverIntervalMs: 500,
-            salesReportAfterIntervals: 5,
+            mutationBreakTime: 300,
             lowStockColorsCfg: [
                 {
                     lowerThan: 3,
@@ -831,7 +830,8 @@ class NativeCtrl {
     basicData() {
         return {
             model: null,
-            productListsMap: new Map()
+            productListsMap: new Map(),
+            lastMutationTime: 0
         }
     }
 
@@ -849,38 +849,38 @@ class NativeCtrl {
     }
 
     /** @TODO
-     * Observer robi kilka interwałów zaraz po uruchomieniu strony, ładując boxy produktów,
-     * zaimplementowane by uwzględnić produkty ładowane ajaxem.
-     */
-    runListsObserver() {
-        let interval = setInterval(() => {
-            if(this.ctrl.cfg.salesReportAfterIntervals == 0) {
-                clearInterval(interval);
-                //fireReport();
-                return;
-            }
-            this.log(this.ctrl.cfg.salesReportAfterIntervals);
-            this.loadNewBoxes();
-            this.ctrl.cfg.salesReportAfterIntervals--;
-        }, this.ctrl.cfg.mutationObserverIntervalMs);
-    }
-
-    /** @TODO Kontynuować...
      * 
      */
-    loadNewBoxes() {
-        for(let [name, config] of Object.entries(this.ctrl.cfg.productsListsCfg)) {
-            let containers = qsa(config.selectors.container);
-            containers = containers.map(container => {
-                let containerObj = {};
-                containerObj.element = container;
-                containerObj.children = container.qsa(config.selectors.box);
-                return containerObj;
-            });
-            log(containers);
-        }
+    runListsObserver() {
+        log('loadNewBoxes');
+        let observer = new MutationObserver(entries => {
+            if(entries.some(entry => entry.addedNodes.length > 0)) {
+                this.ctrl.data.lastMutationTime = Date.now();
+                // log(entries);
+            }
+        });
+
+        observer.observe(document.body, {childList: true, subtree: true});
+
+        
+        let checkLastMutation = setInterval(() => {
+            let diff = Date.now() - this.ctrl.data.lastMutationTime;
+            // log('Checking mutations... diff: ' + diff);
+            if(diff >= this.ctrl.cfg.mutationBreakTime) {
+                clearInterval(checkLastMutation);
+                observer.disconnect();
+                log(`It's time to work. ` +
+                ((Date.now() - this.ctrl.data.startupTime)/1000).toFixed(2) + 's');
+                log('From start to last mutation: ' + ((this.ctrl.data.lastMutationTime - this.ctrl.data.startupTime) / 1000).toFixed(2) + 's');
+                //this.loadNewBoxes();
+            }
+        }, 300);
     }
-    /** @TO DELETE
+
+    loadNewBoxes() {
+        log('Loading New Boxes');
+    }
+    /** @DELETE
      * 
      */
     getProductBoxes() {
@@ -956,7 +956,7 @@ class NativeCtrl {
 
         return ((noPx(window.getComputedStyle(document.body).width) - container.clientWidth) / 2 - 10);
     }
-    /** @TO DELETE
+    /** @DELETE
      * 
      */
     getDataFromProductList() {
@@ -1026,7 +1026,7 @@ class Controller {
         return {
             standard: {
                 selectors: {
-                    container: 'article.book-list',
+                    container: 'article.book-list.xs-hidden',
                     box: 'ul.toggle-view > li'
                 },
                 getModel: function (el) {
@@ -1045,7 +1045,7 @@ class Controller {
     adjustListElements() {
         return null;
     }
-   /** @TO DELETE
+   /** @DELETE
     * 
     */
     async modifyProductList(show = true) {
@@ -1076,11 +1076,11 @@ class Controller {
         }
         return list;
     }
-    /** @TO DELETE
+    /** @DELETE
      * 
      */
     async getReportForProductList(duration, delay) {
-        let models = [...this.data.productList.keys()];
+        let models = [...this.data.productList?.keys()];
         let url = 'https://cba.kierus.com.pl/?p=ShowSqlReport&r=ilosc+zamowionych+produktow+i+unikalnych+zamowien';
         let reqBody = new FormData();
         let [startDate, endDate] = prepareDates(duration, delay);
@@ -1974,9 +1974,15 @@ function setInitListeners() {
     });
 }
 
+function rand(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
 async function basicInit(department) {
     if (!isDev()) useTomczukToolbarStyles();
     new App(department);
+    app.ctrl.data.startupTime = Date.now();
+    log('Start App: ' + app.ctrl.data.startupTime);
     app.ctrl.native.redirectFromSearchPage();
     setInitListeners();
     app.getInvisibleBtn();
@@ -1986,7 +1992,8 @@ async function basicInit(department) {
 //START APP
 
 
-(async function run(department = 'handlowy') {
+(async function(department = 'handlowy') {
+    if(typeof run === 'undefined') return;
     await basicInit(department);
     log('tomczukToolKit - Running...');
     app.navBox();

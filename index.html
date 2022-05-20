@@ -7,10 +7,57 @@
     <meta env="dev">
     <link rel="stylesheet" href="style.css">
     <title>tomczukToolKit</title>
+    <style>
+        .box {
+            width: 200px;
+            height: 200px;
+            margin: 30px;
+            display: flex;
+            flex-wrap: wrap;
+            color: white;
+            font-size: 25px;
+            padding: 10px;
+            align-items: center;
+            align-content: center;
+            justify-content: center;
+            justify-items: center;
+            border: 10px solid black;
+        }
+        div#container {
+            display: flex;
+            width: 100%;
+            background: black;
+        }
+        button, select {
+            padding: 15px;
+            margin: 15px;
+            box-sizing: border-box;
+            cursor: pointer;
+        }
+        
+        div.box.changed {
+            border: 10px solid white;
+        }
+    </style>
 </head>
 <body>
-    
-    <script src="test.js"></script>
+    <div>
+        <div id="container">
+            <div class="box" id="box1" data-model="model1" style="background: red" contenteditable>Uno</div>
+            <div class="box" id="box2" data-model="model2" style="background: blue" contenteditable>Duo</div>
+            <div class="box" id="box3" data-model="model3" style="background: green" contenteditable>Tres</div>
+        </div>
+        <div style="display: flex; flex-direction: column;">
+            <button id="addEl">MUTATE</button>
+            <select>
+                <option>deleteBox</option>
+                <option>changeText</option>
+                <option>addChild</option>
+                <option>removeChild</option>
+            </select>
+        </div>
+    </div>
     <script src="tomczukToolKit.js"></script>
+    <script src="test.js"></script>
 </body>
 </html>
