@@ -1239,22 +1239,43 @@ class Controller {
         }
     }
 
+    /**
+     * @OVERRIDE
+     * @param {HTMLElement} box 
+     * @returns 
+     */
     getDataFromSingleProductBox(box) {
         return null;
     }
 
+    /** 
+     * OVERRIDE
+     * @returns 
+     */
     mainContainerSelectors() {
         return null;
     }
 
+    /**
+     * @OVERRIDE
+     * @param {HTMLElement} dom 
+     * @returns 
+     */
     productModel(dom = null) {
         return null;
     }
-
+    /**
+     * @OVERRIDE
+     * @returns 
+     */
     isSearchPage() { return null; }
     searchText() { return null; }
     searchedElementUrl() { return null; }
 
+    /**
+     * @OVERRIDE
+     * @returns {object}
+     */
     featuresPermissions() {
         return {
             accepted: [],
@@ -1705,7 +1726,13 @@ class MatrasController extends Controller {
 class BasicController extends Controller {
 }
 
+/** @DONE ?
+ * 
+ */
 class Storage {
+    /** @DONE
+     * 
+     */
     constructor() {
         if(window.localStorage) {
             this.type = 'localStorage';
@@ -1721,11 +1748,18 @@ class Storage {
         }
     }
 
+    /** @DONE
+     * @returns {string} 
+     */
     str() {
         if( ! this.type) return undefined;
         return window[this.type].getItem('tomczukToolKit') ?? '';
     }
 
+    /** @DONE
+     * @param {string} key 
+     * @param {string} value 
+     */
     set(key, value) {
         if( ! this.type) return false;
         let keyVal = `${key}=${value}`;
@@ -1746,6 +1780,11 @@ class Storage {
         }
     }
     
+    /** @DONE
+     * 
+     * @param {string} key 
+     * @returns {string|boolean|null}
+     */
     get(key) {
         if( ! this.type) return false;
         let match = this.str()?.match(new RegExp(`(?:${key}\=)([^=&]+)`, 'i'));
@@ -1759,6 +1798,11 @@ class Storage {
     }
 }
 
+/** @DEPRECATED?
+ * 
+ * @param {*} string 
+ * @returns 
+ */
 function pl2url(string) {
     let utf = {
         "Ą": "%A1",
@@ -1798,6 +1842,11 @@ function isCurrentPage(page) {
     return Boolean(window.location.href.match(new RegExp(page, 'ig')));
 }
 
+/** @THINK - może pomyśleć o stylach w konsoli?
+ * 
+ * @param {string} message 
+ * @param {number} type 0/1
+ */
 function log(message, type = 0) {
     if(type === 1) console.error(message);
     if(type === 0) console.debug(message);
@@ -1817,8 +1866,16 @@ function arrivingBasketsUrl(model) {
     return `https://cba.kierus.com.pl/?p=SupplierBasket&a=Filter&sp=0&stm=&stl=&edtm=&edtl=&dtm=&dtl=&SbkStatus=unreceived&SbkOrderBy=Id&SbkViewBy=DESC&opiekun=&product_filter=${model}&doc_filter=&Magazine=-1&DocumentFilter=0`;
 }
 
+/** @DONE
+ * @param {number} value 
+ * @returns {string}
+ */
 function px(value) { return value + 'px' }
 
+/** @DONE
+ * @param {string} value 
+ * @returns {number}
+ */
 function noPx(value) {
     if (typeof value === 'number') return value;
     if (typeof value === 'string') {
@@ -1828,6 +1885,12 @@ function noPx(value) {
     }
 }
 
+/** @CHECK @DONE?
+ * 
+ * @param {boolean} strong if true podaj drugi parametr
+ * @param {string} exceptions lista wyjatkow...
+ * @returns 
+ */
 function userSelection(strong = false, exceptions = '') {
     var result = '';
     if (exceptions) exceptions = exceptions.split('').join('\\');
@@ -1846,8 +1909,13 @@ function userSelection(strong = false, exceptions = '') {
     return result;
 }
 
-function html(tag, attributes = {}) {
-    const el = document.createElement(tag);
+/** @CHECK @THINK @DONE
+ * @param {string} tagName 
+ * @param {object} attributes 
+ * @returns {HTMLElement}
+ */
+function html(tagName, attributes = {}) {
+    const el = document.createElement(tagName);
 
     for (const [key, value] of Object.entries(attributes)) {
         if (key !== 'classes') el[key] = value;
