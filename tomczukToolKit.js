@@ -13,7 +13,9 @@ var app;
 
 // ========================== GLOBAL ==========================
 
-
+/** @DONE
+ * 
+ */
 function useTomczukToolbarStyles() {
     let style = html('style');
     style.id = 'tomczuk-toolbar-styles';
@@ -344,7 +346,10 @@ function useTomczukToolbarStyles() {
 
 class App {
     testMode = true;
-
+    
+    /** @DONE
+     * @param {string} department 
+     */
     constructor(department) {
         app = this;
         app.department = department;
@@ -404,14 +409,27 @@ class App {
         app.getRightPanel();
     }
 
+    /** @DONE
+     * @param {array} departments
+     * @param {string} feature
+     * @returns 
+     */
     allow(departments, feature) {
         return (departments.includes(app.department) && app.ctrl.native.showFeature(feature));
     }
 
+    /** @DONE
+     * @param {array} departments 
+     * @param {string} feature 
+     * @returns 
+     */
     forbid(departments, feature) {
         return (!departments.includes(app.department) && app.ctrl.native.showFeature(feature));
     }
-
+    
+    /** @DONE
+     * @returns {object}
+     */
     getRightPanel() {
         let rightPanel = html('div', { classes: 'tomczuk-right-panel' });
         app.rightPanel = rightPanel;
@@ -491,6 +509,9 @@ class App {
         return rightPanel;
     }
 
+    /** @DONE
+     * 
+     */
     getInvisibleBtn() {
         let btn = html('a', { classes: 'tomczuk-invisible-btn tomczuk-invisible' });
         if (app.storage.get('rightPanelInvisible') == false) {
@@ -515,7 +536,9 @@ class App {
 
         app.rightPanel.after(btn);
     }
-
+    /** @DONE
+     * 
+     */
     makeUtilityContainer() {
         const container = html('div', { classes: 'tomczuk-utility-container' });
         container.primary = html('div', { classes: 'tomczuk-primary' });
@@ -525,6 +548,9 @@ class App {
         app.rightPanel.container = container;
     }
 
+    /** @DONE
+     * 
+     */
     getHeader() {
         const header = html('div', { classes: 'tomczuk-right-panel-header' });
         header.append(html('div', { textContent: '.tomczukToolKit', classes: 'tomczuk-right-panel-header-title' }));
@@ -535,6 +561,9 @@ class App {
         app.rightPanel.header = header;
     }
 
+    /** @DONE
+     * 
+     */
     getPanelToggler(pinned) {
         const panelToggler = html('div', { classes: 'tomczuk-panel-toggler', innerHTML: '&#128204;' });
         const activeClass = 'tomczuk-active';
@@ -553,6 +582,9 @@ class App {
         return panelToggler;
     }
 
+    /** @DONE
+     * 
+     */
     navBox() {
         const allowed = app.forbid([], 'navBox');
 
@@ -584,6 +616,10 @@ class App {
         app.rightPanel.container.primary.append(nav);
     }
 
+    /** @DONE
+     * 
+     * @returns 
+     */
     getReCacheBtn() {
         const allowed = app.forbid([], 'reCacheBtn');
         if (!allowed) return null;
@@ -601,6 +637,9 @@ class App {
         return reCacheBtn;
     }
 
+    /** @DONE
+     * 
+     */
     getMobileBtn() {
         const allowed = app.forbid([], 'mobileBtn');
         if (!allowed) return null;
@@ -634,6 +673,9 @@ class App {
         return mobileBtn;
     }
 
+    /** @DONE
+     * 
+     */
     productBox() {
         const allowed = app.forbid([], 'productBox');
         if (!allowed) return;
@@ -656,13 +698,20 @@ class App {
         if (comingBasketsUrlBtn) productBox.container.append(comingBasketsUrlBtn);
         app.rightPanel.container.primary.append(productBox);
     }
-
+    /** @DONE
+     * 
+     * @param {string} model 
+     * @returns {object}
+     */
     comingBasketsUrlBtn(model) {
         const allowed = app.allow('handlowy', 'comingBasketsUrlBtn');
         if (!allowed) return null;
         return btn({ value: 'Jadące koszyki', url: arrivingBasketsUrl(model) });
     }
 
+    /** @DONE
+     * 
+     */
     async productListBox() {
         const allowed = app.forbid([], 'productListBox');
         if (!allowed) return;
@@ -707,6 +756,9 @@ class App {
         app.rightPanel.container.primary.append(productListBox);
     };
 
+    /** @DONE
+     * 
+     */
     salesBox() {
         const allowed = app.allow([
             'handlowy',
@@ -722,6 +774,9 @@ class App {
         getSaleReportForProduct();
     }
 
+    /** @DONE
+     * @returns {HTMLElement}
+     */
     getSalesControlPanel() {
         let container = html('div', {
             classes: 'tomczuk-sale-control-panel-container',
@@ -755,10 +810,17 @@ class App {
 }
 
 class NativeCtrl {
+    /** @DONE
+     * @param {Controller} controller 
+     */
     constructor(controller) {
         this.ctrl = controller;
     }
 
+    /** @DONE ... so far
+     * 
+     * @returns 
+     */
     async init() {
         this.ctrl.cfg = this.basicCfg();
         this.ctrl.data = this.basicData();
@@ -769,7 +831,6 @@ class NativeCtrl {
 
         this.ctrl.data.model = await this.ctrl.productModel();
         if (isDev() && ! this.ctrl.data.model) this.ctrl.data.model = '9788382158106';
-
 
         this.runListsObserver();
 
@@ -784,15 +845,16 @@ class NativeCtrl {
         this.ctrl.adjustListElements();
     }
 
-    /**
-     * Startowe ustawienia konfiguracyjne dla każdego Controllera
+    /** @TODO - do przeanalizowania, na pewno do zmian.
+     * 
+     * @returns 
      */
     basicCfg() {
         return {
-            testMode: true,
             access: true,
             fetchRequired: false,
-            mutationBreakTime: 300,
+            mutationBreakTimeMs: 500,
+            checkLastMutationIntervalMs: 300,
             lowStockColorsCfg: [
                 {
                     lowerThan: 3,
@@ -827,6 +889,10 @@ class NativeCtrl {
         };
     }
 
+    /** @TODO - pomyśleć... może do wyrzucenia?
+     * 
+     * @returns 
+     */
     basicData() {
         return {
             model: null,
@@ -835,11 +901,11 @@ class NativeCtrl {
         }
     }
 
-    /**
-     * Nadpisuje Konfigurację z Native konfiguracją z Controllera.
+    /** @DONE
+     * Nadpisuje bazową konfigurację z Native konfiguracją z Controllera.
      * @see basicCfg
-     * @see Controller.cfg
-     * @see TKController.cfg
+     * @see Controller.getCfg
+     * @see TKController.getCfg
      */
     overrideCfg() {
         let cfg = this.ctrl.getCfg();
@@ -848,40 +914,44 @@ class NativeCtrl {
         }
     }
 
-    /** @TODO
-     * 
+    /** @TODO - już ma to ręce i nogi, ale jeszcze do poprawek.
+     * Doprowadzić do rozsądnego działania. 
+     * Po odpaleniu aplikacji metoda powinna upewnić się, że wszystkie ajaxy
+     * zostały załadowane, i jeśli to się stało, odpalać querySelectory,
+     * aby te złapały boxy produktowe i dalej je obsłużyły.
+     * @returns {void}
      */
     runListsObserver() {
-        log('loadNewBoxes');
-        let observer = new MutationObserver(entries => {
-            if(entries.some(entry => entry.addedNodes.length > 0)) {
-                this.ctrl.data.lastMutationTime = Date.now();
-                // log(entries);
-            }
+        log('runListsObserver()');
+        let observer = new MutationObserver(() => {
+            this.ctrl.data.lastMutationTime = Date.now();
         });
 
         observer.observe(document.body, {childList: true, subtree: true});
-
         
-        let checkLastMutation = setInterval(() => {
+        let checkLastMutationInterval = setInterval(() => {
             let diff = Date.now() - this.ctrl.data.lastMutationTime;
             // log('Checking mutations... diff: ' + diff);
-            if(diff >= this.ctrl.cfg.mutationBreakTime) {
-                clearInterval(checkLastMutation);
-                observer.disconnect();
-                log(`It's time to work. ` +
+            if(diff >= this.ctrl.cfg.mutationBreakTimeMs) {
+                clearInterval(checkLastMutationInterval);
+                // observer.disconnect();
+                log(`It's time to work. From App Start to run LoadNewBoxes() : ` +
                 ((Date.now() - this.ctrl.data.startupTime)/1000).toFixed(2) + 's');
-                log('From start to last mutation: ' + ((this.ctrl.data.lastMutationTime - this.ctrl.data.startupTime) / 1000).toFixed(2) + 's');
-                //this.loadNewBoxes();
+                log('From App Start to last mutation: ' + ((this.ctrl.data.lastMutationTime - this.ctrl.data.startupTime) / 1000).toFixed(2) + 's');
+                this.loadNewBoxes();
             }
-        }, 300);
+        }, this.ctrl.cfg.checkLastMutationIntervalMs);
     }
 
-    loadNewBoxes() {
-        log('Loading New Boxes');
-    }
-    /** @DELETE
+    /** @TODO - metoda będzie odpalana po załadowaniu boxów produktowych
+     * @see {runListsObserver()}
      * 
+     */
+    loadNewBoxes() {
+        
+    }
+    /** @DEPRECATED - zostanie zastąpiona nowym mechanizmem
+     * @see {loadNewBoxes()}
      */
     getProductBoxes() {
         this.ctrl.data.productBoxes = qsa(this.ctrl.cfg.productBoxSelector) ?? [];
@@ -904,9 +974,12 @@ class NativeCtrl {
         observer.observe(document.body, { childList: true });
     }
     
+    /** @DONE - póki co...
+     * 
+     * @returns 
+     */
     addDebugConsole() {
         if( ! app.testMode) return;
-        log('odpalam konsolę');
         let consoleBox = html('div', {
             style: `
                 position: fixed;
@@ -932,6 +1005,12 @@ class NativeCtrl {
         app.console = consoleBox;
     }
 
+    /** @DONE
+     * @THINK: pomyśleć, czy nie zrobić tak, aby można było lepiej stylować komunikat.
+     * @param {*} text 
+     * @param {*} color 
+     * @returns 
+     */
     log(text, color = 'white') {
         if( ! app.testMode) return;
         let span = html('span', { style: `
@@ -944,6 +1023,10 @@ class NativeCtrl {
         app.console.prepend(span);
     }
     
+    /** @DONE
+     * 
+     * @returns {number}
+     */
     spaceForPanel() {
         let selectors = this.ctrl.mainContainerSelectors();
         let selector = (!Array.isArray(selectors)) 
@@ -956,7 +1039,8 @@ class NativeCtrl {
 
         return ((noPx(window.getComputedStyle(document.body).width) - container.clientWidth) / 2 - 10);
     }
-    /** @DELETE
+
+    /** @DEPRECATED? - co najmniej do poprawki (a może do wywalenia), jak już wejdzie nowy system
      * 
      */
     getDataFromProductList() {
@@ -978,6 +1062,10 @@ class NativeCtrl {
         return data;
     }
 
+    /** @THINK - do przemyślenia, czy tak to rozwiązać. może do poprawki, może do wywalenia
+     * @param {number} stockForDays 
+     * @returns 
+     */
     paintLowStockElem(stockForDays) {
         let element = this.ctrl.cfg.lowStockColorsElem ?? null;
         if( ! element) return null;
@@ -994,12 +1082,19 @@ class NativeCtrl {
         return element;
     }
 
+    /** @DONE
+     * @THINK: czy na pewno NativeCtrl? Może gdzieś to przenieść?
+     */
     redirectFromSearchPage() {
         if ( ! this.ctrl.isSearchPage()) return;
         const url = this.ctrl.searchedElementUrl(this.ctrl.searchText());
         if (url) window.location.href = url;
     }
 
+    /** @DONE
+     * @param {string} feature 
+     * @returns {boolean}
+     */
     showFeature(feature) {
         const { accepted, forbidden } = this.ctrl.featuresPermissions();
         if (forbidden.length > 0) return ! forbidden.find(el => el === feature);
@@ -1014,11 +1109,20 @@ class Controller {
         this.native.init();
     }
 
-    log(text, color = 'white') {this.native.log(text, color);}
+    /** @DONE
+     * 
+     * @param {string} text
+     * @param {string} color
+     */
+    log(text, color = 'white') { this.native.log(text, color); }
 
+    /** @DONE
+     * @OVERRIDE
+     */
     getCfg() {
         return {};
     }
+
     /** @TODO
      * 
      */
@@ -1026,8 +1130,8 @@ class Controller {
         return {
             standard: {
                 selectors: {
-                    container: 'article.book-list.xs-hidden',
-                    box: 'ul.toggle-view > li'
+                    container: 'body',
+                    boxes: (container) => container.qsa('.product-image-container').closest('.owl-item')
                 },
                 getModel: function (el) {
                     return el.qs('[data-model]')?.dataset.model;
@@ -1042,10 +1146,15 @@ class Controller {
         }
     }
 
+    /** @THINK
+     * 
+     * @returns 
+     */
     adjustListElements() {
         return null;
     }
-   /** @DELETE
+
+   /** @DEPRECATED
     * 
     */
     async modifyProductList(show = true) {
@@ -1076,11 +1185,12 @@ class Controller {
         }
         return list;
     }
-    /** @DELETE
+    /** @THINK
      * 
      */
     async getReportForProductList(duration, delay) {
-        let models = [...this.data.productList?.keys()];
+        if( ! this.data.productList) return null;
+        let models = [...this.data?.productList?.keys()];
         let url = 'https://cba.kierus.com.pl/?p=ShowSqlReport&r=ilosc+zamowionych+produktow+i+unikalnych+zamowien';
         let reqBody = new FormData();
         let [startDate, endDate] = prepareDates(duration, delay);
@@ -1458,7 +1568,7 @@ class FantastyczneSwiatyController extends Controller {
     }
 
     productModel() {
-        return document.body.innerText.match(/Model:\s+([\d\w@_]{3,30})/)[1] ?? null;
+        return document.body.innerText?.match(/Model:\s+([\d\w@_]{3,30})/)?.[1];
     }
 
     getCfg() {
@@ -1978,11 +2088,18 @@ function rand(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
+function printConsoleStartingMessage() {
+    console.debug(
+        '%cTomczukToolKit started at: ' + (new Date(app.ctrl.data.startupTime)).toLocaleTimeString(),
+        'color:red;background:white;padding:20px;font-size:18px;weight:800;'
+    );
+}
+
 async function basicInit(department) {
     if (!isDev()) useTomczukToolbarStyles();
     new App(department);
     app.ctrl.data.startupTime = Date.now();
-    log('Start App: ' + app.ctrl.data.startupTime);
+    printConsoleStartingMessage();
     app.ctrl.native.redirectFromSearchPage();
     setInitListeners();
     app.getInvisibleBtn();
@@ -1995,7 +2112,6 @@ async function basicInit(department) {
 (async function(department = 'handlowy') {
     if(typeof run === 'undefined') return;
     await basicInit(department);
-    log('tomczukToolKit - Running...');
     app.navBox();
     app.productBox();
     app.salesBox();
