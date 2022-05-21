@@ -5,7 +5,6 @@
 // ==/UserScript==
 
 // ========================== GLOBAL ==========================
-
 HTMLElement.prototype.qs = function(sel) { return this.querySelector(sel); }
 HTMLElement.prototype.qsa = function(sel) { return [...this.querySelectorAll(sel)]; }
 var run = true;
@@ -847,13 +846,17 @@ class NativeCtrl {
 
     /** @TODO - do przeanalizowania, na pewno do zmian.
      * 
-     * @returns 
+     * @returns {object}
      */
     basicCfg() {
         return {
+            /**
+             * Is it possible to run features on this Controller?
+             */
             access: true,
             fetchRequired: false,
             mutationBreakTimeMs: 500,
+            daysForSalesBundleReport: 3,
             checkLastMutationIntervalMs: 300,
             lowStockColorsCfg: [
                 {
@@ -922,22 +925,45 @@ class NativeCtrl {
      * @returns {void}
      */
     runListsObserver() {
-        log('runListsObserver()');
-        let observer = new MutationObserver(() => {
-            this.ctrl.data.lastMutationTime = Date.now();
-        });
+        var mutationSecondCheck = false;
 
+        log('runListsObserver()');
+        let observer = new MutationObserver(entries => {
+            if( ! entries.some(mutation => {
+                return (
+                    ! mutation.target.classList.contains('tomczuk')
+                    && ! mutation.target.classList.contains('updateable')
+                    && mutation.addedNodes.length > 0 //@TODO - do spr czy dobry warunek logiczny
+                );
+            })) { log('same tomczuki, zawracam'); log(entries); return; }
+            log(entries);
+            this.ctrl.data.lastMutationTime = Date.now();
+            if(mutationSecondCheck) {
+                log('Jeszcze coś tam pykło! ' + ((this.ctrl.data.lastMutationTime - this.ctrl.data.startupTime) / 1000).toFixed(2) + 's');
+                // observer.disconnect();
+            }
+        })
         observer.observe(document.body, {childList: true, subtree: true});
         
         let checkLastMutationInterval = setInterval(() => {
-            let diff = Date.now() - this.ctrl.data.lastMutationTime;
-            // log('Checking mutations... diff: ' + diff);
-            if(diff >= this.ctrl.cfg.mutationBreakTimeMs) {
+
+            let mutationStopped = (
+                (Date.now() - this.ctrl.data.lastMutationTime)
+                >= (this.ctrl.cfg.mutationBreakTimeMs)
+            );
+
+            if(mutationStopped) {
+                log('Mutation stopped, turning off interval...');
                 clearInterval(checkLastMutationInterval);
-                // observer.disconnect();
+                mutationSecondCheck = true; // observer.disconnect();
+
                 log(`It's time to work. From App Start to run LoadNewBoxes() : ` +
-                ((Date.now() - this.ctrl.data.startupTime)/1000).toFixed(2) + 's');
+                ((Date.now() - this.ctrl.data.startupTime)/1000).toFixed(2) + 's ('+Date.now()+')');
                 log('From App Start to last mutation: ' + ((this.ctrl.data.lastMutationTime - this.ctrl.data.startupTime) / 1000).toFixed(2) + 's');
+                setTimeout(() => {
+                    log('Tworzę fake diva.');
+                    document.body.append(document.createElement('div'));
+                }, 6000);
                 this.loadNewBoxes();
             }
         }, this.ctrl.cfg.checkLastMutationIntervalMs);
@@ -1892,11 +1918,11 @@ function noPx(value) {
  * @returns 
  */
 function userSelection(strong = false, exceptions = '') {
-    var result = '';
+    let result = '';
     if (exceptions) exceptions = exceptions.split('').join('\\');
-
-    if (document.activeElement.localName == 'input' || document.activeElement.localName == 'textarea') {
-        let active = document.activeElement;
+    
+    let active = document.activeElement;
+    if (active.localName == 'input' || active.localName == 'textarea') {
         let start = active.selectionStart;
         let end = active.selectionEnd;
         if (start != end) result = active.value.substr(start, end - start);
@@ -1904,12 +1930,10 @@ function userSelection(strong = false, exceptions = '') {
 
     if (strong) result = result.replace(new RegExp('[^a-z0-9ęóąśłżźćń' + exceptions + ']', 'ig'), ' ');
 
-    result = result.replace(/\s{2,}/ig, ' ').trim();
-
-    return result;
+    return result.replace(/\s{2,}/ig, ' ').trim();
 }
 
-/** @CHECK @THINK @DONE
+/** @CHECK @THINK @DONE?
  * @param {string} tagName 
  * @param {object} attributes 
  * @returns {HTMLElement}
@@ -2178,6 +2202,10 @@ async function basicInit(department) {
 
 
 (async function(department = 'handlowy') {
+    if(window.location.href.match('opineo.pl/')) {
+        log('OPINEO, FINISHING SCRIPT...')
+        return;
+    }
     if(typeof run === 'undefined') return;
     await basicInit(department);
     app.navBox();

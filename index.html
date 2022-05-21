@@ -5,51 +5,20 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta env="dev">
+    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="style.css">
     <title>tomczukToolKit</title>
-    <style>
-        .box {
-            width: 200px;
-            height: 200px;
-            margin: 30px;
-            display: flex;
-            flex-wrap: wrap;
-            color: white;
-            font-size: 25px;
-            padding: 10px;
-            align-items: center;
-            align-content: center;
-            justify-content: center;
-            justify-items: center;
-            border: 10px solid black;
-        }
-        div#container {
-            display: flex;
-            width: 100%;
-            background: black;
-        }
-        button, select {
-            padding: 15px;
-            margin: 15px;
-            box-sizing: border-box;
-            cursor: pointer;
-        }
-        
-        div.box.changed {
-            border: 10px solid white;
-        }
-    </style>
 </head>
 <body>
     <div>
-        <div id="container">
-            <div class="box" id="box1" data-model="model1" style="background: red" contenteditable>Uno</div>
-            <div class="box" id="box2" data-model="model2" style="background: blue" contenteditable>Duo</div>
-            <div class="box" id="box3" data-model="model3" style="background: green" contenteditable>Tres</div>
+        <div id="container" class="flex flex-row justify-around p-10">
+            <div class="box p-4 m-2 flex flex-1 flex-wrap bg-red-500 h-96" id="box1" data-model="model1" contenteditable>Uno</div>
+            <div class="box p-4 m-2 flex flex-1 flex-wrap bg-green-500 h-96" id="box2" data-model="model2" contenteditable>Duo</div>
+            <div class="box p-4 m-2 flex flex-1 flex-wrap bg-blue-500 h-96 hover:bg-black" id="box3" data-model="model3" contenteditable>Tres</div>
         </div>
-        <div style="display: flex; flex-direction: column;">
-            <button id="addEl">MUTATE</button>
-            <select>
+        <div >
+            <button class="p-5 box-border bg-fuchsia-300 border border-solid border-black" id="addEl">MUTATE</button>
+            <select class="p-5 box-border border border-solid border-black">
                 <option>deleteBox</option>
                 <option>changeText</option>
                 <option>addChild</option>
@@ -57,6 +26,13 @@
             </select>
         </div>
     </div>
+<div class="flex flex-column justify-around gap-4 w-full bg-red-300 p-4">
+    <div class="p-2 bg-yellow-400 text-red-600">box1</div>
+    <div class="p-2 bg-yellow-400 text-red-600">box2</div>
+    <div class="p-2 bg-yellow-400 text-red-600">box3</div>
+</div>
+
+
     <script src="tomczukToolKit.js"></script>
     <script src="test.js"></script>
 </body>

@@ -41,3 +41,5 @@ qs('#addEl').addEventListener('click', mutate);
 // });
 
 // observer.observe(qs('#container'), { childList: true, subtree: true });
+// document.body.append(html('input',{id: 'condition', value: 'true'}));
+// document.body.append(html('input',{id: 'number', value: '99999999'}));
