@@ -722,21 +722,21 @@ class App {
 
         if (app.storage.get('productListMode') == true) {
             modifyListBtn.classList.add('tomczuk-product-list-mode');
-            app.ctrl.modifyProductList(true);
+            // app.ctrl.modifyProductList(true);
         } else {
             modifyListBtn.classList.remove('tomczuk-product-list-mode');
-            app.ctrl.modifyProductList(false);
+            // app.ctrl.modifyProductList(false);
         }
 
         modifyListBtn.addEventListener('click', async () => {
             if (!modifyListBtn.classList.contains('tomczuk-product-list-mode')) {
                 modifyListBtn.classList.add('tomczuk-product-list-mode');
                 app.storage.set('productListMode', 'true');
-                app.ctrl.modifyProductList(true);
+                // app.ctrl.modifyProductList(true);
             } else {
                 modifyListBtn.classList.remove('tomczuk-product-list-mode');
                 app.storage.set('productListMode', 'false');
-                app.ctrl.modifyProductList(false);
+                // app.ctrl.modifyProductList(false);
             }
         });
 
@@ -832,16 +832,6 @@ class NativeCtrl {
         if (isDev() && ! this.ctrl.data.model) this.ctrl.data.model = '9788382158106';
 
         this.runListsObserver();
-
-        this.ctrl.data.productListContainer = qs(this.ctrl.cfg.productListContainerSelector);
-        
-        this.ctrl.data.productListElements = this.ctrl.data.productListContainer
-            ?.qsa(this.ctrl.cfg.productListElementSelector);
-        
-        this.getProductBoxes();
-        this.ctrl.data.productList = this.getDataFromProductList();
-        await this.ctrl.getReportForProductList(2,0);
-        this.ctrl.adjustListElements();
     }
 
     /** @TODO - do przeanalizowania, na pewno do zmian.
@@ -850,14 +840,11 @@ class NativeCtrl {
      */
     basicCfg() {
         return {
-            /**
-             * Is it possible to run features on this Controller?
-             */
             access: true,
             fetchRequired: false,
-            mutationBreakTimeMs: 500,
+            mutationBreakTimeMs: 2200,
             daysForSalesBundleReport: 3,
-            checkLastMutationIntervalMs: 300,
+            checkLastMutationIntervalMs: 200,
             lowStockColorsCfg: [
                 {
                     lowerThan: 3,
@@ -900,7 +887,7 @@ class NativeCtrl {
         return {
             model: null,
             productListsMap: new Map(),
-            lastMutationTime: 0
+            lastMutationOccuredAt: 0
         }
     }
 
@@ -917,87 +904,64 @@ class NativeCtrl {
         }
     }
 
-    /** @TODO - już ma to ręce i nogi, ale jeszcze do poprawek.
-     * Doprowadzić do rozsądnego działania. 
-     * Po odpaleniu aplikacji metoda powinna upewnić się, że wszystkie ajaxy
-     * zostały załadowane, i jeśli to się stało, odpalać querySelectory,
-     * aby te złapały boxy produktowe i dalej je obsłużyły.
+    /** @DONE? @CHECK @TODO?
      * @returns {void}
      */
     runListsObserver() {
-        var mutationSecondCheck = false;
-
+        this.loadNewBoxes(true);     // @DEBUG
+        var mutationSecondCheck = false;    // @DEBUG do debugowania, przed produkcją wyjebać.
         log('runListsObserver()');
+
         let observer = new MutationObserver(entries => {
-            if( ! entries.some(mutation => {
-                return (
-                    ! mutation.target.classList.contains('tomczuk')
-                    && ! mutation.target.classList.contains('updateable')
+            if( ! entries.some(mutation => { return (
+                    ! mutation.target.classList.contains('updateable')
                     && mutation.addedNodes.length > 0 //@TODO - do spr czy dobry warunek logiczny
                 );
-            })) { log('same tomczuki, zawracam'); log(entries); return; }
-            log(entries);
-            this.ctrl.data.lastMutationTime = Date.now();
-            if(mutationSecondCheck) {
-                log('Jeszcze coś tam pykło! ' + ((this.ctrl.data.lastMutationTime - this.ctrl.data.startupTime) / 1000).toFixed(2) + 's');
-                // observer.disconnect();
+            })) return;
+
+            this.ctrl.data.lastMutationOccuredAt = Date.now();
+            if(mutationSecondCheck) {   // @DEBUG
+                log('Jeszcze coś tam pykło!');
+                log(entries);
             }
-        })
+        });
         observer.observe(document.body, {childList: true, subtree: true});
         
         let checkLastMutationInterval = setInterval(() => {
-
             let mutationStopped = (
-                (Date.now() - this.ctrl.data.lastMutationTime)
+                (Date.now() - this.ctrl.data.lastMutationOccuredAt)
                 >= (this.ctrl.cfg.mutationBreakTimeMs)
             );
 
             if(mutationStopped) {
-                log('Mutation stopped, turning off interval...');
+                log('Mutation finished, turning off interval... ' + ((Date.now() - this.ctrl.data.startUpTime) / 1000).toFixed(2) + 's');
                 clearInterval(checkLastMutationInterval);
-                mutationSecondCheck = true; // observer.disconnect();
-
-                log(`It's time to work. From App Start to run LoadNewBoxes() : ` +
-                ((Date.now() - this.ctrl.data.startupTime)/1000).toFixed(2) + 's ('+Date.now()+')');
-                log('From App Start to last mutation: ' + ((this.ctrl.data.lastMutationTime - this.ctrl.data.startupTime) / 1000).toFixed(2) + 's');
-                setTimeout(() => {
-                    log('Tworzę fake diva.');
-                    document.body.append(document.createElement('div'));
-                }, 6000);
+                mutationSecondCheck = true; // @DEBUG, na proda -> observer.disconnect();
                 this.loadNewBoxes();
             }
         }, this.ctrl.cfg.checkLastMutationIntervalMs);
     }
 
-    /** @TODO - metoda będzie odpalana po załadowaniu boxów produktowych
+    /** @TODO - metoda będzie odpalana po załadowaniu boxów produktowych w DOMie
      * @see {runListsObserver()}
      * 
      */
-    loadNewBoxes() {
-        
-    }
-    /** @DEPRECATED - zostanie zastąpiona nowym mechanizmem
-     * @see {loadNewBoxes()}
-     */
-    getProductBoxes() {
-        this.ctrl.data.productBoxes = qsa(this.ctrl.cfg.productBoxSelector) ?? [];
-        if(this.ctrl.cfg.mutationObserverRequired == false) return this.ctrl.cfg.productBoxes;
+    loadNewBoxes(beforeMutation = false) {
+        if(beforeMutation) return;
+        log('loadNewBoxes(' + (beforeMutation ? 'beforeMutations' : 'afterMutations') + ')');
+        let type = beforeMutation ? 'boxesBeforeMutations' : 'boxesAfterMutations';
+        this.ctrl.data[type] = new Map();
 
-        const callback = async function(mutationsList) {
-            for(const mutation of mutationsList) {
-                if(mutation.type !== 'childList') return;
-                let neededNodes = mutation.target.qsa(app.ctrl.cfg.productBoxSelector)
-                if(neededNodes.length === 0) return;
-                app.ctrl.data.productBoxes = [...new Set([
-                    ...neededNodes,
-                    ...app.ctrl.data.productBoxes
-                ])];
-
-                await app.ctrl.modifyProductList(app.storage.get('productListMode'));
-            }
-        };
-        const observer = new MutationObserver(callback);
-        observer.observe(document.body, { childList: true });
+        for(let [listName, listCfg] of Object.entries(this.ctrl.cfg.productsListsCfg)) {
+            let containers = listCfg.getContainers();
+            containers.forEach(container => {
+                let boxes = listCfg.getBoxes(container);
+                boxes.map(box => {
+                    listCfg.adjustBox(box);
+                    listCfg.buildBox(box);
+                });
+            });
+        }
     }
     
     /** @DONE - póki co...
@@ -1064,28 +1028,6 @@ class NativeCtrl {
         if (!container) return null;
 
         return ((noPx(window.getComputedStyle(document.body).width) - container.clientWidth) / 2 - 10);
-    }
-
-    /** @DEPRECATED? - co najmniej do poprawki (a może do wywalenia), jak już wejdzie nowy system
-     * 
-     */
-    getDataFromProductList() {
-        if(this.ctrl.data.productBoxes.length === 0) return null;
-        
-        let data = new Map();
-        for(let box of this.ctrl.data.productBoxes) {
-            let singleProductData = this.ctrl.getDataFromSingleProductBox(box);
-            if( ! singleProductData) continue;
-            let model = singleProductData.get('model');
-            if( ! model) continue;
-            singleProductData.delete('model');
-            if( ! data.labels) data.labels = [...singleProductData.keys()];
-
-            singleProductData.set('element', box.parentElement);
-            data.set(model, singleProductData);
-        }
-
-        return data;
     }
 
     /** @THINK - do przemyślenia, czy tak to rozwiązać. może do poprawki, może do wywalenia
@@ -1156,63 +1098,24 @@ class Controller {
         return {
             standard: {
                 selectors: {
-                    container: 'body',
-                    boxes: (container) => container.qsa('.product-image-container').closest('.owl-item')
+                    container: null,
+                    boxes: (container) => { return null; }
                 },
                 getModel: function (el) {
-                    return el.qs('[data-model]')?.dataset.model;
+                    return null;
                 },
                 adjust: function (el) {
-                    el.style.background = 'salmon';
+                    return null;
                 },
                 build: function(el) {
-                    el.style.border = '2px solid black';
+                    return null;
                 }
             }
         }
     }
 
     /** @THINK
-     * 
-     * @returns 
-     */
-    adjustListElements() {
-        return null;
-    }
-
-   /** @DEPRECATED
-    * 
-    */
-    async modifyProductList(show = true) {
-        if(this.cfg.access === false) return null;
-        
-        let list = this.data.productBoxes;
-        for(let el of list) {
-            if(el.modifiedBox === true) {
-                el.parentElement.qs('.tomczuk-product-info-box').classList.toggle('tomczuk-hidden', !show);
-                continue;
-            }
-            this.cfg.getModel(el).then(model => {
-                el.modifiedBox = true;
-                let infoBox = html('div', { classes: 'tomczuk-product-info-box' });
-                el.before(infoBox);
-                let url = model ? `https://cba.kierus.com.pl/?p=EditProduct&load=*${model}` : '';
-                infoBox.append(html('a', { classes: 'tomczuk-box-child', textContent: 'idź do cba', href: url }));
-                let btn = html('button', {innerText: `kopiuj: ${model}`, style: 'font-size: .8rem; cursor: pointer;'});
-                btn.addEventListener('click', e => {
-                    e.preventDefault();
-                    navigator.clipboard.writeText(model);
-                    btn.disabled = true;
-                    setTimeout(() => { btn.disabled = false; }, 500);
-                });
-                infoBox.append(btn);
-                infoBox.classList.toggle('tomczuk-hidden', !show);
-            });
-        }
-        return list;
-    }
-    /** @THINK
-     * 
+     * będzie zmiana referencji do listy produktów.
      */
     async getReportForProductList(duration, delay) {
         if( ! this.data.productList) return null;
@@ -1265,15 +1168,6 @@ class Controller {
         }
     }
 
-    /**
-     * @OVERRIDE
-     * @param {HTMLElement} box 
-     * @returns 
-     */
-    getDataFromSingleProductBox(box) {
-        return null;
-    }
-
     /** 
      * OVERRIDE
      * @returns 
@@ -1315,25 +1209,84 @@ class Controller {
 }
 
 class TKController extends Controller {
-    getCfg() {
+    /** @TODO @THINK
+     * 
+     */
+     getProductsListsCfg() {
         return {
-            access: true,
-            productListContainerSelector: '.container.with-below-header',
-            productListElementSelector: '.product-container',
-            productBoxSelector: '.product-container',
-            fetchRequired: false,
-            mutationObserverRequired: true,
-            fetchUrl: function (listElement) { return null },
-            modelSelector: 'a[data-model]',
-            getModel: async function (modelElement) {
-                return modelElement.qs(this.modelSelector)?.dataset.model;
+            standard: {
+                getContainers: function() {
+                    return qsa('.book-list.xs-hidden ul.toggle-view.grid');
+                },
+                getBoxes: function(container) {
+                    return container.qsa('.product-container').map(el => el.closest('li'));
+                },
+                getModel: function (box) {
+                    return box.qs('[data-model]')?.dataset.model;
+                },
+                adjustBox: function (box) {
+                    box.style.background = 'yellow';
+                },
+                buildBox: function(box) {
+                    box.prepend(html('button', {textContent: this.getModel(box)}));
+                }
+            },
+            productPage: {
+                getContainers: function() {
+                    return qsa('.book-list.xs-hidden .list-container.grid-desc.clearfix');
+                },
+                getBoxes: function(container) {
+                    return container.qsa('.grid-desc-item');
+                },
+                getModel: function (box) {
+                    return box.qs('[data-model]')?.dataset.model;
+                },
+                adjustBox: function (box) {
+                    box.qs('a.grid-desc-title').style.overflowY = 'scroll';
+                    box.style.height = 'auto';
+                    box.style.background = 'orange';
+                },
+                buildBox: function(box) {
+                    box.prepend(html('button', {textContent: this.getModel(box)}));
+                }
+            },
+            slider: {
+                getContainers: function() {
+                    return qsa('.slider-grid.xs-hidden');
+                },
+                getBoxes: function(container) {
+                    return container.qsa('ul.clearfix > li');
+                },
+                getModel: function (box) {
+                    return box.qs('[data-model]')?.dataset.model;
+                },
+                adjustBox: function (box) {
+                    box.style.background = 'silver';
+                },
+                buildBox: function(box) {
+                    box.prepend(html('button', {textContent: this.getModel(box)}));
+                }
+            },
+            bestsellers: {
+                getContainers: function() {
+                    return qsa('ul#pagi-slide');
+                },
+                getBoxes: function(container) {
+                    return container.qsa('li');
+                },
+                getModel: function (box) {
+                    return box.qs('[data-model]')?.dataset.model;
+                },
+                adjustBox: function (box) {
+                    box.style.background = 'pink';
+                    box.style.height = 'auto';
+                    box.lastChild.style.height = 'auto';
+                },
+                buildBox: function(box) {
+                    box.prepend(html('button', {textContent: this.getModel(box)}));
+                }
             }
         }
-    }
-
-    adjustListElements() {
-        this.data.productListElements.map(e => e.style.height = 'auto');
-        this.data.productBoxes.map(e => e.style.height = 'auto');
     }
 
     mainContainerSelectors() {
@@ -1357,73 +1310,6 @@ class TKController extends Controller {
         return qs(`a[data-model="${searchText}"]`)?.href;
     }
 
-    productList() {
-        let products = {};
-        products.keys = ['title', 'price', 'discount', 'category', 'author', 'availability', 'url'];
-        for (let prod of this.data.productListElements) {
-            let obj = {};
-            let a = qs('a[data-model]', prod);
-            if (!a) continue;
-            const model = a.dataset.model;
-
-            obj.url = a.href;
-            obj.title = a.dataset.name;
-            obj.category = a.dataset.category;
-            obj.price = a.dataset.price;
-
-            const avail = prod.qs('.product-availability-wrapper');
-            obj.availability = avail ? avail.textContent.trim() : '';
-
-            const discount = prod.qs('.product-discount');
-            obj.discount = discount ? discount.textContent.trim() : '-';
-
-            const authors = prod.qs('.product-authors');
-
-            obj.author = '';
-            if (authors) {
-                let authorList = authors.qsa('a');
-                if (!authorList) break;
-
-                authorList = [...authorList];
-
-                let authorString = authorList.map(a => a.textContent.trim()).join(', ');
-
-                obj.author = authorString;
-            }
-
-            products[model] = obj;
-        }
-        if (Object.keys(products).length == 0) return null;
-        return products;
-    }
-
-    getDataFromSingleProductBox(box) {
-        let data = new Map();
-        let model = box.qs('[data-model]')?.dataset.model;
-        if( ! model) return null;
-
-        data.set('model', model);
-
-        let price = box.qs('[data-price]')?.dataset.price;
-        if(price) price = price.replace('.', ',');
-        data.set('cena_nasza', price);
-
-        let retail = box.qs('.product-main-bottom span del:last-child')?.innerText;
-        if(retail) retail = retail.replace('.',',').replace(/[^\d,]+/, '');
-        else retail = price;
-        data.set('cena_okladkowa', retail);
-
-        let title = box.qs('[data-name]')?.dataset.name;
-        data.set('tytul', title);
-
-        let authors = box.qsa('.product-authors a');
-        let author = authors.length === 0 ? null : authors.map(el => el.innerText.trim()).join(', ');
-
-        data.set('autor', author);
-
-        return data;
-    }
-
     featuresPermissions() {
         return {
             accepted: [],
@@ -1433,21 +1319,6 @@ class TKController extends Controller {
 }
 
 class CMController extends Controller {
-    getCfg() {
-        return {
-            access: true,
-            productListContainerSelector: '#SearchProdDiv tbody',
-            productListElementSelector: '#RowResultsWhite',
-            productBoxSelector: 'a[data-model].cmp_m_prod_tytul',
-            fetchRequired: false,
-            mutationObserverRequired: false,
-            fetchUrl: function (listElement) { return null },
-            modelSelector: 'a[data-model].cmp_m_prod_tytul',
-            getModel: async function (modelElement) {
-                return modelElement?.dataset.model;
-            }
-        }
-    };
 
     mainContainerSelectors() {
         return [
@@ -1526,22 +1397,6 @@ class BEEController extends Controller {
         return '#header .container';
     }
 
-    getCfg() {
-        return {
-            access: true,
-            productListContainerSelector: 'div.product_list.row',
-            productListElementSelector: '.product-container',
-            productBoxSelector: '.product-container',
-            fetchRequired: false,
-            mutationObserverRequired: true,
-            fetchUrl: function (listElement) { return null },
-            modelSelector: 'a[data-model]',
-            getModel: async function (modelElement) {
-                return modelElement.qs(this.modelSelector)?.dataset.model;
-            }
-        }
-    };
-
     productModel() {
         return qs('meta[itemprop="productID"]')?.getAttribute('content');
     }
@@ -1556,46 +1411,6 @@ class BEEController extends Controller {
 
     searchedElementUrl(searchText) {
         return qs(`a[data-model="${searchText}"]`)?.href;
-    }
-
-    getSelectorsForProductList() {
-        return { list: '.product_list', container: '.li.ajax_block_product' };
-    }
-
-    productList() {
-        let ul = qsa('div.row div.product_list')
-                .filter(div => !div.classList.contains('products'))[0] ?? null;
-        if(! ul) return null;
-
-        let els = qsa('product-container', ul);
-        if (!els) return null;
-        els = els.filter(div => !div.classList.contains('productlike-adzone'));
-
-        let products = {};
-        products.keys = ['name', 'price', 'discount', 'category', 'brand', 'size', 'availability', 'url'];
-        for (let prod of els) {
-            let obj = {};
-            let a = qs('a.product-name[data-model]', prod);
-            if (!a) continue;
-            const model = a.dataset.model;
-
-            obj.url = a.href ?? '-';
-            obj.category = a.dataset.category ?? '-';
-            obj.price = a.dataset.price ?? '-';
-
-            obj.brand = a.qs('.products-title-prefix')?.textContent;
-            obj.name = a.qs('.products-title-name')?.textContent;
-            obj.size = a.qs('.products-title-suffix')?.textContent;
-
-            obj.availability = prod.qs('.product-available')?.textContent;
-
-            const discount = qs('.product-discount', prod);
-            obj.discount = discount?.textContent.trim();
-
-            products[model] = obj;
-        }
-
-        return products;
     }
 
     featuresPermissions() {
@@ -1617,23 +1432,6 @@ class FantastyczneSwiatyController extends Controller {
     productModel() {
         return document.body.innerText?.match(/Model:\s+([\d\w@_]{3,30})/)?.[1];
     }
-
-    getCfg() {
-        return {
-            access: true,
-            productListContainerSelector: '.category-products .products-grid',
-            productListElementSelector: 'li.item',
-            productBoxSelector: '.item-area',
-            fetchRequired: false,
-            mutationObserverRequired: false,
-            fetchUrl: function (listElement) { return null },
-            modelSelector: 'a.product-image img',
-            getModel: async function(el) {
-                let modelEl = qs(this.modelSelector, el);
-                return modelEl?.dataset?.src?.match(/\/([^\/]{3,30})\.jpg/i)[1] ?? null;
-            }
-        }
-    };
 
     featuresPermissions() {
         return {
@@ -1698,25 +1496,6 @@ class SwiatKsiazkiController extends Controller {
 
 class TantisController extends Controller { 
     mainContainerSelectors() { return '.header-main'; }
-
-    getCfg() {
-        return {
-            access: true,
-            productListContainerSelector: '#productGridRow .product-list-grid',
-            productListElementSelector: '.product-box .card-body',
-            productBoxSelector: '.product-box .card-body',
-            fetchRequired: true,
-            mutationObserverRequired: false,
-            fetchUrl: function (listElement) { return listElement.qs('a')?.href },
-            modelSelector: 'a[data-model]',
-            getModel: async function (modelElement) {
-                let url = this.fetchUrl(modelElement);
-                let dom = await fetchPageDOM(url);
-                let model = app.ctrl.productModel(dom);
-                return model;
-            }
-        }
-    };
 
     productModel(dom = null) {
         if(!dom) dom = document;
@@ -2182,7 +1961,7 @@ function rand(min, max) {
 
 function printConsoleStartingMessage() {
     console.debug(
-        '%cTomczukToolKit started at: ' + (new Date(app.ctrl.data.startupTime)).toLocaleTimeString(),
+        '%cTomczukToolKit started at: ' + (new Date(app.ctrl.data.startUpTime)).toLocaleTimeString(),
         'color:red;background:white;padding:20px;font-size:18px;weight:800;'
     );
 }
@@ -2190,7 +1969,7 @@ function printConsoleStartingMessage() {
 async function basicInit(department) {
     if (!isDev()) useTomczukToolbarStyles();
     new App(department);
-    app.ctrl.data.startupTime = Date.now();
+    app.ctrl.data.startUpTime = Date.now();
     printConsoleStartingMessage();
     app.ctrl.native.redirectFromSearchPage();
     setInitListeners();
