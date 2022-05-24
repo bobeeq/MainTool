@@ -824,7 +824,7 @@ class NativeCtrl {
         this.ctrl.cfg = this.basicCfg();
         this.ctrl.data = this.basicData();
         this.overrideCfg();
-        this.ctrl.cfg.productsListsCfg = this.ctrl.getProductsListsCfg();
+        this.ctrl.data.lists = new ListBundle();
         this.addDebugConsole();
         if (this.ctrl.cfg.access === false) return;
 
@@ -908,7 +908,7 @@ class NativeCtrl {
      * @returns {void}
      */
     runListsObserver() {
-        this.loadNewBoxes(true);     // @DEBUG
+        // this.loadNewBoxes(true);     // @DEBUG
         var mutationSecondCheck = false;    // @DEBUG do debugowania, przed produkcją wyjebać.
         log('runListsObserver()');
 
@@ -946,22 +946,8 @@ class NativeCtrl {
      * @see {runListsObserver()}
      * 
      */
-    loadNewBoxes(beforeMutation = false) {
-        if(beforeMutation) return;
-        log('loadNewBoxes(' + (beforeMutation ? 'beforeMutations' : 'afterMutations') + ')');
-        let type = beforeMutation ? 'boxesBeforeMutations' : 'boxesAfterMutations';
-        this.ctrl.data[type] = new Map();
-
-        for(let [listName, listCfg] of Object.entries(this.ctrl.cfg.productsListsCfg)) {
-            let containers = listCfg.getContainers();
-            containers.forEach(container => {
-                let boxes = listCfg.getBoxes(container);
-                boxes.map(box => {
-                    listCfg.adjustBox(box);
-                    listCfg.buildBox(box);
-                });
-            });
-        }
+    loadNewBoxes() {
+        this.ctrl.listsInit();
     }
     
     /** @DONE - póki co...
@@ -1091,27 +1077,10 @@ class Controller {
         return {};
     }
 
-    /** @TODO
+    /** @OVERRIDE
      * 
      */
-    getProductsListsCfg() {
-        return {
-            standard: {
-                selectors: {
-                    container: null,
-                    boxes: (container) => { return null; }
-                },
-                getModel: function (el) {
-                    return null;
-                },
-                adjust: function (el) {
-                    return null;
-                },
-                build: function(el) {
-                    return null;
-                }
-            }
-        }
+    listsInit() {
     }
 
     /** @THINK
@@ -1209,84 +1178,14 @@ class Controller {
 }
 
 class TKController extends Controller {
-    /** @TODO @THINK
-     * 
-     */
-     getProductsListsCfg() {
-        return {
-            standard: {
-                getContainers: function() {
-                    return qsa('.book-list.xs-hidden ul.toggle-view.grid');
-                },
-                getBoxes: function(container) {
-                    return container.qsa('.product-container').map(el => el.closest('li'));
-                },
-                getModel: function (box) {
-                    return box.qs('[data-model]')?.dataset.model;
-                },
-                adjustBox: function (box) {
-                    box.style.background = 'yellow';
-                },
-                buildBox: function(box) {
-                    box.prepend(html('button', {textContent: this.getModel(box)}));
-                }
-            },
-            productPage: {
-                getContainers: function() {
-                    return qsa('.book-list.xs-hidden .list-container.grid-desc.clearfix');
-                },
-                getBoxes: function(container) {
-                    return container.qsa('.grid-desc-item');
-                },
-                getModel: function (box) {
-                    return box.qs('[data-model]')?.dataset.model;
-                },
-                adjustBox: function (box) {
-                    box.qs('a.grid-desc-title').style.overflowY = 'scroll';
-                    box.style.height = 'auto';
-                    box.style.background = 'orange';
-                },
-                buildBox: function(box) {
-                    box.prepend(html('button', {textContent: this.getModel(box)}));
-                }
-            },
-            slider: {
-                getContainers: function() {
-                    return qsa('.slider-grid.xs-hidden');
-                },
-                getBoxes: function(container) {
-                    return container.qsa('ul.clearfix > li');
-                },
-                getModel: function (box) {
-                    return box.qs('[data-model]')?.dataset.model;
-                },
-                adjustBox: function (box) {
-                    box.style.background = 'silver';
-                },
-                buildBox: function(box) {
-                    box.prepend(html('button', {textContent: this.getModel(box)}));
-                }
-            },
-            bestsellers: {
-                getContainers: function() {
-                    return qsa('ul#pagi-slide');
-                },
-                getBoxes: function(container) {
-                    return container.qsa('li');
-                },
-                getModel: function (box) {
-                    return box.qs('[data-model]')?.dataset.model;
-                },
-                adjustBox: function (box) {
-                    box.style.background = 'pink';
-                    box.style.height = 'auto';
-                    box.lastChild.style.height = 'auto';
-                },
-                buildBox: function(box) {
-                    box.prepend(html('button', {textContent: this.getModel(box)}));
-                }
-            }
-        }
+    listsInit() {
+        this.data.lists.add(new TKStandardList);
+        this.data.lists.add(new TKProductPageList);
+        this.data.lists.add(new TKBestsellersList);
+        this.data.lists.add(new TKSliderList);
+        this.data.lists.add(new TKPromoList);
+        this.data.lists.operate();
+        this.data.lists.show();
     }
 
     mainContainerSelectors() {
@@ -1529,6 +1428,135 @@ class MatrasController extends Controller {
 }
 
 class BasicController extends Controller {
+}
+
+class List {
+    constructor() {
+        this.elements = new Map;
+    }
+    getContainers() {
+        return [];
+    }
+    getBoxes(container) {
+        return [];
+    }
+    getModel(box) {
+        return box.qs('[data-model]')?.dataset.model;
+    }
+    adjustBox(box) {
+        box.style.padding = '3px';
+        let bg = box.style.backgroundColor;
+        box.addEventListener('mouseover', () => {
+            box.style.boxShadow = '0 0 8px rgba(0,0,0,.4)';
+            box.style.transition = '500ms';
+            box.style.scale = '.95';
+            box.style.backgroundColor = '#eee';
+        });
+        box.addEventListener('mouseout', () => {
+            box.style.backgroundColor = bg;
+            box.style.boxShadow = 'none';
+            box.style.scale = '1';
+        });
+    }
+    buildBox(box) {
+        box.prepend(html('button', {
+            textContent: this.getModel(box),
+            style:'margin:auto;display:block'
+        }));
+    }
+}
+
+class TKStandardList extends List {
+    getContainers() {
+        return qsa('.book-list.xs-hidden ul.toggle-view.grid');
+    }
+    getBoxes(container) {
+        return container.qsa('.product-container').map(el => el.closest('li'));
+    }
+}
+
+class TKProductPageList extends TKStandardList {
+    getContainers() {
+        return qsa('.book-list.xs-hidden .list-container.grid-desc.clearfix');
+    }
+    getBoxes(container) {
+        return container.qsa('.grid-desc-item');
+    }
+    adjustBox(box) {
+        super.adjustBox(box);
+        box.style.height = 'auto';
+    }
+}
+
+class TKSliderList extends TKStandardList {
+    getContainers() {
+        return qsa('.slider-grid.xs-hidden');
+    }
+    getBoxes(container) {
+        return container.qsa('ul.clearfix > li');
+    }
+}
+
+class TKBestsellersList extends TKStandardList {
+    getContainers() {
+        return qsa('ul#pagi-slide');
+    }
+    getBoxes(container) {
+        return container.qsa('li');
+    }
+    adjustBox(box) {
+        super.adjustBox(box);
+        box.style.height = 'auto';
+        box.qs('.product-container').style.height = 'auto';
+    }
+}
+
+class TKPromoList extends TKStandardList {
+    getContainers() {
+        return qsa('.book-list .list-container ul.list');
+    }
+    getBoxes(container) {
+        return container.qsa('li');
+    }
+    adjustBox(box) {
+        box.style.height = '250px';
+        box.children[0].style.height = '200px';
+        box.children[0].style.top = '80px';
+    }
+}
+
+class ListBundle {
+    constructor() {
+        this.lists = [];
+        this.allElements = new Map;
+    }
+    
+    add(list) {
+        this.lists.push(list);
+    }
+
+    operate() {
+        for(let list of this.lists) {
+            let containers = list.getContainers();
+            for(let container of containers) {
+                list.getBoxes(container).map(box => {
+                    list.adjustBox(box);
+                    list.buildBox(box);
+                    let model = list.getModel(box)
+                    list.elements.set(model, box);
+                    this.allElements.set(model, box);
+                });
+            }
+        }
+    }
+
+    getAllElements() {
+        return this.allElements;
+    }
+
+    show() {
+        log(this);
+    }
 }
 
 /** @DONE ?
