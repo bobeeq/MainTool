@@ -842,7 +842,7 @@ class NativeCtrl {
         return {
             access: true,
             fetchRequired: false,
-            mutationBreakTimeMs: 2200,
+            mutationBreakTimeMs: 3600,
             daysForSalesBundleReport: 3,
             checkLastMutationIntervalMs: 200,
             lowStockColorsCfg: [
@@ -887,7 +887,7 @@ class NativeCtrl {
         return {
             model: null,
             productListsMap: new Map(),
-            lastMutationOccuredAt: 0
+            lastMutationOccuredAt: Date.now()
         }
     }
 
@@ -908,22 +908,18 @@ class NativeCtrl {
      * @returns {void}
      */
     runListsObserver() {
-        // this.loadNewBoxes(true);     // @DEBUG
         var mutationSecondCheck = false;    // @DEBUG do debugowania, przed produkcją wyjebać.
-        log('runListsObserver()');
-
+        let longestGap = 0;
         let observer = new MutationObserver(entries => {
-            if( ! entries.some(mutation => { return (
-                    ! mutation.target.classList.contains('updateable')
-                    && mutation.addedNodes.length > 0 //@TODO - do spr czy dobry warunek logiczny
-                );
-            })) return;
+
+            let now = Date.now();
+            let diff = now - this.ctrl.data.lastMutationOccuredAt;
+            if(diff > longestGap) longestGap = diff;
 
             this.ctrl.data.lastMutationOccuredAt = Date.now();
-            if(mutationSecondCheck) {   // @DEBUG
-                log('Jeszcze coś tam pykło!');
-                log(entries);
-            }
+            if(mutationSecondCheck) log('JESZCZE COŚ TAM PYKŁO!'); // @DEBUG
+            secFromStart();
+            log(entries);
         });
         observer.observe(document.body, {childList: true, subtree: true});
         
@@ -934,7 +930,8 @@ class NativeCtrl {
             );
 
             if(mutationStopped) {
-                log('Mutation finished, turning off interval... ' + ((Date.now() - this.ctrl.data.startUpTime) / 1000).toFixed(2) + 's');
+                log(`Mutation finished, turning off interval... ${secFromStart(false, false)}`);
+                log(`Longest gap between mutations: ${longestGap}`);
                 clearInterval(checkLastMutationInterval);
                 mutationSecondCheck = true; // @DEBUG, na proda -> observer.disconnect();
                 this.loadNewBoxes();
@@ -1188,6 +1185,9 @@ class TKController extends Controller {
         this.data.lists.show();
     }
 
+    getCfg() {
+        return {mutationBreakTimeMs: 2600}
+    }
     mainContainerSelectors() {
         return sessionStorage.tomczukMobileMode === 'true' ? '#header > .container' : 'header#top';
     }
@@ -1291,6 +1291,12 @@ class AllegroController extends Controller {
 }
 
 class BEEController extends Controller {
+    listsInit() {
+        this.data.lists.add(new BEEStandardList);
+        this.data.lists.add(new BEESliderList);
+        this.data.lists.operate();
+        this.data.lists.show();
+    }
     mainContainerSelectors() {
         if (sessionStorage.tomczukMobileMode === 'true') return '#header .container';
         return '#header .container';
@@ -1430,6 +1436,112 @@ class MatrasController extends Controller {
 class BasicController extends Controller {
 }
 
+/** @DONE ?
+ * 
+ */
+class Storage {
+    /** @DONE
+     * 
+     */
+    constructor() {
+        if(window.localStorage) {
+            this.type = 'localStorage';
+        } else if(window.sessionStorage) {
+            this.type = 'sessionStorage';
+        } else {
+            this.type = null;
+            this.storage = null;
+        }
+
+        if(this.type && !window[this.type].getItem('tomczukToolKit')) {
+            window[this.type].setItem('tomczukToolKit', '');
+        }
+    }
+
+    /** @DONE
+     * @returns {string} 
+     */
+    str() {
+        if( ! this.type) return undefined;
+        return window[this.type].getItem('tomczukToolKit') ?? '';
+    }
+
+    /** @DONE
+     * @param {string} key 
+     * @param {string} value 
+     */
+    set(key, value) {
+        if( ! this.type) return false;
+        let keyVal = `${key}=${value}`;
+        if(this.str().length === 0) {
+            window[this.type].setItem('tomczukToolKit', keyVal);
+            return;
+        }
+        let match = this.str().match(new RegExp(`(.*)(${key}=[^=&]+)(.*)`, 'i'));
+        if( ! match) {
+            window[this.type].setItem(
+                'tomczukToolKit',
+                window[this.type].getItem('tomczukToolKit') + `&${keyVal}`
+            );
+        } else {
+            match.shift();
+            match[1] = keyVal;
+            window[this.type].setItem('tomczukToolKit', match.join(''));
+        }
+    }
+    
+    /** @DONE
+     * 
+     * @param {string} key 
+     * @returns {string|boolean|null}
+     */
+    get(key) {
+        if( ! this.type) return false;
+        let match = this.str()?.match(new RegExp(`(?:${key}\=)([^=&]+)`, 'i'));
+        if(match) match = match[1];
+        if(match === null) return null;
+        if(match === 'true') return true;
+        if(match === 'false') return false;
+        if(/^\d+$/.test(match)) return parseInt(match);
+        if(/^\d+\.\d+$/.test(match)) return parseFloat(match);
+        return match;
+    }
+}
+
+class ListBundle {
+    constructor() {
+        this.lists = [];
+        this.allElements = new Map;
+    }
+    
+    add(list) {
+        this.lists.push(list);
+    }
+
+    operate() {
+        for(let list of this.lists) {
+            let containers = list.getContainers();
+            for(let container of containers) {
+                list.getBoxes(container).map(box => {
+                    list.adjustBox(box);
+                    list.buildBox(box);
+                    let model = list.getModel(box)
+                    list.elements.set(model, box);
+                    this.allElements.set(model, box);
+                });
+            }
+        }
+    }
+
+    getAllElements() {
+        return this.allElements;
+    }
+
+    show() {
+        log(this);
+    }
+}
+
 class List {
     constructor() {
         this.elements = new Map;
@@ -1525,109 +1637,22 @@ class TKPromoList extends TKStandardList {
     }
 }
 
-class ListBundle {
-    constructor() {
-        this.lists = [];
-        this.allElements = new Map;
+class BEEStandardList extends List {
+    getContainers() {
+        let containers = qsa('.product_list.row');
+        return containers.length === 0 ? qsa('.slider') : containers;
     }
-    
-    add(list) {
-        this.lists.push(list);
-    }
-
-    operate() {
-        for(let list of this.lists) {
-            let containers = list.getContainers();
-            for(let container of containers) {
-                list.getBoxes(container).map(box => {
-                    list.adjustBox(box);
-                    list.buildBox(box);
-                    let model = list.getModel(box)
-                    list.elements.set(model, box);
-                    this.allElements.set(model, box);
-                });
-            }
-        }
-    }
-
-    getAllElements() {
-        return this.allElements;
-    }
-
-    show() {
-        log(this);
+    getBoxes(container) {
+        return container.qsa('.product-container').map(el => el.parentElement);
     }
 }
 
-/** @DONE ?
- * 
- */
-class Storage {
-    /** @DONE
-     * 
-     */
-    constructor() {
-        if(window.localStorage) {
-            this.type = 'localStorage';
-        } else if(window.sessionStorage) {
-            this.type = 'sessionStorage';
-        } else {
-            this.type = null;
-            this.storage = null;
-        }
-
-        if(this.type && !window[this.type].getItem('tomczukToolKit')) {
-            window[this.type].setItem('tomczukToolKit', '');
-        }
+class BEESliderList extends List {
+    getContainers() {
+        return qsa('.slider');
     }
-
-    /** @DONE
-     * @returns {string} 
-     */
-    str() {
-        if( ! this.type) return undefined;
-        return window[this.type].getItem('tomczukToolKit') ?? '';
-    }
-
-    /** @DONE
-     * @param {string} key 
-     * @param {string} value 
-     */
-    set(key, value) {
-        if( ! this.type) return false;
-        let keyVal = `${key}=${value}`;
-        if(this.str().length === 0) {
-            window[this.type].setItem('tomczukToolKit', keyVal);
-            return;
-        }
-        let match = this.str().match(new RegExp(`(.*)(${key}=[^=&]+)(.*)`, 'i'));
-        if( ! match) {
-            window[this.type].setItem(
-                'tomczukToolKit',
-                window[this.type].getItem('tomczukToolKit') + `&${keyVal}`
-            );
-        } else {
-            match.shift();
-            match[1] = keyVal;
-            window[this.type].setItem('tomczukToolKit', match.join(''));
-        }
-    }
-    
-    /** @DONE
-     * 
-     * @param {string} key 
-     * @returns {string|boolean|null}
-     */
-    get(key) {
-        if( ! this.type) return false;
-        let match = this.str()?.match(new RegExp(`(?:${key}\=)([^=&]+)`, 'i'));
-        if(match) match = match[1];
-        if(match === null) return null;
-        if(match === 'true') return true;
-        if(match === 'false') return false;
-        if(/^\d+$/.test(match)) return parseInt(match);
-        if(/^\d+\.\d+$/.test(match)) return parseFloat(match);
-        return match;
+    getBoxes(container) {
+        return container.qsa('.li.slider-item').map(el => el.parentElement);
     }
 }
 
@@ -1987,23 +2012,29 @@ function rand(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
+function secFromStart(timestamp, logIt = true) {
+    if( ! timestamp) timestamp = Date.now();
+    let time = ((timestamp - app.startUpTime) / 1000).toFixed(2) + 's';
+    if( ! logIt) return time;
+    log(time);
+}
+
 function printConsoleStartingMessage() {
     console.debug(
-        '%cTomczukToolKit started at: ' + (new Date(app.ctrl.data.startUpTime)).toLocaleTimeString(),
+        '%cTomczukToolKit started at: ' + (new Date(app.startUpTime)).toLocaleTimeString(),
         'color:red;background:white;padding:20px;font-size:18px;weight:800;'
     );
 }
 
 async function basicInit(department) {
-    if (!isDev()) useTomczukToolbarStyles();
     new App(department);
-    app.ctrl.data.startUpTime = Date.now();
+    app.startUpTime = Date.now();
     printConsoleStartingMessage();
+    if (!isDev()) useTomczukToolbarStyles();
     app.ctrl.native.redirectFromSearchPage();
     setInitListeners();
     app.getInvisibleBtn();
 }
-
 
 //START APP
 
