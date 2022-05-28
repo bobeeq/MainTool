@@ -824,7 +824,7 @@ class NativeCtrl {
         this.ctrl.cfg = this.basicCfg();
         this.ctrl.data = this.basicData();
         this.overrideCfg();
-        this.ctrl.data.lists = new ListBundle();
+        this.ctrl.data.lists = new ListBundle(this.ctrl.getLists());
         this.addDebugConsole();
         if (this.ctrl.cfg.access === false) return;
 
@@ -1059,6 +1059,10 @@ class Controller {
         this.native = new NativeCtrl(this);
         this.native.init();
     }
+    
+    getLists() {
+        return [];
+    }
 
     /** @DONE
      * 
@@ -1175,13 +1179,18 @@ class Controller {
 }
 
 class TKController extends Controller {
+    getLists() {
+        return [
+            new TKStandardList,
+            new TKProductPageList,
+            new TKBestsellersList,
+            new TKSliderList,
+            new TKPromoList
+        ];
+    }
+
     listsInit() {
-        this.data.lists.add(new TKStandardList);
-        this.data.lists.add(new TKProductPageList);
-        this.data.lists.add(new TKBestsellersList);
-        this.data.lists.add(new TKSliderList);
-        this.data.lists.add(new TKPromoList);
-        this.data.lists.operate();
+        this.data.lists.prepare();
         this.data.lists.show();
     }
 
@@ -1291,12 +1300,18 @@ class AllegroController extends Controller {
 }
 
 class BEEController extends Controller {
+    getLists() {
+        return [
+            new BEEStandardList,
+            new BEESliderList
+        ];
+    }
+
     listsInit() {
-        this.data.lists.add(new BEEStandardList);
-        this.data.lists.add(new BEESliderList);
-        this.data.lists.operate();
+        this.data.lists.prepare();
         this.data.lists.show();
     }
+
     mainContainerSelectors() {
         if (sessionStorage.tomczukMobileMode === 'true') return '#header .container';
         return '#header .container';
@@ -1509,28 +1524,40 @@ class Storage {
 }
 
 class ListBundle {
-    constructor() {
-        this.lists = [];
+    constructor(lists = []) {
+        log('creating bundle. lists:');
+        log(lists);
+        this.lists = lists;
         this.allElements = new Map;
     }
     
     add(list) {
-        this.lists.push(list);
+        if(Array.isArray(list)) {
+            this.lists = [...this.lists, ...list];
+        } else {
+            this.lists.push(list);
+        }
     }
 
-    operate() {
+    prepare() {
         for(let list of this.lists) {
             let containers = list.getContainers();
             for(let container of containers) {
-                list.getBoxes(container).map(box => {
-                    list.adjustBox(box);
-                    list.buildBox(box);
-                    let model = list.getModel(box)
+                let boxes = list.getBoxes(container);
+                for(let box of boxes) {
+                    box.tomczuk = {};
+                    let model = box.tomczuk.model = list.getModel(box);
+                    box.tomczuk.adjustBox = list.adjustBox;
+                    box.tomczuk.buildBox = list.buildBox;
                     list.elements.set(model, box);
                     this.allElements.set(model, box);
-                });
+                }
             }
         }
+    }
+
+    loadReport() {
+        let models = this.allElements.keys();
     }
 
     getAllElements() {
@@ -1553,7 +1580,7 @@ class List {
         return [];
     }
     getModel(box) {
-        return box.qs('[data-model]')?.dataset.model;
+        return box?.qs('[data-model]')?.dataset.model;
     }
     adjustBox(box) {
         box.style.padding = '3px';
@@ -1571,8 +1598,10 @@ class List {
         });
     }
     buildBox(box) {
+        let model = this.getModel(box);
+        if(! model) return;
         box.prepend(html('button', {
-            textContent: this.getModel(box),
+            textContent:  model,
             style:'margin:auto;display:block'
         }));
     }
@@ -1639,11 +1668,15 @@ class TKPromoList extends TKStandardList {
 
 class BEEStandardList extends List {
     getContainers() {
-        let containers = qsa('.product_list.row');
-        return containers.length === 0 ? qsa('.slider') : containers;
+        return qsa('.product_list.row');
     }
     getBoxes(container) {
         return container.qsa('.product-container').map(el => el.parentElement);
+    }
+    adjustBox(box) {
+        super.adjustBox(box);
+        box.style.height = '500px';
+        box.qs('.product-container').style.height = 'auto';
     }
 }
 
