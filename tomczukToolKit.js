@@ -418,8 +418,8 @@ class App {
     }
 
     /** @DONE
-     * @param {array} departments 
-     * @param {string} feature 
+     * @param {array} departments
+     * @param {string} feature
      * @returns 
      */
     forbid(departments, feature) {
@@ -506,6 +506,29 @@ class App {
         app.makeUtilityContainer();
         document.body.append(rightPanel);
         return rightPanel;
+    }
+
+    setInitListeners() {
+        document.addEventListener('click', e => {
+            if (e.target.closest('.tomczuk-right-panel')) return;
+            app.rightPanel.adjustWidth();
+        });
+    
+        window.addEventListener('resize', () => { app.rightPanel.adjustWidth(); });
+    
+        document.addEventListener('scroll', showGoUpBtn);
+        document.addEventListener('resize', showGoUpBtn);
+    
+        window.addEventListener('keydown', e => {
+            if (e.key === 'Escape') {
+                setTimeout(() => {
+                    app.rightPanel.classList.add('tomczuk-click-through');
+                    setTimeout(() => {
+                        app.rightPanel.classList.remove('tomczuk-click-through');
+                    }, 3000);
+                }, 150);
+            };
+        });
     }
 
     /** @DONE
@@ -720,24 +743,22 @@ class App {
         const copyListBtn = html('a', { innerHTML: '&#128203;', classes: 'tomczuk-btn tomczuk-copy-product-list' });
         const modifyListBtn = html('a', { innerHTML: '&#128200;', classes: 'tomczuk-btn tomczuk-modify-product-list' });
 
-        if (app.storage.get('productListMode') == true) {
+        if (app.storage.get('productListMode')) {
             modifyListBtn.classList.add('tomczuk-product-list-mode');
-            // app.ctrl.modifyProductList(true);
         } else {
             modifyListBtn.classList.remove('tomczuk-product-list-mode');
-            // app.ctrl.modifyProductList(false);
         }
 
         modifyListBtn.addEventListener('click', async () => {
             if (!modifyListBtn.classList.contains('tomczuk-product-list-mode')) {
                 modifyListBtn.classList.add('tomczuk-product-list-mode');
                 app.storage.set('productListMode', 'true');
-                // app.ctrl.modifyProductList(true);
             } else {
                 modifyListBtn.classList.remove('tomczuk-product-list-mode');
                 app.storage.set('productListMode', 'false');
-                // app.ctrl.modifyProductList(false);
             }
+            
+            app.ctrl.native.loadNewBoxes();
         });
 
         copyListBtn.addEventListener('click', e => {
@@ -810,10 +831,11 @@ class App {
 
 class NativeCtrl {
     /** @DONE
-     * @param {Controller} controller 
+     * @param {Controller} controller
      */
     constructor(controller) {
         this.ctrl = controller;
+        this.init();
     }
 
     /** @DONE ... so far
@@ -822,13 +844,14 @@ class NativeCtrl {
      */
     async init() {
         this.ctrl.cfg = this.basicCfg();
-        this.ctrl.data = this.basicData();
         this.overrideCfg();
+
+        this.ctrl.data = this.basicData();
         this.ctrl.data.lists = new ListBundle(this.ctrl.getLists());
         this.addDebugConsole();
         if (this.ctrl.cfg.access === false) return;
 
-        this.ctrl.data.model = await this.ctrl.productModel();
+        this.ctrl.data.model = this.ctrl.productModel();
         if (isDev() && ! this.ctrl.data.model) this.ctrl.data.model = '9788382158106';
 
         this.runListsObserver();
@@ -911,7 +934,6 @@ class NativeCtrl {
         var mutationSecondCheck = false;    // @DEBUG do debugowania, przed produkcją wyjebać.
         let longestGap = 0;
         let observer = new MutationObserver(entries => {
-
             let now = Date.now();
             let diff = now - this.ctrl.data.lastMutationOccuredAt;
             if(diff > longestGap) longestGap = diff;
@@ -931,7 +953,7 @@ class NativeCtrl {
 
             if(mutationStopped) {
                 log(`Mutation finished, turning off interval... ${secFromStart(false, false)}`);
-                log(`Longest gap between mutations: ${longestGap}`);
+                log(`Longest gap between mutations: ${(longestGap / 1000).toFixed(2)}s`);
                 clearInterval(checkLastMutationInterval);
                 mutationSecondCheck = true; // @DEBUG, na proda -> observer.disconnect();
                 this.loadNewBoxes();
@@ -943,8 +965,14 @@ class NativeCtrl {
      * @see {runListsObserver()}
      * 
      */
-    loadNewBoxes() {
+    async loadNewBoxes() {
         this.ctrl.listsInit();
+        await this.ctrl.salesReportForLoadedBoxes();
+        if(app.storage.get('productListMode')) {
+            this.ctrl.data.lists.buildAll();
+        } else {
+            this.ctrl.data.lists.unbuildAll();
+        }
     }
     
     /** @DONE - póki co...
@@ -1057,9 +1085,12 @@ class NativeCtrl {
 class Controller {
     constructor() {
         this.native = new NativeCtrl(this);
-        this.native.init();
     }
     
+    /** @OVERRIDE
+     * 
+     * @returns array
+     */
     getLists() {
         return [];
     }
@@ -1087,9 +1118,10 @@ class Controller {
     /** @THINK
      * będzie zmiana referencji do listy produktów.
      */
-    async getReportForProductList(duration, delay) {
-        if( ! this.data.productList) return null;
-        let models = [...this.data?.productList?.keys()];
+    async salesReportForLoadedBoxes(duration = 2, delay = 0) {
+        if(this.data.lists.allElements.length < 1) return null;
+
+        let models = [...this.data.lists.allElements.keys()];
         let url = 'https://cba.kierus.com.pl/?p=ShowSqlReport&r=ilosc+zamowionych+produktow+i+unikalnych+zamowien';
         let reqBody = new FormData();
         let [startDate, endDate] = prepareDates(duration, delay);
@@ -1134,7 +1166,8 @@ class Controller {
 
         if( ! Array.isArray(report) || report.length === 0) return null;
         for(let row of report) {
-            this.data.productList.get(row.model)?.set('saleReport', row);
+            let box = this.data.lists.allElements.get(row.model)
+            if(box) box.tomczuk.saleReport = row;
         }
     }
 
@@ -1564,6 +1597,22 @@ class ListBundle {
         return this.allElements;
     }
 
+    buildAll() {
+        this.lists.forEach(list => {
+            list.elements.forEach(box => {
+                list.buildBox(box);
+            });
+        });
+    }
+
+    unbuildAll() {
+        this.lists.forEach(list => {
+            list.elements.forEach(box => {
+                box.style.background = 'orange'
+            });
+        });
+    }
+
     show() {
         log(this);
     }
@@ -1598,6 +1647,7 @@ class List {
         });
     }
     buildBox(box) {
+        console.log(this);
         let model = this.getModel(box);
         if(! model) return;
         box.prepend(html('button', {
@@ -1634,7 +1684,9 @@ class TKSliderList extends TKStandardList {
         return qsa('.slider-grid.xs-hidden');
     }
     getBoxes(container) {
-        return container.qsa('ul.clearfix > li');
+        let boxes = container.qsa('ul.clearfix > li');
+        log(boxes);
+        return boxes;
     }
 }
 
@@ -2017,30 +2069,6 @@ function showGoUpBtn() {
     qs('.tomczuk-goup-btn')?.classList.toggle('tomczuk-hidden', ! window.scrollY);
 }
 
-function setInitListeners() {
-    let rightPanel = app.rightPanel;
-    document.addEventListener('click', e => {
-        if (e.target.closest('.tomczuk-right-panel')) return;
-        rightPanel.adjustWidth();
-    });
-
-    window.addEventListener('resize', () => { rightPanel.adjustWidth(); });
-
-    document.addEventListener('scroll', showGoUpBtn);
-    document.addEventListener('resize', showGoUpBtn);
-
-    window.addEventListener('keydown', e => {
-        if (e.key === 'Escape') {
-            setTimeout(() => {
-                rightPanel.classList.add('tomczuk-click-through');
-                setTimeout(() => {
-                    rightPanel.classList.remove('tomczuk-click-through');
-                }, 3000);
-            }, 150);
-        };
-    });
-}
-
 function rand(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }
@@ -2059,13 +2087,13 @@ function printConsoleStartingMessage() {
     );
 }
 
-async function basicInit(department) {
+async function init(department) {
     new App(department);
     app.startUpTime = Date.now();
     printConsoleStartingMessage();
-    if (!isDev()) useTomczukToolbarStyles();
+    if ( ! isDev()) useTomczukToolbarStyles();
     app.ctrl.native.redirectFromSearchPage();
-    setInitListeners();
+    app.setInitListeners();
     app.getInvisibleBtn();
 }
 
@@ -2074,11 +2102,11 @@ async function basicInit(department) {
 
 (async function(department = 'handlowy') {
     if(window.location.href.match('opineo.pl/')) {
-        log('OPINEO, FINISHING SCRIPT...')
+        log('OPINEO, KILLING SCRIPT...')
         return;
     }
     if(typeof run === 'undefined') return;
-    await basicInit(department);
+    await init(department);
     app.navBox();
     app.productBox();
     app.salesBox();
