@@ -12,6 +12,17 @@ var app;
 
 // ========================== GLOBAL ==========================
 
+
+Map.prototype.add = function(key, val) {
+    let current = this.get(key);
+    if(current) {
+        if( ! Array.isArray(current)) throw new Error('Powinna być tablica');
+        current.push(val);
+    } else {
+        this.set(key, [val]);
+    }
+}
+
 /** @DONE
  * 
  */
@@ -1558,10 +1569,9 @@ class Storage {
 
 class ListBundle {
     constructor(lists = []) {
-        log('creating bundle. lists:');
-        log(lists);
         this.lists = lists;
         this.allElements = new Map;
+        this.prepared = false;
     }
     
     add(list) {
@@ -1573,6 +1583,7 @@ class ListBundle {
     }
 
     prepare() {
+        if(this.prepared) return;
         for(let list of this.lists) {
             let containers = list.getContainers();
             for(let container of containers) {
@@ -1580,13 +1591,13 @@ class ListBundle {
                 for(let box of boxes) {
                     box.tomczuk = {};
                     let model = box.tomczuk.model = list.getModel(box);
-                    box.tomczuk.adjustBox = list.adjustBox;
-                    box.tomczuk.buildBox = list.buildBox;
-                    list.elements.set(model, box);
-                    this.allElements.set(model, box);
+
+                    list.elements.add(model, box);
+                    this.allElements.add(model, box);
                 }
             }
         }
+        this.prepared = true;
     }
 
     loadReport() {
@@ -1599,16 +1610,21 @@ class ListBundle {
 
     buildAll() {
         this.lists.forEach(list => {
-            list.elements.forEach(box => {
-                list.buildBox(box);
+            list.elements.forEach(boxes => {
+                boxes.forEach(box => {
+                    list.adjustBox(box);
+                    list.buildBox(box);
+                });
             });
         });
     }
 
     unbuildAll() {
         this.lists.forEach(list => {
-            list.elements.forEach(box => {
-                box.style.background = 'orange'
+            list.elements.forEach(boxes => {
+                boxes.forEach(box => {
+                    list.unbuildBox(box);
+                });
             });
         });
     }
@@ -1647,13 +1663,21 @@ class List {
         });
     }
     buildBox(box) {
-        console.log(this);
         let model = this.getModel(box);
         if(! model) return;
-        box.prepend(html('button', {
+        if(box.box) return;
+        box.box = html('button', {
             textContent:  model,
             style:'margin:auto;display:block'
-        }));
+        });
+        box.prepend(box.box);
+    }
+    unbuildBox(box) {
+        if(box.box) {
+            box.box.remove();
+            delete box.box;
+            box.style.background = 'salmon';
+        }
     }
 }
 
