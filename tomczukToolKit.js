@@ -1638,15 +1638,19 @@ class List {
     constructor() {
         this.elements = new Map;
     }
+
     getContainers() {
         return [];
     }
+
     getBoxes(container) {
         return [];
     }
+
     getModel(box) {
         return box?.qs('[data-model]')?.dataset.model;
     }
+
     adjustBox(box) {
         box.style.padding = '3px';
         let bg = box.style.backgroundColor;
@@ -1662,21 +1666,24 @@ class List {
             box.style.scale = '1';
         });
     }
+
     buildBox(box) {
+        if(box.box) return;
         let model = this.getModel(box);
         if(! model) return;
-        if(box.box) return;
         box.box = html('button', {
             textContent:  model,
             style:'margin:auto;display:block'
         });
         box.prepend(box.box);
+        box.classList.add('tomczuk-built');
     }
+
     unbuildBox(box) {
         if(box.box) {
             box.box.remove();
             delete box.box;
-            box.style.background = 'salmon';
+            box.classList.remove('tomczuk-built');
         }
     }
 }
@@ -1685,6 +1692,7 @@ class TKStandardList extends List {
     getContainers() {
         return qsa('.book-list.xs-hidden ul.toggle-view.grid');
     }
+
     getBoxes(container) {
         return container.qsa('.product-container').map(el => el.closest('li'));
     }
@@ -1694,9 +1702,11 @@ class TKProductPageList extends TKStandardList {
     getContainers() {
         return qsa('.book-list.xs-hidden .list-container.grid-desc.clearfix');
     }
+
     getBoxes(container) {
         return container.qsa('.grid-desc-item');
     }
+
     adjustBox(box) {
         super.adjustBox(box);
         box.style.height = 'auto';
@@ -1707,6 +1717,7 @@ class TKSliderList extends TKStandardList {
     getContainers() {
         return qsa('.slider-grid.xs-hidden');
     }
+
     getBoxes(container) {
         let boxes = container.qsa('ul.clearfix > li');
         log(boxes);
@@ -1718,9 +1729,11 @@ class TKBestsellersList extends TKStandardList {
     getContainers() {
         return qsa('ul#pagi-slide');
     }
+
     getBoxes(container) {
         return container.qsa('li');
     }
+
     adjustBox(box) {
         super.adjustBox(box);
         box.style.height = 'auto';
@@ -1732,9 +1745,11 @@ class TKPromoList extends TKStandardList {
     getContainers() {
         return qsa('.book-list .list-container ul.list');
     }
+
     getBoxes(container) {
         return container.qsa('li');
     }
+
     adjustBox(box) {
         box.style.height = '250px';
         box.children[0].style.height = '200px';
@@ -1746,9 +1761,11 @@ class BEEStandardList extends List {
     getContainers() {
         return qsa('.product_list.row');
     }
+
     getBoxes(container) {
         return container.qsa('.product-container').map(el => el.parentElement);
     }
+
     adjustBox(box) {
         super.adjustBox(box);
         box.style.height = '500px';
@@ -1760,6 +1777,7 @@ class BEESliderList extends List {
     getContainers() {
         return qsa('.slider');
     }
+    
     getBoxes(container) {
         return container.qsa('.li.slider-item').map(el => el.parentElement);
     }
