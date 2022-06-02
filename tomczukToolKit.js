@@ -1783,6 +1783,58 @@ class BEESliderList extends List {
     }
 }
 
+class Product {
+    constructor(model = null) {
+        this.addModel(model);
+    }
+
+    addModel(model) {
+        this.model = model;
+        this.makeCbaUrl();
+    }
+
+    addRetail(price) {
+        this.retail = toPrice(price);
+    }
+
+    addTitle(title) {
+        this.title = title.trim();
+    }
+
+    addPrice(price) {
+        this.price = price;
+    }
+
+    addUrl(url) {
+        this.url = url;
+    }
+
+    makeCbaUrl() {
+        this.cbaUrl = `https://cba.kierus.com.pl/?p=EditProduct&load=*${this.model}`;
+    }
+
+    countDiscount() {
+        if( ! this.retail || ! this.price) return '-';
+        let price = priceToFloat(this.price);
+        let retail = priceToFloat(this.retail);
+        log([price, retail]);
+        log(1 - price / retail);
+        let discount = (1 - (price / retail))
+        this.discount = String(discount).match(/(?:0.)(\d{2})/)?.[1] + '%';
+    }
+}
+
+function toPrice(price) {
+    if(typeof price === 'number') price = price.toString();
+    let stripped = price.match(/\d+(?:[.,]{1}\d{1,2})?/)?.[0].replace(',','.');
+    return parseFloat(stripped).toFixed(2).replace('.',',') + 'zł';
+}
+
+function priceToFloat(price) {
+    price = price.match(/\d+,\d{2}/)?.[0].replace(',','.');
+    if(price) return parseFloat(price);
+}
+
 /** @DEPRECATED?
  * 
  * @param {*} string 
