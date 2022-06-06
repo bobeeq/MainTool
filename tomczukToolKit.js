@@ -1784,44 +1784,69 @@ class BEESliderList extends List {
 }
 
 class Product {
+    authors = [];
+
     constructor(model = null) {
-        this.addModel(model);
+        model && this.setModel(model);
     }
 
-    addModel(model) {
-        this.model = model;
-        this.makeCbaUrl();
+    setModel(model) {
+        this.model = model.trim();
+        this.setUrls();
     }
 
-    addRetail(price) {
-        this.retail = toPrice(price);
+    setRetail(retail) {
+        this.retail = priceToFloat(retail);
     }
-
-    addTitle(title) {
+    
+    setPrice(price) {
+        this.price = priceToFloat(price);
+    }
+    
+    setTitle(title) {
         this.title = title.trim();
     }
 
-    addPrice(price) {
-        this.price = price;
+    setShopUrl(url) {
+        this.shopUrl = url.trim();
     }
 
-    addUrl(url) {
-        this.url = url;
+    setAuthors(authors) {
+        if(typeof authors === 'string') this.authors.push(authors.trim());
+        else this.authors = authors.map(a => a.trim());
     }
 
-    makeCbaUrl() {
+    setPublisher(publisher) {
+        this.publisher = publisher.trim();
+    }
+
+    setUrls() {
         this.cbaUrl = `https://cba.kierus.com.pl/?p=EditProduct&load=*${this.model}`;
+        this.tkUrl = `https://www.taniaksiazka.pl/Szukaj/q-m:${this.model}`;
     }
 
     countDiscount() {
-        if( ! this.retail || ! this.price) return '-';
-        let price = priceToFloat(this.price);
-        let retail = priceToFloat(this.retail);
-        log([price, retail]);
-        log(1 - price / retail);
-        let discount = (1 - (price / retail))
-        this.discount = String(discount).match(/(?:0.)(\d{2})/)?.[1] + '%';
+        if( ! this.retail || ! this.price || this.price >= this.retail) {
+            this.discount = '-';
+            return;
+        }
+        
+        this.discount = ((1 - (this.price / this.retail)) * 100).toFixed(0) + '%';
     }
+    /** @OVERRIDE
+     * 
+     */
+    loadFromBox(box) {}
+}
+
+class TkProduct extends Product {
+    loadFromBox(box) {
+
+    }
+}
+
+class BoxDataGetter {
+    
 }
 
 function toPrice(price) {
@@ -1831,8 +1856,10 @@ function toPrice(price) {
 }
 
 function priceToFloat(price) {
-    price = price.match(/\d+,\d{2}/)?.[0].replace(',','.');
-    if(price) return parseFloat(price);
+    price = String(price)?.match(
+        /(?:0|[1-9]\d*)[ \t]*([,.][ \t]*\d{1,2})?/
+    )?.[0].replace(',','.').replace(/\s*/,'');
+    return parseFloat(price) ?? false;
 }
 
 /** @DEPRECATED?

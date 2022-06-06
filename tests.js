@@ -4,33 +4,55 @@ class Test {
     }
 
     testToPrice() {
-        log('testToPrice()');
-        let testPrices = [222, '1.38u', '0,2802', '2.13', 42.227, '33,11 zł'];
-        let shouldBe = ['222,00zł', '1,38zł', '0,28zł', '2,13zł', '42,22zł', '33,11zł'];
-        let after = testPrices.map(toPrice);
-
-        for(let i in testPrices) {
-            if(after[i] !== shouldBe[i]) 
-                this.error('testToPrice', testPrices[i], shouldBe[i], after[i]);
+        let test = new Case();
+        test.input([222, '1.38u', '0,2802', '2.13', 42.227, '33,11 zł']);
+        test.output(['222,00zł', '1,38zł', '0,28zł', '2,13zł', '42,22zł', '33,11zł']);
+        for(let [input, output] of test.loop()) {
+            let after = toPrice(input);
+            if(after !== output) {
+                this.error('testToPrice', input, output, after);
+            }
         }
     }
 
     testCountDiscount() {
         let prod = new Product();
-        let price = '30,00zł';
-        let retail = '40,00zł';
-        prod.addPrice(price);
-        prod.addRetail(retail);
-        prod.countDiscount();
-        if(prod.discount !== '25%')
-            this.error('testCountDiscount', `${price} i ${retail}`, '25%', prod.discount);
+        let test = new Case;
+        test.input([
+            [30, 40],
+            [22.99, 45],
+            [30.11, 42.88],
+            [35, 32],
+            [33.11]
+        ]);
+        test.output([
+            '25%',
+            '49%',
+            '30%',
+            '-',
+            '-'
+        ]);
+
+        for(let [[price, retail], discount] of test.loop()) {
+            let prod = new Product;
+            prod.setPrice(price);
+            prod.setRetail(retail);
+            prod.countDiscount();
+            if(prod.discount !== discount)
+                this.error('testCountDiscount', `${price} i ${retail}`, discount, prod.discount);
+        }
     }
 
     testPriceToFloat() {
-        let price = '38,99zł';
-        let newPrice = priceToFloat(price);
-        if(newPrice !== 38.99)
-            this.error('testPriceToFloat', price, 38.99, newPrice );
+        let test = new Case();
+        test.input([222, '1.38u', '0,2802', '2.13', 42.227, '33,11 zł', '23d5']);
+        test.output([222, 1.38, 0.28, 2.13, 42.22, 33.11, 23]);
+        for(let [input, output] of test.loop()) {
+            let after = priceToFloat(input);
+            if(after !== output) {
+                this.error('priceToFloat', input, output, after);
+            }
+        }
     }
 
 
@@ -50,8 +72,37 @@ class Test {
         this.testCases.forEach(test => {
             this[test]();
         });
+        console.debug(`%c${this.testCases.length} TESTS PASSED.`, 'color:green;font-size:2rem;');
+    }
+}
+
+class Case {
+    input(array) {
+        this.inputs = array; 
+    }
+
+    output(array) {
+        this.outputs = array;
+    }
+
+    getPair() {
+        return [this.inputs.pop(), this.outputs.pop()];
+    }
+
+    loop() {
+        let result = [];
+        for(let i in this.inputs) {
+            result.push([this.inputs[i], this.outputs[i]]);
+        }
+
+        return result;
     }
 }
 
 let TestObj = new Test();
 TestObj.run();
+
+
+let a = new Product('9788366555037');
+// a.title = 'statek titanic';
+log(a);
