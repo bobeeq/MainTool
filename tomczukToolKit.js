@@ -1819,6 +1819,11 @@ class Product {
     setPublisher(publisher) {
         this.publisher = publisher.trim();
     }
+    
+    setShippingTime(shippingTime) {
+        
+        this.shippingTime = shippingTime
+    }
 
     setUrls() {
         this.cbaUrl = `https://cba.kierus.com.pl/?p=EditProduct&load=*${this.model}`;
@@ -1833,19 +1838,16 @@ class Product {
         
         this.discount = ((1 - (this.price / this.retail)) * 100).toFixed(0) + '%';
     }
-    /** @OVERRIDE
-     * 
-     */
-    loadFromBox(box) {}
-}
 
-class TkProduct extends Product {
-    loadFromBox(box) {
-
+    setBox(box) {
+        this.box = box;
     }
 }
 
-class BoxDataGetter {
+/** @THINK czy potrzebne?
+ * 
+ */
+class ProductBoxDataLoader {
     
 }
 
