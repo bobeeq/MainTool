@@ -1,0 +1,92 @@
+{
+	"AllElements(Map)": {
+		"Ean1": [
+			"HTMLElement1",
+			"HTMLElement2",
+			"HTMLElement3"
+		],
+		"Ean2": [
+			"HTMLElement1",
+			"HTMLElement2",
+			"HTMLElement3"
+		],
+		"Ean3": [
+			"HTMLElement1",
+			"HTMLElement2",
+			"HTMLElement3"
+		]
+	},
+	"Lists": [
+		{
+			"ClassName": "ListClassName1",
+			"SomeAdditionalSettings": {},
+			"Lists": {
+				"List1": {
+					"Container": "HTMLElement",
+					"Elements(Map)": {
+						"Ean1": [
+							"HTMLElement1",
+							"HTMLElement2",
+							"HTMLElement3"
+						],
+						"Ean2": [
+							"HTMLElement1",
+							"HTMLElement2",
+							"HTMLElement3"
+						]
+					}
+				},
+				"List2": {
+					"Container": "HTMLElement",
+					"Elements(Map)": {
+						"Ean1": [
+							"HTMLElement1",
+							"HTMLElement2",
+							"HTMLElement3"
+						],
+						"Ean2": [
+							"HTMLElement1",
+							"HTMLElement2",
+							"HTMLElement3"
+						]
+					}
+				}
+			}
+		}, {
+			"ClassName": "ListClassName2",
+			"SomeAdditionalSettings": {},
+			"Lists": {
+				"List1": {
+					"Container": "HTMLElement",
+					"Elements(Map)": {
+						"Ean1": [
+							"HTMLElement1",
+							"HTMLElement2",
+							"HTMLElement3"
+						],
+						"Ean2": [
+							"HTMLElement1",
+							"HTMLElement2",
+							"HTMLElement3"
+						]
+					}
+				},
+				"List2": {
+					"Container": "HTMLElement",
+					"Elements(Map)": {
+						"Ean1": [
+							"HTMLElement1",
+							"HTMLElement2",
+							"HTMLElement3"
+						],
+						"Ean2": [
+							"HTMLElement1",
+							"HTMLElement2",
+							"HTMLElement3"
+						]
+					}
+				}
+			}
+		}
+	]
+}
