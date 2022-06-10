@@ -951,8 +951,8 @@ class NativeCtrl {
 
             this.ctrl.data.lastMutationOccuredAt = Date.now();
             if(mutationSecondCheck) log('JESZCZE COŚ TAM PYKŁO!'); // @DEBUG
-            secFromStart();
-            log(entries);
+            // secFromStart();      // @DEBUG
+            // log(entries);        // @DEBUG
         });
         observer.observe(document.body, {childList: true, subtree: true});
         
@@ -1130,7 +1130,7 @@ class Controller {
      * będzie zmiana referencji do listy produktów.
      */
     async salesReportForLoadedBoxes(duration = 2, delay = 0) {
-        if(this.data.lists.allElements.length < 1) return null;
+        return null; //@TODO
 
         let models = [...this.data.lists.allElements.keys()];
         let url = 'https://cba.kierus.com.pl/?p=ShowSqlReport&r=ilosc+zamowionych+produktow+i+unikalnych+zamowien';
@@ -1235,7 +1235,6 @@ class TKController extends Controller {
 
     listsInit() {
         this.data.lists.prepare();
-        this.data.lists.show();
     }
 
     getCfg() {
@@ -1570,8 +1569,8 @@ class Storage {
 class ListBundle {
     constructor(lists = []) {
         this.lists = lists;
-        this.allElements = new Map;
         this.prepared = false;
+        this.allElements = new Map();
     }
     
     add(list) {
@@ -1584,71 +1583,100 @@ class ListBundle {
 
     prepare() {
         if(this.prepared) return;
+        log('preparing...');
         for(let list of this.lists) {
-            let containers = list.getContainers();
-            for(let container of containers) {
-                let boxes = list.getBoxes(container);
-                for(let box of boxes) {
-                    box.tomczuk = {};
-                    let model = box.tomczuk.model = list.getModel(box);
-
-                    list.elements.add(model, box);
-                    this.allElements.add(model, box);
-                }
+            let listTypesLists = list.load();
+            for(let listTypeBoxesMap of listTypesLists) {
+                log(listTypeBoxesMap);
+                listTypeBoxesMap.forEach(boxArr => {
+                    boxArr.forEach(box => {
+                        this.addBox(box)
+                    });
+                });
             }
         }
         this.prepared = true;
+        log(this);
+    }
+    addBox(box) {
+        let key = box.getModel(box);
+        if(this.allElements.has(key)) this.allElements.get(key).push(box);
+        else this.allElements.set(key, [box]);
     }
 
     loadReport() {
         let models = this.allElements.keys();
     }
 
-    getAllElements() {
-        return this.allElements;
-    }
-
     buildAll() {
-        this.lists.forEach(list => {
-            list.elements.forEach(boxes => {
-                boxes.forEach(box => {
-                    list.adjustBox(box);
-                    list.buildBox(box);
-                });
-            });
-        });
+        this.lists.forEach(list => list.build());
     }
 
     unbuildAll() {
-        this.lists.forEach(list => {
-            list.elements.forEach(boxes => {
-                boxes.forEach(box => {
-                    list.unbuildBox(box);
-                });
-            });
-        });
+        this.lists.forEach(list => list.unbuild());
     }
+
+    
 
     show() {
         log(this);
     }
 }
 
-class List {
-    constructor() {
-        this.elements = new Map;
-    }
 
+class ListType {
+    constructor() {
+        this.lists = [];
+        this.allElements = new Map;
+    }
+    /**
+     * 
+     * @returns {array} containers
+     */
     getContainers() {
         return [];
     }
 
+    /** @OVERRIDE
+     * @param {HTMLElement} container 
+     * @returns {array} boxes
+     */
     getBoxes(container) {
         return [];
     }
 
+    load() {
+        let containers = this.getContainers();
+        let boxesArr = [];
+        for(let container of containers) {
+            let list = new List(container);
+            let boxes = this.getBoxes(container);
+            for(let box of boxes) {
+                box.getModel = this.getModel;
+                box.adjustBox = this.adjustBox;
+                box.buildBox = this.buildBox;
+                box.unbuildBox = this.unbuildBox;
+                this.addBox(box);
+                list.addBox(box);
+            }
+            this.lists.push(list);
+
+            boxesArr.push(list.allElements);
+        }
+        return boxesArr;
+    }
+
+    build() {
+
+    }
+    addBox(box) {
+        let key = box.getModel(box);
+        if(this.allElements.has(key)) this.allElements.get(key).push(box);
+        else this.allElements.set(key, [box]);
+    }
+
     getModel(box) {
-        return box?.qs('[data-model]')?.dataset.model;
+        return box?.qs('[data-model]')?.dataset.model.trim();
     }
 
     adjustBox(box) {
@@ -1669,8 +1697,7 @@ class List {
 
     buildBox(box) {
         if(box.box) return;
-        let model = this.getModel(box);
-        if(! model) return;
+        let model = box.getModel(box);
         box.box = html('button', {
             textContent:  model,
             style:'margin:auto;display:block'
@@ -1688,7 +1715,46 @@ class List {
     }
 }
 
-class TKStandardList extends List {
+class List {
+    constructor(container = null) {
+        this.container = container;
+        this.makeContainerHoverable();
+        this.allElements = new Map;
+    }
+
+    /**
+     * @param {HTMLElement} container 
+     */
+    addContainer(container) {
+        this.container = container;
+    }
+
+    /**
+     * @param {HTMLElement} box 
+     */
+    addBox(box) {
+        let key = box.getModel(box);
+        if(this.allElements.has(key)) this.allElements.get(key).push(box);
+        else this.allElements.set(key, [box]);
+    }
+
+    // @THINK
+    makeContainerHoverable() {
+        let container = this.container;
+        let stillOver = false;
+        container.addEventListener('mouseover', e => {
+            if(stillOver) return;
+            stillOver = true;
+            container.style.border = '5px solid black';
+        });
+        container.addEventListener('mouseout', e => {
+            stillOver = false;
+            container.style.border = '5px solid red';
+        });
+    }
+}
+
+class TKStandardList extends ListType {
     getContainers() {
         return qsa('.book-list.xs-hidden ul.toggle-view.grid');
     }
@@ -1757,7 +1823,7 @@ class TKPromoList extends TKStandardList {
     }
 }
 
-class BEEStandardList extends List {
+class BEEStandardList extends ListType {
     getContainers() {
         return qsa('.product_list.row');
     }
@@ -1773,7 +1839,7 @@ class BEEStandardList extends List {
     }
 }
 
-class BEESliderList extends List {
+class BEESliderList extends ListType {
     getContainers() {
         return qsa('.slider');
     }

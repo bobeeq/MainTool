@@ -16,14 +16,14 @@
 			"HTMLElement3"
 		]
 	},
-	"Lists": [
+	"Lists(TypeClasses)": [
 		{
 			"ClassName": "ListClassName1",
 			"SomeAdditionalSettings": {},
-			"Lists": {
-				"List1": {
+			"Lists": [
+				{
 					"Container": "HTMLElement",
-					"Elements(Map)": {
+					"Boxes(Map)": {
 						"Ean1": [
 							"HTMLElement1",
 							"HTMLElement2",
@@ -36,9 +36,9 @@
 						]
 					}
 				},
-				"List2": {
+				{
 					"Container": "HTMLElement",
-					"Elements(Map)": {
+					"Boxes(Map)": {
 						"Ean1": [
 							"HTMLElement1",
 							"HTMLElement2",
@@ -51,14 +51,15 @@
 						]
 					}
 				}
-			}
-		}, {
+			]
+		},
+		{
 			"ClassName": "ListClassName2",
 			"SomeAdditionalSettings": {},
-			"Lists": {
-				"List1": {
+			"Lists": [
+				{
 					"Container": "HTMLElement",
-					"Elements(Map)": {
+					"Boxes(Map)": {
 						"Ean1": [
 							"HTMLElement1",
 							"HTMLElement2",
@@ -71,9 +72,9 @@
 						]
 					}
 				},
-				"List2": {
+				{
 					"Container": "HTMLElement",
-					"Elements(Map)": {
+					"Boxes(Map)": {
 						"Ean1": [
 							"HTMLElement1",
 							"HTMLElement2",
@@ -86,7 +87,7 @@
 						]
 					}
 				}
-			}
+			]
 		}
 	]
 }
