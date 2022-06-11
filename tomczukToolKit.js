@@ -713,7 +713,7 @@ class App {
         const allowed = app.forbid([], 'productBox');
         if (!allowed) return;
 
-        let model = app.ctrl.data.model;
+        let model = app.ctrl.cfg.model;
         if (isDev() && !model) model = '9788382158106';
         if (!model) return;
 
@@ -769,7 +769,7 @@ class App {
                 app.storage.set('productListMode', 'false');
             }
             
-            app.ctrl.native.loadNewBoxes();
+            app.ctrl.native.loadLists();
         });
 
         copyListBtn.addEventListener('click', e => {
@@ -794,7 +794,7 @@ class App {
         const allowed = app.allow([
             'handlowy',
         ], 'salesBox');
-        if ( ! allowed || ! app.ctrl.data.model) return;
+        if ( ! allowed || ! app.ctrl.cfg.model) return;
         
         const salesBox = box('Sprzedaż');
         salesBox.classList.add('tomczuk-sales-box');
@@ -857,13 +857,11 @@ class NativeCtrl {
         this.ctrl.cfg = this.basicCfg();
         this.overrideCfg();
 
-        this.ctrl.data = this.basicData();
-        this.ctrl.data.lists = new ListBundle(this.ctrl.getLists());
-        this.addDebugConsole();
         if (this.ctrl.cfg.access === false) return;
+        this.ctrl.listBundle = new ListBundle(this.ctrl.getLists());
 
-        this.ctrl.data.model = this.ctrl.productModel();
-        if (isDev() && ! this.ctrl.data.model) this.ctrl.data.model = '9788382158106';
+        this.ctrl.cfg.model = this.ctrl.productModel();
+        if (isDev() && ! this.ctrl.cfg.model) this.ctrl.cfg.model = '9788382158106';
 
         this.runListsObserver();
     }
@@ -874,55 +872,13 @@ class NativeCtrl {
      */
     basicCfg() {
         return {
-            access: true,
-            fetchRequired: false,
+            access: true,       // @DEPRECATED? 
             mutationBreakTimeMs: 3600,
-            daysForSalesBundleReport: 3,
+            daysForSalesBundleReport: 2,
             checkLastMutationIntervalMs: 200,
-            lowStockColorsCfg: [
-                {
-                    lowerThan: 3,
-                    css: {
-                        background: 'tomato',
-                        color: 'black'
-                    } 
-                }, {
-                    lowerThan: 5,
-                    css: {
-                        background: 'salmon',
-                        color: 'black'
-                    }
-                }, {
-                    lowerThan: 10,
-                    css: {
-                        background: 'pink',
-                        color: 'black'
-                    }
-                }, {
-                    lowerThan: null,
-                    css: {
-                        background: 'green',
-                        color: 'black'
-                    }
-                }
-            ],
-            lowStockColorsElem: document.body,
-            fetchUrl: function (listElement) { return null },
-            modelSelector: null,
-            getModel: async function (modelElement) { return null; },
-        };
-    }
-
-    /** @TODO - pomyśleć... może do wyrzucenia?
-     * 
-     * @returns 
-     */
-    basicData() {
-        return {
             model: null,
-            productListsMap: new Map(),
             lastMutationOccuredAt: Date.now()
-        }
+        };
     }
 
     /** @DONE
@@ -946,10 +902,10 @@ class NativeCtrl {
         let longestGap = 0;
         let observer = new MutationObserver(entries => {
             let now = Date.now();
-            let diff = now - this.ctrl.data.lastMutationOccuredAt;
+            let diff = now - this.ctrl.cfg.lastMutationOccuredAt;
             if(diff > longestGap) longestGap = diff;
 
-            this.ctrl.data.lastMutationOccuredAt = Date.now();
+            this.ctrl.cfg.lastMutationOccuredAt = Date.now();
             if(mutationSecondCheck) log('JESZCZE COŚ TAM PYKŁO!'); // @DEBUG
             // secFromStart();      // @DEBUG
             // log(entries);        // @DEBUG
@@ -958,7 +914,7 @@ class NativeCtrl {
         
         let checkLastMutationInterval = setInterval(() => {
             let mutationStopped = (
-                (Date.now() - this.ctrl.data.lastMutationOccuredAt)
+                (Date.now() - this.ctrl.cfg.lastMutationOccuredAt)
                 >= (this.ctrl.cfg.mutationBreakTimeMs)
             );
 
@@ -967,7 +923,7 @@ class NativeCtrl {
                 log(`Longest gap between mutations: ${(longestGap / 1000).toFixed(2)}s`);
                 clearInterval(checkLastMutationInterval);
                 mutationSecondCheck = true; // @DEBUG, na proda -> observer.disconnect();
-                this.loadNewBoxes();
+                this.loadLists();
             }
         }, this.ctrl.cfg.checkLastMutationIntervalMs);
     }
@@ -976,63 +932,14 @@ class NativeCtrl {
      * @see {runListsObserver()}
      * 
      */
-    async loadNewBoxes() {
-        this.ctrl.listsInit();
+    async loadLists() {
+        this.ctrl.listBundle.loadLists();
         await this.ctrl.salesReportForLoadedBoxes();
         if(app.storage.get('productListMode')) {
-            this.ctrl.data.lists.buildAll();
+            this.ctrl.listBundle.buildAll();
         } else {
-            this.ctrl.data.lists.unbuildAll();
+            this.ctrl.listBundle.unbuildAll();
         }
-    }
-    
-    /** @DONE - póki co...
-     * 
-     * @returns 
-     */
-    addDebugConsole() {
-        if( ! app.testMode) return;
-        let consoleBox = html('div', {
-            style: `
-                position: fixed;
-                z-index: 999999;
-                background: rgba(40,40,40,.85);
-                color: white;
-                top: -50vh;
-                left: 0;
-                overflow-y: scroll;
-                height: 45vh;
-                width: calc(100vw - 20px);
-                padding: 0;
-                transition: 320ms ease-in;
-            `
-        });
-        document.addEventListener('keyup', e => {
-            if(e.key == '`') {
-                if(consoleBox.style.top == '0px') consoleBox.style.top = '-50vh';
-                else consoleBox.style.top = '0px';
-            }
-        });
-        document.body.append(consoleBox);
-        app.console = consoleBox;
-    }
-
-    /** @DONE
-     * @THINK: pomyśleć, czy nie zrobić tak, aby można było lepiej stylować komunikat.
-     * @param {*} text 
-     * @param {*} color 
-     * @returns 
-     */
-    log(text, color = 'white') {
-        if( ! app.testMode) return;
-        let span = html('span', { style: `
-            display:block;
-            padding: 1px;
-            font-size: 14px;
-            border-bottom: 1px solid #222;
-            color: ${color};
-        `, textContent: (new Date()).toLocaleTimeString() + '___: ' + text});
-        app.console.prepend(span);
     }
     
     /** @DONE
@@ -1050,26 +957,6 @@ class NativeCtrl {
         if (!container) return null;
 
         return ((noPx(window.getComputedStyle(document.body).width) - container.clientWidth) / 2 - 10);
-    }
-
-    /** @THINK - do przemyślenia, czy tak to rozwiązać. może do poprawki, może do wywalenia
-     * @param {number} stockForDays 
-     * @returns 
-     */
-    paintLowStockElem(stockForDays) {
-        let element = this.ctrl.cfg.lowStockColorsElem ?? null;
-        if( ! element) return null;
-        let cfg = this.ctrl.cfg?.lowStockColorsCfg;
-        if( ! cfg) return null;
-        for(let days of cfg) {
-            if(stockForDays < days.lowerThan) {
-                for(let property of Object.keys(days.css)) {
-                    element.style[property] = days.css[property];
-                }
-            }
-        }
-        log(element);
-        return element;
     }
 
     /** @DONE
@@ -1118,12 +1005,6 @@ class Controller {
      */
     getCfg() {
         return {};
-    }
-
-    /** @OVERRIDE
-     * 
-     */
-    listsInit() {
     }
 
     /** @THINK
@@ -1190,13 +1071,14 @@ class Controller {
         return null;
     }
 
-    /**
-     * @OVERRIDE
+    /** @OVERRIDE if needed
+     * 
      * @param {HTMLElement} dom 
      * @returns 
      */
-    productModel(dom = null) {
-        return null;
+      productModel(dom = null) {
+        if(dom === null) dom = document.body;
+        return dom?.qs('meta[itemprop="productID"]')?.getAttribute('content');
     }
     /**
      * @OVERRIDE
@@ -1233,20 +1115,12 @@ class TKController extends Controller {
         ];
     }
 
-    listsInit() {
-        this.data.lists.prepare();
+    getCfg() {
+        return {mutationBreakTimeMs: 2600};
     }
 
-    getCfg() {
-        return {mutationBreakTimeMs: 2600}
-    }
     mainContainerSelectors() {
         return sessionStorage.tomczukMobileMode === 'true' ? '#header > .container' : 'header#top';
-    }
-
-    productModel(dom = null) {
-        if (!dom) dom = document.body;
-        return dom.qs('meta[itemprop="productID"]')?.getAttribute('content');
     }
 
     isSearchPage() {
@@ -1276,11 +1150,6 @@ class CMController extends Controller {
             'header#top',
             'header > div.container.clearfix'
         ];
-    }
-
-    productModel() {
-        let meta = qs('meta[itemprop="productID"]');
-        return meta ? meta.getAttribute('content') : null;
     }
 
     featuresPermissions() {
@@ -1350,18 +1219,9 @@ class BEEController extends Controller {
         ];
     }
 
-    listsInit() {
-        this.data.lists.prepare();
-        this.data.lists.show();
-    }
-
     mainContainerSelectors() {
         if (sessionStorage.tomczukMobileMode === 'true') return '#header .container';
         return '#header .container';
-    }
-
-    productModel() {
-        return qs('meta[itemprop="productID"]')?.getAttribute('content');
     }
 
     isSearchPage() {
@@ -1408,7 +1268,7 @@ class BonitoController extends Controller {
     mainContainerSelectors() { return 'body > div.container'; }
 
     productModel() {
-        return qs('meta[itemprop="gtin"]')?.getAttribute('content');
+        return qs('meta[itemprop="gtin"]')?.getAttribute('content').match(/\d{13,16}/)?.[0];
     }
 }
 
@@ -1441,11 +1301,13 @@ class GandalfController extends Controller {
     mainContainerSelectors() { return '.top-menu > .container:not(.infoheader)'; }
 
     productModel() {
-        return qs('div#product-details.details-list')
-            ?.qsa('li > span.nowrap')
-            ?.find(el => el.textContent === 'ISBN:')
-            ?.nextElementSibling
-            ?.textContent.trim();
+        let details = qs('#product-details.details-list');
+        if( ! details) return;
+        let elem = details.qsa('tr').filter(tr => {
+            log(tr.textContent);
+            return tr.textContent.match(/ISBN:?\s*(\d{13,16})/i)
+        });
+        return elem[0]?.textContent.match(/\d+/)?.[0];
     }
 }
 
@@ -1567,59 +1429,39 @@ class Storage {
 }
 
 class ListBundle {
-    constructor(lists = []) {
-        this.lists = lists;
+    constructor(listTypes = []) {
+        this.listTypes = listTypes;
         this.prepared = false;
-        this.allElements = new Map();
     }
     
-    add(list) {
-        if(Array.isArray(list)) {
-            this.lists = [...this.lists, ...list];
+    addList(listType) {
+        if(Array.isArray(listType)) {
+            this.listTypes = [...this.listTypes, ...listType];
         } else {
-            this.lists.push(list);
+            this.listTypes.push(listType);
         }
     }
 
-    prepare() {
+    loadLists() {
         if(this.prepared) return;
-        log('preparing...');
-        for(let list of this.lists) {
-            let listTypesLists = list.load();
-            for(let listTypeBoxesMap of listTypesLists) {
-                log(listTypeBoxesMap);
-                listTypeBoxesMap.forEach(boxArr => {
-                    boxArr.forEach(box => {
-                        this.addBox(box)
-                    });
-                });
-            }
-        }
+        this.listTypes.forEach(listType => listType.load());
         this.prepared = true;
-        log(this);
     }
-    addBox(box) {
-        let key = box.getModel(box);
-        if(this.allElements.has(key)) this.allElements.get(key).push(box);
-        else this.allElements.set(key, [box]);
-    }
+    /** @TODO ?
+     * 
+     */
+    loadReport() {}
 
-    loadReport() {
-        let models = this.allElements.keys();
+    adjustAll() {
+        this.listTypes.forEach(listType => listType.adjust());
     }
 
     buildAll() {
-        this.lists.forEach(list => list.build());
+        this.listTypes.forEach(listType => listType.build());
     }
 
     unbuildAll() {
-        this.lists.forEach(list => list.unbuild());
-    }
-
-    
-
-    show() {
-        log(this);
+        this.listTypes.forEach(listType => listType.unbuild());
     }
 }
 
@@ -1627,7 +1469,6 @@ class ListBundle {
 class ListType {
     constructor() {
         this.lists = [];
-        this.allElements = new Map;
     }
     /**
      * 
@@ -1645,79 +1486,67 @@ class ListType {
         return [];
     }
 
+    build() {
+        this.lists.forEach(list => list.build());
+    }
+
+    unbuild() {
+        this.lists.forEach(list => list.unbuild());
+    }
+
     load() {
         let containers = this.getContainers();
-        let boxesArr = [];
         for(let container of containers) {
-            let list = new List(container);
-            let boxes = this.getBoxes(container);
-            for(let box of boxes) {
-                box.getModel = this.getModel;
-                box.adjustBox = this.adjustBox;
-                box.buildBox = this.buildBox;
-                box.unbuildBox = this.unbuildBox;
-                this.addBox(box);
-                list.addBox(box);
-            }
+            let list = new List(this, container);
+            list.load();
             this.lists.push(list);
-
-            boxesArr.push(list.allElements);
         }
-        return boxesArr;
     }
 
-    build() {
-
-    }
-    addBox(box) {
-        let key = box.getModel(box);
-        if(this.allElements.has(key)) this.allElements.get(key).push(box);
-        else this.allElements.set(key, [box]);
+    getModel() {
+        this.model = this.element?.qs('[data-model]')?.dataset.model.trim();
+        return this.model;
     }
 
-    getModel(box) {
-        return box?.qs('[data-model]')?.dataset.model.trim();
-    }
-
-    adjustBox(box) {
-        box.style.padding = '3px';
-        let bg = box.style.backgroundColor;
-        box.addEventListener('mouseover', () => {
-            box.style.boxShadow = '0 0 8px rgba(0,0,0,.4)';
-            box.style.transition = '500ms';
-            box.style.scale = '.95';
-            box.style.backgroundColor = '#eee';
+    adjustBox() {
+        this.element.style.padding = '3px';
+        let bg = this.element.style.backgroundColor;
+        this.element.addEventListener('mouseover', () => {
+            this.element.style.boxShadow = '0 0 8px rgba(0,0,0,.4)';
+            this.element.style.transition = '500ms';
+            this.element.style.scale = '.95';
+            this.element.style.backgroundColor = '#eee';
         });
-        box.addEventListener('mouseout', () => {
-            box.style.backgroundColor = bg;
-            box.style.boxShadow = 'none';
-            box.style.scale = '1';
+        this.element.addEventListener('mouseout', () => {
+            this.element.style.backgroundColor = bg;
+            this.element.style.boxShadow = 'none';
+            this.element.style.scale = '1';
         });
     }
 
-    buildBox(box) {
-        if(box.box) return;
-        let model = box.getModel(box);
-        box.box = html('button', {
-            textContent:  model,
+    buildBox() {
+        if(this.modelButton) return;
+        this.modelButton = html('button', {
+            textContent:  this.getModel(),
             style:'margin:auto;display:block'
         });
-        box.prepend(box.box);
-        box.classList.add('tomczuk-built');
+        this.element.prepend(this.modelButton);
+        this.element.classList.add('tomczuk-built');
     }
 
-    unbuildBox(box) {
-        if(box.box) {
-            box.box.remove();
-            delete box.box;
-            box.classList.remove('tomczuk-built');
+    unbuildBox() {
+        if(this.modelButton) {
+            this.modelButton.remove();
+            this.modelButton = null;
+            this.element.classList.remove('tomczuk-built');
         }
     }
 }
 
 class List {
-    constructor(container = null) {
+    constructor(listType, container = null) {
         this.container = container;
+        this.listType = listType;
         this.makeContainerHoverable();
         this.allElements = new Map;
     }
@@ -1729,123 +1558,58 @@ class List {
         this.container = container;
     }
 
-    /**
-     * @param {HTMLElement} box 
-     */
+    load() {
+        let boxes = this.listType.getBoxes(this.container);
+        for(let box of boxes) {
+            let boxObj = new Box(box, [
+                this.listType.getModel,
+                this.listType.adjustBox,
+                this.listType.buildBox,
+                this.listType.unbuildBox
+            ]);
+            this.addBox(boxObj);
+        }
+    }
+
     addBox(box) {
-        let key = box.getModel(box);
-        if(this.allElements.has(key)) this.allElements.get(key).push(box);
-        else this.allElements.set(key, [box]);
+        this.allElements.add(box.getModel(), box);
     }
 
+    build() {
+        this.allElements.forEach(elArr => {
+            elArr.forEach(box => {
+                box.adjustBox();
+                box.buildBox()
+            });
+        });
+    }
+
+    unbuild() {
+        this.allElements.forEach(elArr => {
+            elArr.forEach(box => box?.unbuildBox(box));
+        });
+    }
     // @THINK
-    makeContainerHoverable() {
-        let container = this.container;
-        let stillOver = false;
-        container.addEventListener('mouseover', e => {
-            if(stillOver) return;
-            stillOver = true;
-            container.style.border = '5px solid black';
+    makeContainerHoverable() {}
+}
+
+class Box {
+    /**
+     * @param {HTMLElement} element
+     */
+    constructor(element, functions = []) {
+        this.element = element;
+        this.attachFunctions(functions);
+        this.getModel?.();
+        this.product = new Product(this.model);
+    }
+    /**
+     * @param {array} functions 
+     */
+    attachFunctions(functions) {
+        functions.forEach(func => {
+            this[func.name] = func;
         });
-        container.addEventListener('mouseout', e => {
-            stillOver = false;
-            container.style.border = '5px solid red';
-        });
-    }
-}
-
-class TKStandardList extends ListType {
-    getContainers() {
-        return qsa('.book-list.xs-hidden ul.toggle-view.grid');
-    }
-
-    getBoxes(container) {
-        return container.qsa('.product-container').map(el => el.closest('li'));
-    }
-}
-
-class TKProductPageList extends TKStandardList {
-    getContainers() {
-        return qsa('.book-list.xs-hidden .list-container.grid-desc.clearfix');
-    }
-
-    getBoxes(container) {
-        return container.qsa('.grid-desc-item');
-    }
-
-    adjustBox(box) {
-        super.adjustBox(box);
-        box.style.height = 'auto';
-    }
-}
-
-class TKSliderList extends TKStandardList {
-    getContainers() {
-        return qsa('.slider-grid.xs-hidden');
-    }
-
-    getBoxes(container) {
-        let boxes = container.qsa('ul.clearfix > li');
-        log(boxes);
-        return boxes;
-    }
-}
-
-class TKBestsellersList extends TKStandardList {
-    getContainers() {
-        return qsa('ul#pagi-slide');
-    }
-
-    getBoxes(container) {
-        return container.qsa('li');
-    }
-
-    adjustBox(box) {
-        super.adjustBox(box);
-        box.style.height = 'auto';
-        box.qs('.product-container').style.height = 'auto';
-    }
-}
-
-class TKPromoList extends TKStandardList {
-    getContainers() {
-        return qsa('.book-list .list-container ul.list');
-    }
-
-    getBoxes(container) {
-        return container.qsa('li');
-    }
-
-    adjustBox(box) {
-        box.style.height = '250px';
-        box.children[0].style.height = '200px';
-        box.children[0].style.top = '80px';
-    }
-}
-
-class BEEStandardList extends ListType {
-    getContainers() {
-        return qsa('.product_list.row');
-    }
-
-    getBoxes(container) {
-        return container.qsa('.product-container').map(el => el.parentElement);
-    }
-
-    adjustBox(box) {
-        super.adjustBox(box);
-        box.style.height = '500px';
-        box.qs('.product-container').style.height = 'auto';
-    }
-}
-
-class BEESliderList extends ListType {
-    getContainers() {
-        return qsa('.slider');
-    }
-    
-    getBoxes(container) {
-        return container.qsa('.li.slider-item').map(el => el.parentElement);
     }
 }
 
@@ -1907,6 +1671,100 @@ class Product {
 
     setBox(box) {
         this.box = box;
+    }
+}
+
+class TKStandardList extends ListType {
+    getContainers() {
+        return qsa('.book-list.xs-hidden ul.toggle-view.grid');
+    }
+
+    getBoxes(container) {
+        return container.qsa('.product-container').map(el => el.closest('li'));
+    }
+}
+
+class TKProductPageList extends TKStandardList {
+    getContainers() {
+        return qsa('.book-list.xs-hidden .list-container.grid-desc.clearfix');
+    }
+
+    getBoxes(container) {
+        return container.qsa('.grid-desc-item');
+    }
+
+    adjustBox() {
+        super.adjustBox();
+        this.element.style.height = 'auto';
+    }
+}
+
+class TKSliderList extends TKStandardList {
+    getContainers() {
+        return qsa('.slider-grid.xs-hidden');
+    }
+
+    getBoxes(container) {
+        let boxes = container.qsa('ul.clearfix > li');
+        return boxes;
+    }
+}
+
+class TKBestsellersList extends TKStandardList {
+    getContainers() {
+        return qsa('ul#pagi-slide');
+    }
+
+    getBoxes(container) {
+        return container.qsa('li');
+    }
+
+    adjustBox(box) {
+        super.adjustBox(box);
+        box.style.height = 'auto';
+        box.qs('.product-container').style.height = 'auto';
+    }
+}
+
+class TKPromoList extends TKStandardList {
+    getContainers() {
+        return qsa('.book-list .list-container ul.list');
+    }
+
+    getBoxes(container) {
+        return container.qsa('li');
+    }
+
+    adjustBox(box) {
+        box.style.height = '250px';
+        box.children[0].style.height = '200px';
+        box.children[0].style.top = '80px';
+    }
+}
+
+class BEEStandardList extends ListType {
+    getContainers() {
+        return qsa('.product_list.row');
+    }
+
+    getBoxes(container) {
+        return container.qsa('.product-container').map(el => el.parentElement);
+    }
+
+    adjustBox(box) {
+        super.adjustBox(box);
+        box.style.height = '500px';
+        box.qs('.product-container').style.height = 'auto';
+    }
+}
+
+class BEESliderList extends ListType {
+    getContainers() {
+        return qsa('.slider');
+    }
+    
+    getBoxes(container) {
+        return container.qsa('.li.slider-item').map(el => el.parentElement);
     }
 }
 
@@ -2165,7 +2023,7 @@ async function getSalesBundleReport(models, duration = 14, delay = 0) {
 }
 
 async function getSaleReportForProduct(model = null, duration = null, delay = null) {
-    if(model === null) model = app.ctrl.data.model;
+    if(model === null) model = app.ctrl.cfg.model;
     if(!model) return null;
     if(delay === null) delay = app.rightPanel?.qs('.tomczuk-delay')?.value;
     if(duration === null) duration =  app.rightPanel?.qs('.tomczuk-duration')?.value;
@@ -2242,7 +2100,6 @@ async function fetchPageDOM(url, additionalOptions = null) {
             finalOptions[property] = additionalOptions[property];
         }
     }
-    log(['go report', url, finalOptions]);
     let html = await fetch(url, finalOptions);
     let buffer = await html.arrayBuffer();
     let text = new TextDecoder('iso-8859-2').decode(buffer);
@@ -2291,7 +2148,7 @@ async function init(department) {
 
 (async function(department = 'handlowy') {
     if(window.location.href.match('opineo.pl/')) {
-        log('OPINEO, KILLING SCRIPT...')
+        log('OPINEO, KILLING SCRIPT...');
         return;
     }
     if(typeof run === 'undefined') return;
