@@ -3,17 +3,15 @@ import shutil
 
 mainFileName = "tomczukToolKit.js"
 try:
-    shutil.copyfile('tomczukToolKit.js', mainFileName)
+    shutil.copyfile(mainFileName, mainFileName + '.bak')
+    print('Backup utworzony: ' + mainFileName + '.bak')
+
     cssFile = open("style.css", "r", encoding = 'utf-8')
     cssText = cssFile.read()
 
     jsFile = open(mainFileName, "r", encoding = 'utf-8')
     jsText = jsFile.read()
     jsFile.close()
-
-    bakFile = open(mainFileName + '.bak', 'w', encoding = 'utf-8')
-    bakFile.write(jsText)
-    print('Backup utworzony: ' + mainFileName + '.bak')
     
     newJs = re.sub(
         r"(customUpdateableCSS\s*\=\s*`)([^`]+)(`)",

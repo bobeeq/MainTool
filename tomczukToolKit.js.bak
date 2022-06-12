@@ -350,7 +350,6 @@ function useTomczukToolbarStyles() {
 }
 
 .tomczuk-container-hovered {
-    transition: 600ms;
     background-color: #e6e6e6;
 }
 
