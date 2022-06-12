@@ -29,7 +29,7 @@ Map.prototype.add = function(key, val) {
 function useTomczukToolbarStyles() {
     let style = html('style');
     style.id = 'tomczuk-toolbar-styles';
-    let css =
+    let customUpdateableCSS =
         `:root {
             --right-panel-width: 400px;
             --main-transition: 250ms;
@@ -349,7 +349,7 @@ function useTomczukToolbarStyles() {
             filter: brightness(1.5);
         }`;
 
-    style.textContent = css;
+    style.textContent = customUpdateableCSS;
     let head = qs('head');
     if(head) head.append(style);
 }
