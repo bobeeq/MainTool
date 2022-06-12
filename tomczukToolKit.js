@@ -29,7 +29,7 @@ Map.prototype.add = function(key, val) {
 function useTomczukToolbarStyles() {
     let style = html('style');
     style.id = 'tomczuk-toolbar-styles';
-    let css =
+    let customUpdateableCSS =
         `:root {
             --right-panel-width: 400px;
             --main-transition: 250ms;
@@ -349,7 +349,7 @@ function useTomczukToolbarStyles() {
             filter: brightness(1.5);
         }`;
 
-    style.textContent = css;
+    style.textContent = customUpdateableCSS;
     let head = qs('head');
     if(head) head.append(style);
 }
@@ -754,22 +754,19 @@ class App {
         const copyListBtn = html('a', { innerHTML: '&#128203;', classes: 'tomczuk-btn tomczuk-copy-product-list' });
         const modifyListBtn = html('a', { innerHTML: '&#128200;', classes: 'tomczuk-btn tomczuk-modify-product-list' });
 
-        if (app.storage.get('productListMode')) {
-            modifyListBtn.classList.add('tomczuk-product-list-mode');
-        } else {
-            modifyListBtn.classList.remove('tomczuk-product-list-mode');
-        }
+            modifyListBtn.classList.toggle(
+                'tomczuk-product-list-mode',
+                app.storage.get('productListMode')
+            );
+
 
         modifyListBtn.addEventListener('click', async () => {
-            if (!modifyListBtn.classList.contains('tomczuk-product-list-mode')) {
-                modifyListBtn.classList.add('tomczuk-product-list-mode');
-                app.storage.set('productListMode', 'true');
-            } else {
-                modifyListBtn.classList.remove('tomczuk-product-list-mode');
-                app.storage.set('productListMode', 'false');
-            }
-            
-            app.ctrl.native.loadLists();
+            let className = 'tomczuk-product-list-mode';
+            let currentMode =  modifyListBtn.classList.contains(className);
+            modifyListBtn.classList.toggle(className, !currentMode);
+            app.storage.set('productListMode', !currentMode);
+
+            app.ctrl.native.showLists();
         });
 
         copyListBtn.addEventListener('click', e => {
@@ -924,6 +921,7 @@ class NativeCtrl {
                 clearInterval(checkLastMutationInterval);
                 mutationSecondCheck = true; // @DEBUG, na proda -> observer.disconnect();
                 this.loadLists();
+                this.showLists();
             }
         }, this.ctrl.cfg.checkLastMutationIntervalMs);
     }
@@ -934,10 +932,18 @@ class NativeCtrl {
      */
     async loadLists() {
         this.ctrl.listBundle.loadLists();
-        await this.ctrl.salesReportForLoadedBoxes();
+        await this.ctrl.salesReportForLoadedBoxes(); //@THINK  ? ? ?
+        
+    }
+    /**
+     * 
+     */
+    showLists() {
         if(app.storage.get('productListMode')) {
+            this.ctrl.listBundle.adjustAll();
             this.ctrl.listBundle.buildAll();
         } else {
+            this.ctrl.listBundle.unadjustAll();
             this.ctrl.listBundle.unbuildAll();
         }
     }
@@ -1431,7 +1437,7 @@ class Storage {
 class ListBundle {
     constructor(listTypes = []) {
         this.listTypes = listTypes;
-        this.prepared = false;
+        this.loaded = false;
     }
     
     addList(listType) {
@@ -1443,9 +1449,9 @@ class ListBundle {
     }
 
     loadLists() {
-        if(this.prepared) return;
+        if(this.loaded) return;
         this.listTypes.forEach(listType => listType.load());
-        this.prepared = true;
+        this.loaded = true;
     }
     /** @TODO ?
      * 
@@ -1454,6 +1460,10 @@ class ListBundle {
 
     adjustAll() {
         this.listTypes.forEach(listType => listType.adjust());
+    }
+
+    unadjustAll() {
+        this.listTypes.forEach(listType => listType.unadjust());
     }
 
     buildAll() {
@@ -1486,6 +1496,14 @@ class ListType {
         return [];
     }
 
+    adjust() {
+        this.lists.forEach(list => list.adjust());
+    }
+
+    unadjust() {
+        this.lists.forEach(list => list.unadjust());
+    }
+
     build() {
         this.lists.forEach(list => list.build());
     }
@@ -1501,6 +1519,16 @@ class ListType {
             list.load();
             this.lists.push(list);
         }
+    }
+
+    insertFunctions(box) {
+        [
+            this.getModel,
+            this.adjustBox,
+            this.unadjustBox,
+            this.buildBox,
+            this.unbuildBox
+        ].forEach(func => box[func.name] = func);
     }
 
     getModel() {
@@ -1522,6 +1550,10 @@ class ListType {
             this.element.style.boxShadow = 'none';
             this.element.style.scale = '1';
         });
+    }
+
+    unadjustBox() {
+        this.element.classList.remove('tomczuk-built');
     }
 
     buildBox() {
@@ -1561,13 +1593,7 @@ class List {
     load() {
         let boxes = this.listType.getBoxes(this.container);
         for(let box of boxes) {
-            let boxObj = new Box(box, [
-                this.listType.getModel,
-                this.listType.adjustBox,
-                this.listType.buildBox,
-                this.listType.unbuildBox
-            ]);
-            this.addBox(boxObj);
+            this.addBox(new Box(this.listType, box));
         }
     }
 
@@ -1575,12 +1601,21 @@ class List {
         this.allElements.add(box.getModel(), box);
     }
 
+    adjust() {
+        this.allElements.forEach(elArr => {
+            elArr.forEach(box => box.adjustBox());
+        })
+    }
+
+    unadjust() {
+        this.allElements.forEach(elArr => {
+            elArr.forEach(box => box.unadjustBox());
+        })
+    }
+
     build() {
         this.allElements.forEach(elArr => {
-            elArr.forEach(box => {
-                box.adjustBox();
-                box.buildBox()
-            });
+            elArr.forEach(box => box.buildBox());
         });
     }
 
@@ -1597,19 +1632,12 @@ class Box {
     /**
      * @param {HTMLElement} element
      */
-    constructor(element, functions = []) {
+    constructor(listType, element) {
         this.element = element;
-        this.attachFunctions(functions);
+        this.listType = listType;
+        listType.insertFunctions(this);
         this.getModel?.();
         this.product = new Product(this.model);
-    }
-    /**
-     * @param {array} functions 
-     */
-    attachFunctions(functions) {
-        functions.forEach(func => {
-            this[func.name] = func;
-        });
     }
 }
 
