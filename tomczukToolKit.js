@@ -1046,7 +1046,7 @@ class Controller {
      */
     async salesReportForLoadedBoxes(duration = 2, delay = 0) {
         return null; //@TODO
-
+        // @DEPRECATED-BELOW:
         let models = [...this.data.lists.allElements.keys()];
         let url = 'https://cba.kierus.com.pl/?p=ShowSqlReport&r=ilosc+zamowionych+produktow+i+unikalnych+zamowien';
         let reqBody = new FormData();
@@ -1597,6 +1597,26 @@ class ListType {
             this.element.classList.remove('tomczuk-built');
         }
     }
+
+    getTitle(box) {
+        return box.qs('[data-name]')?.dataset.name;
+    }
+
+    getPrice(box) {
+        return box.qs('[data-price]')?.dataset.price;
+    }
+
+    getRetail(box) {
+        return box.qs('.product-price + del')?.textContent.trim();
+    }
+
+    getAuthors(box) {
+        return box.qs('.product-authors')?.textContent.trim();
+    }
+    
+    getRealShopUrl(box) {
+        return box.qs('a.ecommerce-datalayer[data-price][href]')?.href;
+    }
 }
 
 class List {
@@ -1604,7 +1624,7 @@ class List {
         this.container = container;
         this.listType = listType;
         this.makeContainerHoverable();
-        this.allElements = new Map;
+        this.elements = new Map;
     }
 
     /**
@@ -1622,29 +1642,29 @@ class List {
     }
 
     addBox(box) {
-        this.allElements.add(box.getModel(), box);
+        this.elements.add(box.getModel(), box);
     }
 
     adjust() {
-        this.allElements.forEach(elArr => {
+        this.elements.forEach(elArr => {
             elArr.forEach(box => box.adjustBox());
-        })
+        });
     }
 
     unadjust() {
-        this.allElements.forEach(elArr => {
+        this.elements.forEach(elArr => {
             elArr.forEach(box => box.unadjustBox());
-        })
+        });
     }
 
     build() {
-        this.allElements.forEach(elArr => {
+        this.elements.forEach(elArr => {
             elArr.forEach(box => box.buildBox());
         });
     }
 
     unbuild() {
-        this.allElements.forEach(elArr => {
+        this.elements.forEach(elArr => {
             elArr.forEach(box => box?.unbuildBox(box));
         });
     }
@@ -1652,7 +1672,7 @@ class List {
     makeContainerHoverable() {
         this.container.addEventListener('mouseenter', e => {
             this.container.classList.add('tomczuk-container-hovered')
-        })
+        });
 
         this.container.addEventListener('mouseleave', e => {
             this.container.classList.remove('tomczuk-container-hovered')
@@ -1669,16 +1689,19 @@ class Box {
         this.listType = listType;
         listType.insertFunctions(this);
         this.getModel?.();
-        this.shopProduct = new Product(this.model);
-        this.reportProduct = new Product(this.model);
+        this.product = new Product(this.model, element, listType);
+        console.debug(this.product.shopData.rawData);
     }
 }
 
 class Product {
     authors = [];
 
-    constructor(model = null) {
+    constructor(model = null, box = null, listType = null) {
         model && this.setModel(model);
+        if(box) this.box = box;
+        if(box) this.shopData = new ShopProductData(box, listType);
+        if(model) this.reportData = new ReportProductData(model);
     }
 
     setModel(model) {
@@ -1712,7 +1735,6 @@ class Product {
     }
     
     setShippingTime(shippingTime) {
-        
         this.shippingTime = shippingTime
     }
 
@@ -1735,6 +1757,35 @@ class Product {
     }
 }
 
+class ShopProductData {
+    constructor(box, listType) {
+        this.box = box;
+        this.listType = listType;
+        this.rawData = {};
+        this.loadData();
+    }
+
+    loadData() {
+        let obj = this.listType;
+        let box = this.box;
+        let data = this.rawData;
+
+        data.price = obj.getPrice(box);
+        data.retail = obj.getRetail(box);
+        data.title = obj.getTitle(box);
+        data.authors = obj.getAuthors(box);
+        data.realShopUrl = obj.getRealShopUrl(box);
+        if(obj.getAvailab) data.availab = obj.getAvailab(box);
+    }
+}
+
+class ReportProductData {
+    constructor(model) {
+        this.model = model;
+        this.rawData = {};
+    }
+}
+
 class TKStandardList extends ListType {
     getContainers() {
         return qsa('.book-list.xs-hidden ul.toggle-view.grid');
@@ -1742,6 +1793,10 @@ class TKStandardList extends ListType {
 
     getBoxes(container) {
         return container.qsa('.product-container').map(el => el.closest('li'));
+    }
+
+    getAvailab(box) {
+        return box.qs('.product-available')?.textContent.trim();
     }
 }
 
