@@ -355,13 +355,26 @@ function useTomczukToolbarStyles() {
 }
 
 .tomczuk-box-adjusted {
-    height: auto;
+    height: auto!important;
     transition: 500ms;
+}
+
+.tomczuk-box-adjusted .product-container {
+    height: auto!important;
 }
 
 .tomczuk-box-adjusted.tomczuk-box-hovered {
     box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.4);
     background-color: rgba(255, 203, 172, .35);
+}
+
+.tomczuk-box-adjusted.tomczuk-tk-promo-list {
+    height: 250px!important;
+}
+
+.tomczuk-box-adjusted.tomczuk-tk-promo-list > div {
+    height: 200px!important;
+    top: 80px;
 }`;
 
     style.textContent = customUpdateableCSS;
@@ -1564,7 +1577,7 @@ class ListType {
 
     unadjustBox() {
         this.element.classList.remove('tomczuk-box-adjusted');
-        this.element.classList.remove('tomczuk-box-hovered');
+        // @THINK - nie usuwa event listenerow z elementu.
     }
 
     buildBox() {
@@ -1656,7 +1669,8 @@ class Box {
         this.listType = listType;
         listType.insertFunctions(this);
         this.getModel?.();
-        this.product = new Product(this.model);
+        this.shopProduct = new Product(this.model);
+        this.reportProduct = new Product(this.model);
     }
 }
 
@@ -1739,11 +1753,6 @@ class TKProductPageList extends TKStandardList {
     getBoxes(container) {
         return container.qsa('.grid-desc-item');
     }
-
-    adjustBox() {
-        super.adjustBox();
-        this.element.style.height = 'auto';
-    }
 }
 
 class TKSliderList extends TKStandardList {
@@ -1765,12 +1774,6 @@ class TKBestsellersList extends TKStandardList {
     getBoxes(container) {
         return container.qsa('li');
     }
-
-    adjustBox(box) {
-        super.adjustBox(box);
-        box.style.height = 'auto';
-        box.qs('.product-container').style.height = 'auto';
-    }
 }
 
 class TKPromoList extends TKStandardList {
@@ -1782,10 +1785,16 @@ class TKPromoList extends TKStandardList {
         return container.qsa('li');
     }
 
-    adjustBox(box) {
-        box.style.height = '250px';
-        box.children[0].style.height = '200px';
-        box.children[0].style.top = '80px';
+    adjustBox() {
+        this.element.classList.add(
+            'tomczuk-tk-promo-list',
+            'tomczuk-box-adjusted'
+        );
+    }
+
+    unadjustBox() {
+        super.unadjustBox();
+        this.element.classList.remove('tomczuk-tk-promo-list');
     }
 }
 
@@ -1798,10 +1807,9 @@ class BEEStandardList extends ListType {
         return container.qsa('.product-container').map(el => el.parentElement);
     }
 
-    adjustBox(box) {
+    adjustBox() {
         super.adjustBox(box);
-        box.style.height = '500px';
-        box.qs('.product-container').style.height = 'auto';
+        this.element.style.height = '500px';
     }
 }
 
