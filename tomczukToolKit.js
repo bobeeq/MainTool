@@ -883,10 +883,9 @@ class NativeCtrl {
         this.overrideCfg();
 
         if (this.ctrl.cfg.access === false) return;
-        this.ctrl.listBundle = new ListBundle(this.ctrl.getLists());
-
-        this.ctrl.cfg.model = this.ctrl.productModel();
         if (isDev() && ! this.ctrl.cfg.model) this.ctrl.cfg.model = '9788382158106';
+        this.ctrl.listBundle = new ListBundle(this.ctrl.getLists());
+        this.ctrl.cfg.model = this.ctrl.productModel();
 
         this.runListsObserver();
     }
@@ -948,8 +947,11 @@ class NativeCtrl {
                 log(`Longest gap between mutations: ${(longestGap / 1000).toFixed(2)}s`);
                 clearInterval(checkLastMutationInterval);
                 mutationSecondCheck = true; // @DEBUG, na proda -> observer.disconnect();
-                this.loadLists();
-                this.showLists();
+                this.loadLists().then(res => {
+                    log('after fetch from cba...');
+                    log(res);
+                    this.showLists();
+                });
             }
         }, this.ctrl.cfg.checkLastMutationIntervalMs);
     }
@@ -960,9 +962,41 @@ class NativeCtrl {
      */
     async loadLists() {
         this.ctrl.listBundle.loadLists();
-        await this.ctrl.salesReportForLoadedBoxes(); //@THINK  ? ? ?
-        
+        this.ctrl.allModels = this.ctrl.listBundle.getAllModels();
+        this.ctrl.allModels.add(this.ctrl.cfg.model);
+        this.ctrl.cfg.salesReportForTwoDays = await this.ctrl.salesReportForLoadedBoxes(); //@THINK  ? ? ?
     }
+
+    /** @THINK
+     * będzie zmiana referencji do listy produktów.
+     */
+     async salesReportForLoadedBoxes(
+        duration = this.cfg.daysForSalesBundleReport,
+        delay = 0
+    ) {
+        return null; //@TODO
+        // @DEPRECATED-BELOW:
+        let models = [...this.data.lists.allElements.keys()];
+        let url = 'https://cba.kierus.com.pl/?p=ShowSqlReport&r=ilosc+zamowionych+produktow+i+unikalnych+zamowien';
+        let reqBody = new FormData();
+        let [startDate, endDate] = prepareDates(duration, delay);
+        reqBody.append('lista_produktow', models.join("\r\n"));
+        reqBody.append('data_od', startDate);
+        reqBody.append('data_do', endDate);
+        reqBody.append('promo', '');
+        reqBody.append('sklep', '-1');
+        reqBody.append('source', '-1');
+        reqBody.append('csv', '0');
+
+        // let report = await getReport(url, { method: 'post', body: reqBody });
+
+        if( ! Array.isArray(report) || report.length === 0) return null;
+        for(let row of report) {
+            let box = this.data.lists.allElements.get(row.model)
+            if(box) box.tomczuk.saleReport = row;
+        }
+    }
+
     /**
      * 
      */
@@ -1039,62 +1073,6 @@ class Controller {
      */
     getCfg() {
         return {};
-    }
-
-    /** @THINK
-     * będzie zmiana referencji do listy produktów.
-     */
-    async salesReportForLoadedBoxes(duration = 2, delay = 0) {
-        return null; //@TODO
-        // @DEPRECATED-BELOW:
-        let models = [...this.data.lists.allElements.keys()];
-        let url = 'https://cba.kierus.com.pl/?p=ShowSqlReport&r=ilosc+zamowionych+produktow+i+unikalnych+zamowien';
-        let reqBody = new FormData();
-        let [startDate, endDate] = prepareDates(duration, delay);
-        reqBody.append('lista_produktow', models.join("\r\n"));
-        reqBody.append('data_od', startDate);
-        reqBody.append('data_do', endDate);
-        reqBody.append('promo', '');
-        reqBody.append('sklep', '-1');
-        reqBody.append('source', '-1');
-        reqBody.append('csv', '0');
-
-        // let report = await getReport(url, { method: 'post', body: reqBody });
-        let report = [{
-            tytul: "Żabki grają w łapki. Maluszki ćwiczą rączki, nóżki i paluszki",
-            model: "9788382404036",
-            ean: "9788382404036",
-            ilosc_zamowionych: "251",
-            ilosc_unikalnych_zamowien: "227",
-            wartosc_produktow: "6548.5100",
-            wartosc_zamowien: "39086.6200",
-            ilosc_zamowionych_w_promocji: "239",
-            wartosc_produktow_w_promocji: "6202.3800",
-            na_mag_i_zapas: "92",
-            w_koszykach_z_zapasu: "0",
-            w_kolejce: "106",
-            na_mag_i_zapas_z_kolejka: "198"
-          }, {
-            tytul: "Najszczęśliwsza książka pod chmurką",
-            model: "9788382511468",
-            ean: "9788382511468",
-            ilosc_zamowionych: "251",
-            ilosc_unikalnych_zamowien: "227",
-            wartosc_produktow: "6548.5100",
-            wartosc_zamowien: "39086.6200",
-            ilosc_zamowionych_w_promocji: "239",
-            wartosc_produktow_w_promocji: "6202.3800",
-            na_mag_i_zapas: "92",
-            w_koszykach_z_zapasu: "0",
-            w_kolejce: "106",
-            na_mag_i_zapas_z_kolejka: "198"
-        }];
-
-        if( ! Array.isArray(report) || report.length === 0) return null;
-        for(let row of report) {
-            let box = this.data.lists.allElements.get(row.model)
-            if(box) box.tomczuk.saleReport = row;
-        }
     }
 
     /** 
@@ -1500,6 +1478,15 @@ class ListBundle {
     unbuildAll() {
         this.listTypes.forEach(listType => listType.unbuild());
     }
+
+    getAllModels() {
+        log('listBundle.getAllModels()');
+        let models = [];
+        this.listTypes.forEach(listType => {
+            listType.getAllModels().forEach(model => models.push(model));
+        });
+        return new Set(models);
+    }
 }
 
 
@@ -1597,6 +1584,15 @@ class ListType {
         }
     }
 
+    getAllModels() {
+        log('listType.getAllModels()');
+        let models = [];
+        this.lists.forEach(list => {
+            list.getAllModels().forEach(model => models.push(model));
+        });
+        return models;
+    }
+
     getTitle(box) {
         return box.qs('[data-name]')?.dataset.name;
     }
@@ -1674,6 +1670,13 @@ class List {
         this.elements.forEach(elArr => {
             elArr.forEach(box => box?.unbuildBox(box));
         });
+    }
+
+    getAllModels() {
+        log('list.getAllModels()');
+        let models = [...this.elements.keys()];
+        log(models);
+        return models;
     }
     // @THINK
     makeContainerHoverable() {
@@ -1801,13 +1804,15 @@ class Product {
 
     constructor(model = null, box = null, listType = null) {
         model && this.setModel(model);
-        if(box) this.box = box;
-        if(box) this.shopData = new ShopProductData(box, listType);
+        if(box) {
+            this.box = box;
+            this.shopData = new ShopProductData(box, listType);
+        }
         if(model) this.reportData = new ReportProductData(model);
         this.setPrice(this.shopData.rawData.price);
         this.setRetail(this.shopData.rawData.retail);
         this.countDiscount();
-        log(this);
+        // log(this); // @DEBUG
     }
 
     setModel(model) {
