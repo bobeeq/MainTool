@@ -1338,7 +1338,6 @@ class GandalfController extends Controller {
         let details = qs('#product-details.details-list');
         if( ! details) return;
         let elem = details.qsa('tr').filter(tr => {
-            log(tr.textContent);
             return tr.textContent.match(/ISBN:?\s*(\d{13,16})/i)
         });
         return elem[0]?.textContent.match(/\d+/)?.[0];
@@ -1603,7 +1602,7 @@ class ListType {
     }
 
     getPrice(box) {
-        return box.qs('[data-price]')?.dataset.price;
+        return box.qs('.updateable > .product-price')?.textContent.trim();
     }
 
     getRetail(box) {
@@ -1613,9 +1612,17 @@ class ListType {
     getAuthors(box) {
         return box.qs('.product-authors')?.textContent.trim();
     }
+
+    getCategory(box) {
+        return box.qs('[data-category]')?.dataset.category;
+    }
     
     getRealShopUrl(box) {
         return box.qs('a.ecommerce-datalayer[data-price][href]')?.href;
+    }
+
+    getType(box) {
+        return box.qs('.product-main-top-params > .produkt-listing.typename')?.textContent.trim();
     }
 }
 
@@ -1680,6 +1687,102 @@ class List {
     }
 }
 
+class TKStandardList extends ListType {
+    getContainers() {
+        return qsa('.book-list.xs-hidden ul.toggle-view.grid');
+    }
+
+    getBoxes(container) {
+        return container.qsa('.product-container').map(el => el.closest('li'));
+    }
+
+    getAvailab(box) {
+        return box.qs('.product-available')?.textContent.trim();
+    }
+}
+
+class TKProductPageList extends TKStandardList {
+    getContainers() {
+        return qsa('.book-list.xs-hidden .list-container.grid-desc.clearfix');
+    }
+
+    getBoxes(container) {
+        return container.qsa('.grid-desc-item');
+    }
+
+    getRetail(box) {
+        return box.qs('.grid-desc-price > strong + del')?.textContent.trim();
+    }
+}
+
+class TKSliderList extends TKStandardList {
+    getContainers() {
+        return qsa('.slider-grid.xs-hidden');
+    }
+
+    getBoxes(container) {
+        let boxes = container.qsa('ul.clearfix > li');
+        return boxes;
+    }
+}
+
+class TKBestsellersList extends TKStandardList {
+    getContainers() {
+        return qsa('ul#pagi-slide');
+    }
+
+    getBoxes(container) {
+        return container.qsa('li');
+    }
+}
+
+class TKPromoList extends TKStandardList {
+    getContainers() {
+        return qsa('.book-list .list-container ul.list');
+    }
+
+    getBoxes(container) {
+        return container.qsa('li');
+    }
+
+    adjustBox() {
+        this.element.classList.add(
+            'tomczuk-tk-promo-list',
+            'tomczuk-box-adjusted'
+        );
+    }
+
+    unadjustBox() {
+        super.unadjustBox();
+        this.element.classList.remove('tomczuk-tk-promo-list');
+    }
+}
+
+class BEEStandardList extends ListType {
+    getContainers() {
+        return qsa('.product_list.row');
+    }
+
+    getBoxes(container) {
+        return container.qsa('.product-container').map(el => el.parentElement);
+    }
+
+    adjustBox() {
+        super.adjustBox(box);
+        this.element.style.height = '500px';
+    }
+}
+
+class BEESliderList extends ListType {
+    getContainers() {
+        return qsa('.slider');
+    }
+    
+    getBoxes(container) {
+        return container.qsa('.li.slider-item').map(el => el.parentElement);
+    }
+}
+
 class Box {
     /**
      * @param {HTMLElement} element
@@ -1690,7 +1793,6 @@ class Box {
         listType.insertFunctions(this);
         this.getModel?.();
         this.product = new Product(this.model, element, listType);
-        console.debug(this.product.shopData.rawData);
     }
 }
 
@@ -1702,6 +1804,10 @@ class Product {
         if(box) this.box = box;
         if(box) this.shopData = new ShopProductData(box, listType);
         if(model) this.reportData = new ReportProductData(model);
+        this.setPrice(this.shopData.rawData.price);
+        this.setRetail(this.shopData.rawData.retail);
+        this.countDiscount();
+        log(this);
     }
 
     setModel(model) {
@@ -1776,6 +1882,7 @@ class ShopProductData {
         data.authors = obj.getAuthors(box);
         data.realShopUrl = obj.getRealShopUrl(box);
         if(obj.getAvailab) data.availab = obj.getAvailab(box);
+        data.type = obj.getType(box);
     }
 }
 
@@ -1786,97 +1893,6 @@ class ReportProductData {
     }
 }
 
-class TKStandardList extends ListType {
-    getContainers() {
-        return qsa('.book-list.xs-hidden ul.toggle-view.grid');
-    }
-
-    getBoxes(container) {
-        return container.qsa('.product-container').map(el => el.closest('li'));
-    }
-
-    getAvailab(box) {
-        return box.qs('.product-available')?.textContent.trim();
-    }
-}
-
-class TKProductPageList extends TKStandardList {
-    getContainers() {
-        return qsa('.book-list.xs-hidden .list-container.grid-desc.clearfix');
-    }
-
-    getBoxes(container) {
-        return container.qsa('.grid-desc-item');
-    }
-}
-
-class TKSliderList extends TKStandardList {
-    getContainers() {
-        return qsa('.slider-grid.xs-hidden');
-    }
-
-    getBoxes(container) {
-        let boxes = container.qsa('ul.clearfix > li');
-        return boxes;
-    }
-}
-
-class TKBestsellersList extends TKStandardList {
-    getContainers() {
-        return qsa('ul#pagi-slide');
-    }
-
-    getBoxes(container) {
-        return container.qsa('li');
-    }
-}
-
-class TKPromoList extends TKStandardList {
-    getContainers() {
-        return qsa('.book-list .list-container ul.list');
-    }
-
-    getBoxes(container) {
-        return container.qsa('li');
-    }
-
-    adjustBox() {
-        this.element.classList.add(
-            'tomczuk-tk-promo-list',
-            'tomczuk-box-adjusted'
-        );
-    }
-
-    unadjustBox() {
-        super.unadjustBox();
-        this.element.classList.remove('tomczuk-tk-promo-list');
-    }
-}
-
-class BEEStandardList extends ListType {
-    getContainers() {
-        return qsa('.product_list.row');
-    }
-
-    getBoxes(container) {
-        return container.qsa('.product-container').map(el => el.parentElement);
-    }
-
-    adjustBox() {
-        super.adjustBox(box);
-        this.element.style.height = '500px';
-    }
-}
-
-class BEESliderList extends ListType {
-    getContainers() {
-        return qsa('.slider');
-    }
-    
-    getBoxes(container) {
-        return container.qsa('.li.slider-item').map(el => el.parentElement);
-    }
-}
 
 /** @THINK czy potrzebne?
  * 
