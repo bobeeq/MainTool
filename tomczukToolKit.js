@@ -390,6 +390,7 @@ class App {
      */
     constructor(department) {
         app = this;
+        app.startUpTime = Date.now();
         app.department = department;
         app.storage = new Storage();
 
@@ -890,7 +891,7 @@ class NativeCtrl {
         this.runListsObserver();
     }
 
-    /** @TODO - do przeanalizowania, na pewno do zmian.
+    /** @TODO - do przeanalizowania
      * 
      * @returns {object}
      */
@@ -947,10 +948,8 @@ class NativeCtrl {
                 log(`Longest gap between mutations: ${(longestGap / 1000).toFixed(2)}s`);
                 clearInterval(checkLastMutationInterval);
                 mutationSecondCheck = true; // @DEBUG, na proda -> observer.disconnect();
-                this.loadLists().then(res => {
-                    log('after fetch from cba...');
-                    log(res);
-                    this.showLists();
+                this.loadLists().then(() => {
+                    log(this.ctrl.cfg.salesReportForTwoDays);
                 });
             }
         }, this.ctrl.cfg.checkLastMutationIntervalMs);
@@ -964,17 +963,20 @@ class NativeCtrl {
         this.ctrl.listBundle.loadLists();
         this.ctrl.allModels = this.ctrl.listBundle.getAllModels();
         this.ctrl.allModels.add(this.ctrl.cfg.model);
-        this.ctrl.cfg.salesReportForTwoDays = await this.ctrl.salesReportForLoadedBoxes(); //@THINK  ? ? ?
+        this.ctrl.cfg.salesReportForTwoDays = await this.salesReportForLoadedBoxes(); //@THINK  ? ? ?
     }
 
     /** @THINK
      * będzie zmiana referencji do listy produktów.
      */
      async salesReportForLoadedBoxes(
-        duration = this.cfg.daysForSalesBundleReport,
+        duration = this.ctrl.cfg.daysForSalesBundleReport,
         delay = 0
     ) {
-        return null; //@TODO
+        let dom = await fetchPageDOM('https://google.pl');
+        return dom;
+        
+        //@TODO
         // @DEPRECATED-BELOW:
         let models = [...this.data.lists.allElements.keys()];
         let url = 'https://cba.kierus.com.pl/?p=ShowSqlReport&r=ilosc+zamowionych+produktow+i+unikalnych+zamowien';
@@ -1480,7 +1482,6 @@ class ListBundle {
     }
 
     getAllModels() {
-        log('listBundle.getAllModels()');
         let models = [];
         this.listTypes.forEach(listType => {
             listType.getAllModels().forEach(model => models.push(model));
@@ -1585,7 +1586,6 @@ class ListType {
     }
 
     getAllModels() {
-        log('listType.getAllModels()');
         let models = [];
         this.lists.forEach(list => {
             list.getAllModels().forEach(model => models.push(model));
@@ -1673,7 +1673,6 @@ class List {
     }
 
     getAllModels() {
-        log('list.getAllModels()');
         let models = [...this.elements.keys()];
         log(models);
         return models;
@@ -1898,14 +1897,6 @@ class ReportProductData {
     }
 }
 
-
-/** @THINK czy potrzebne?
- * 
- */
-class ProductBoxDataLoader {
-    
-}
-
 function toPrice(price) {
     if(typeof price === 'number') price = price.toString();
     let stripped = price.match(/\d+(?:[.,]{1}\d{1,2})?/)?.[0].replace(',','.');
@@ -1964,7 +1955,6 @@ function isCurrentPage(page) {
 }
 
 /** @THINK - może pomyśleć o stylach w konsoli?
- * 
  * @param {string} message 
  * @param {number} type 0/1
  */
@@ -2063,7 +2053,6 @@ function box(title) {
     const arrow = titleDiv.qs('.tomczuk-box-title-arrow');
     box.container = container;
     box.append(titleDiv, container);
-
 
     let minimizeOptName = title.toLowerCase() + 'BoxMinimized';
     if (app.storage.get(minimizeOptName) == true) {
@@ -2266,7 +2255,6 @@ function printConsoleStartingMessage() {
 
 async function init(department) {
     new App(department);
-    app.startUpTime = Date.now();
     printConsoleStartingMessage();
     if ( ! isDev()) useTomczukToolbarStyles();
     app.ctrl.native.redirectFromSearchPage();
