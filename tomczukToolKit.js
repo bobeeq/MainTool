@@ -7,7 +7,9 @@
 // ========================== GLOBAL ==========================
 HTMLElement.prototype.qs = function(sel) { return this.querySelector(sel); }
 HTMLElement.prototype.qsa = function(sel) { return [...this.querySelectorAll(sel)]; }
+
 var run = true;
+var testMode = true;
 var app;
 
 // ========================== GLOBAL ==========================
@@ -383,17 +385,15 @@ function useTomczukToolbarStyles() {
 }
 
 class App {
-    testMode = true;
-    
     /** @DONE
-     * @param {string} department 
+     * @param {string} department
      */
     constructor(department) {
+        test(this);
         app = this;
         app.startUpTime = Date.now();
         app.department = department;
         app.storage = new Storage();
-
         switch (true) {
             case isCBA():
                 app.ctrl = new CBAController;
@@ -454,6 +454,7 @@ class App {
      * @returns 
      */
     allow(departments, feature) {
+        test('Odpalam funkcję app.allow()');
         return (departments.includes(app.department) && app.ctrl.native.showFeature(feature));
     }
 
@@ -783,11 +784,10 @@ class App {
         const copyListBtn = html('a', { innerHTML: '&#128203;', classes: 'tomczuk-btn tomczuk-copy-product-list' });
         const modifyListBtn = html('a', { innerHTML: '&#128200;', classes: 'tomczuk-btn tomczuk-modify-product-list' });
 
-            modifyListBtn.classList.toggle(
-                'tomczuk-product-list-mode',
-                app.storage.get('productListMode')
-            );
-
+        modifyListBtn.classList.toggle(
+            'tomczuk-product-list-mode',
+            app.storage.get('productListMode')
+        );
 
         modifyListBtn.addEventListener('click', async () => {
             let className = 'tomczuk-product-list-mode';
@@ -795,7 +795,7 @@ class App {
             modifyListBtn.classList.toggle(className, !currentMode);
             app.storage.set('productListMode', !currentMode);
 
-            app.ctrl.native.showLists();
+            app.ctrl.native.loadLists();
         });
 
         copyListBtn.addEventListener('click', e => {
@@ -871,6 +871,7 @@ class NativeCtrl {
      * @param {Controller} controller
      */
     constructor(controller) {
+        test(this);
         this.ctrl = controller;
         this.init();
     }
@@ -883,7 +884,10 @@ class NativeCtrl {
         this.ctrl.cfg = this.basicCfg();
         this.overrideCfg();
 
-        if (this.ctrl.cfg.access === false) return;
+        if (this.ctrl.cfg.access === false) {
+            test('ctrl.cfg.access == false, kończę inicjację NativeCtrl', 1);
+            return;
+        }
         if (isDev() && ! this.ctrl.cfg.model) this.ctrl.cfg.model = '9788382158106';
         this.ctrl.listBundle = new ListBundle(this.ctrl.getLists());
         this.ctrl.cfg.model = this.ctrl.productModel();
@@ -896,6 +900,7 @@ class NativeCtrl {
      * @returns {object}
      */
     basicCfg() {
+        test('Pobieram basicCfg() dla kontrolera')
         return {
             access: true,       // @DEPRECATED? 
             mutationBreakTimeMs: 3600,
@@ -913,6 +918,7 @@ class NativeCtrl {
      * @see TKController.getCfg
      */
     overrideCfg() {
+        test('Nadpisuję cfg kontrolera za pomocą overrideCfg()')
         let cfg = this.ctrl.getCfg();
         for(let setting of Object.keys(cfg)) {
             this.ctrl.cfg[setting] = cfg[setting];
@@ -949,9 +955,7 @@ class NativeCtrl {
                 clearInterval(checkLastMutationInterval);
                 observer.disconnect();
                 // mutationSecondCheck = true; // @DEBUG, na proda -> observer.disconnect();
-                this.loadLists().then(() => {
-                    log(this.ctrl.cfg.salesReportForTwoDays);
-                });
+                this.loadLists();
             }
         }, this.ctrl.cfg.checkLastMutationIntervalMs);
     }
@@ -963,32 +967,28 @@ class NativeCtrl {
     async loadLists() {
         this.ctrl.listBundle.loadLists();
         this.ctrl.allModels = this.ctrl.listBundle.getAllModels();
-        this.ctrl.allModels.add(this.ctrl.cfg.model);
-        await this.salesReportForLoadedBoxes(); //@THINK  ? ? ?
-        if(this.ctrl.cfg.salesReportForTwoDays) {
-            log('This is the place to pin report for products.');
-        }
+        this.ctrl.allModels.push(this.ctrl.cfg.model);
+        await this.salesReportForLoadedBoxes();
+        this.ctrl.listBundle.loadProductsFromReport();
+        this.showLists();
     }
 
     /** @THINK
-     * będzie zmiana referencji do listy produktów.
+     * 
      */
      async salesReportForLoadedBoxes(
-        duration = this.ctrl.cfg.daysForSalesBundleReport,
-        delay = 0
     ) {
         if(
-            this.ctrl.cfg.salesReportForTwoDays ||
+            this.ctrl.cfg.salesReportForXDays ||
             ! app.storage.get('productListMode')
         ) {
             return;
         }
 
-        this.ctrl.cfg.salesReportForTwoDays = await getSalesBundleReport(
-            [...this.ctrl.allModels],
+        this.ctrl.cfg.salesReportForXDays = prepareReport(await getSalesBundleReport(
+            this.ctrl.allModels,
             this.ctrl.cfg.daysForSalesBundleReport,
-            0
-        );
+        ));
         
         return;
 
@@ -1066,6 +1066,7 @@ class NativeCtrl {
 
 class Controller {
     constructor() {
+        test(this);
         this.native = new NativeCtrl(this);
     }
     
@@ -1391,17 +1392,22 @@ class Storage {
      * 
      */
     constructor() {
+        test(this);
         if(window.localStorage) {
+            test('Ustawiam localStorage');
             this.type = 'localStorage';
         } else if(window.sessionStorage) {
+            test('Ustawiam sessionStorage');
             this.type = 'sessionStorage';
         } else {
+            test('Nie mogę ustawić storage', 1);
             this.type = null;
             this.storage = null;
         }
 
         if(this.type && !window[this.type].getItem('tomczukToolKit')) {
             window[this.type].setItem('tomczukToolKit', '');
+            test('Tworzę nowy klucz "tomczukToolKit" dla ' + this.type);
         }
     }
 
@@ -1457,8 +1463,11 @@ class Storage {
 
 class ListBundle {
     constructor(listTypes = []) {
+        test(this);
         this.listTypes = listTypes;
+        test('Przypisuję typy list:', 0, listTypes);
         this.loaded = false;
+        test('ListBundle.loaded = false');
     }
     
     addList(listType) {
@@ -1467,6 +1476,7 @@ class ListBundle {
         } else {
             this.listTypes.push(listType);
         }
+        test('Dodaję kolejne listy do BundleList', 0, this.listTypes);
     }
 
     loadLists() {
@@ -1474,10 +1484,12 @@ class ListBundle {
         this.listTypes.forEach(listType => listType.load());
         this.loaded = true;
     }
-    /** @TODO ?
-     * 
-     */
-    loadReport() {}
+    
+    loadProductsFromReport() {
+        this.listTypes.forEach(listType => 
+            listType.loadProductsFromReport()
+        );
+    }
 
     adjustAll() {
         this.listTypes.forEach(listType => listType.adjust());
@@ -1500,13 +1512,14 @@ class ListBundle {
         this.listTypes.forEach(listType => {
             listType.getAllModels().forEach(model => models.push(model));
         });
-        return new Set(models);
+        return [...new Set(models)];
     }
 }
 
 
 class ListType {
     constructor() {
+        test(this);
         this.lists = [];
     }
     /**
@@ -1550,6 +1563,12 @@ class ListType {
         }
     }
 
+    loadProductsFromReport() {
+        this.lists.forEach(list => 
+            list.loadProductsFromReport()
+        );
+    }
+
     insertFunctions(box) {
         [
             this.getModel,
@@ -1581,20 +1600,72 @@ class ListType {
         // @THINK - nie usuwa event listenerow z elementu.
     }
 
+    /**
+     * this keyword odnosi sie tu do:
+     * @see Product
+     */
     buildBox() {
-        if(this.modelButton) return;
-        this.modelButton = html('button', {
-            textContent:  this.getModel(),
-            style:'margin:auto;display:block'
+        if(this.salesBox) return;
+        this.salesBox = html('div', {
+            style:'border: 1px solid gray; height: 160px'
         });
-        this.element.prepend(this.modelButton);
+        this.element.prepend(this.salesBox);
         this.element.classList.add('tomczuk-built');
+
+        this.salesBox.append(
+            html('button', {
+                style: 'display: block;',
+                textContent: this.product.model
+            })
+        );
+
+        if(! this.product?.reportData?.data) return;
+
+        this.salesBox.append(
+            html('div', {
+                textContent: 
+                    `Sprzedaż dzienna: ${this.product.reportData.data.dailySaleQty}szt`,
+                style:'margin:auto;display:block'
+            })
+        );
+
+        this.salesBox.append(
+            html('div', {
+                textContent: 
+                    `Stan: ${this.product.reportData.data.magQty}szt`,
+                style:'margin:auto;display:block'
+            })
+        );
+
+        this.salesBox.append(
+            html('div', {
+                textContent: 
+                    `Śr cena sprz: ${(this.product.reportData.data.averageSoldPrice).toFixed(2)}zł`,
+                style:'margin:auto;display:block'
+            })
+        );
+
+        this.salesBox.append(
+            html('div', {
+                textContent: 
+                    `Zapotrz 14dni: ${this.product.reportData.data.demandFor14Days}szt`,
+                style:'margin:auto;display:block'
+            })
+        );
+
+        this.salesBox.append(
+            html('div', {
+                textContent: 
+                    `Zapas na: ${this.product.reportData.data.stockForDays}dni`,
+                style:'margin:auto;display:block'
+            })
+        );
     }
 
     unbuildBox() {
-        if(this.modelButton) {
-            this.modelButton.remove();
-            this.modelButton = null;
+        if(this.salesBox) {
+            this.salesBox.remove();
+            this.salesBox = null;
             this.element.classList.remove('tomczuk-built');
         }
     }
@@ -1638,6 +1709,7 @@ class ListType {
 
 class List {
     constructor(listType, container = null) {
+        test(this);
         this.container = container;
         this.listType = listType;
         this.makeContainerHoverable();
@@ -1656,6 +1728,12 @@ class List {
         for(let box of boxes) {
             this.addBox(new Box(this.listType, box));
         }
+    }
+
+    loadProductsFromReport() {
+        this.elements.forEach(boxes => {
+            boxes.forEach(box => box.loadProductFromReport());
+        });
     }
 
     addBox(box) {
@@ -1687,9 +1765,7 @@ class List {
     }
 
     getAllModels() {
-        let models = [...this.elements.keys()];
-        log(models);
-        return models;
+        return [...this.elements.keys()];
     }
     // @THINK
     makeContainerHoverable() {
@@ -1810,6 +1886,10 @@ class Box {
         this.getModel?.();
         this.product = new Product(this.model, element, listType);
     }
+
+    loadProductFromReport() {
+        this.product.loadFromReport();
+    }
 }
 
 class Product {
@@ -1826,6 +1906,11 @@ class Product {
         this.setRetail(this.shopData.rawData.retail);
         this.countDiscount();
         // log(this); // @DEBUG
+    }
+
+    loadFromReport() {
+        this.reportData.load();
+        this.reportData.prepare();
     }
 
     setModel(model) {
@@ -1907,7 +1992,36 @@ class ShopProductData {
 class ReportProductData {
     constructor(model) {
         this.model = model;
-        this.rawData = {};
+        this.rawData = null;
+        this.data = null;
+    }
+
+    load() {
+        if( ! app.ctrl.cfg.salesReportForXDays) {
+            log('brak raportu z dwóch dni', 1);
+            return;
+        }
+        this.rawData = app.ctrl.cfg.salesReportForXDays?.[this.model];
+    }
+
+    prepare() {
+        if( ! this.rawData) {
+            test(`Brakuje raportu dla produktu: ${this.model}`, 1);
+            return;
+        }
+        this.data = {};
+        this.data.title = this.rawData.tytul;
+        this.data.magQty = this.rawData.na_mag_i_zapas_z_kolejka;
+        this.data.soldQty = this.rawData.ilosc_zamowionych;
+        this.data.soldOrders = this.rawData.ilosc_unikalnych_zamowien;
+        this.data.averageSoldPrice = priceToFloat(
+            priceToFloat(this.rawData.wartosc_produktow) / this.data.soldQty
+        );
+        this.data.dailySaleQty = parseFloat((this.rawData.ilosc_zamowionych / app.ctrl.cfg.daysForSalesBundleReport).toFixed(1));
+        
+        this.data.stockForDays = parseInt(this.data.magQty / this.data.dailySaleQty);
+
+        this.data.demandFor14Days = Math.max((this.data.dailySaleQty * 14) - this.data.magQty, 0);
     }
 }
 
@@ -2145,8 +2259,16 @@ async function getReport(url, additionalOptions = null) {
     return result ?? null;
 }
 
+function prepareReport(report) {
+    let obj = {};
+    for(let row of report) {
+        obj[row.model] = row;
+    }
+
+    return obj;
+}
+
 async function getSalesBundleReport(models, duration = 14, delay = 0) {
-      
     let [startDate, endDate] = prepareDates(duration, delay);
     let reqBody = new FormData();
     reqBody.append('lista_produktow', models.join("\r\n"));
@@ -2157,6 +2279,206 @@ async function getSalesBundleReport(models, duration = 14, delay = 0) {
     reqBody.append('source', '-1');
     reqBody.append('csv', '0');
     let url = `https://cba.kierus.com.pl/?p=ShowSqlReport&r=ilosc+zamowionych+produktow+i+unikalnych+zamowien`;
+
+    // @DEBUGGING, wywalić po przesiadce na VPN.
+    return [{
+            "tytul": "Reminders of Him. Cząstka ciebie, którą znam",
+            "model": "9788381351973",
+            "ean": "9788381351973",
+            "ilosc_zamowionych": 49,
+            "ilosc_unikalnych_zamowien": 49,
+            "wartosc_produktow": "1653.26",
+            "wartosc_zamowien": "7389.01",
+            "ilosc_zamowionych_w_promocji": 49,
+            "wartosc_produktow_w_promocji": "1653.26",
+            "na_mag_i_zapas": 179,
+            "w_koszykach_z_zapasu": 0,
+            "w_kolejce": 0,
+            "na_mag_i_zapas_z_kolejka": 179
+        }, {
+            "tytul": "Sezon luster",
+            "model": "9788367247191",
+            "ean": "9788367247191",
+            "ilosc_zamowionych": 36,
+            "ilosc_unikalnych_zamowien": 33,
+            "wartosc_produktow": "957.60",
+            "wartosc_zamowien": "22833.13",
+            "ilosc_zamowionych_w_promocji": 36,
+            "wartosc_produktow_w_promocji": "957.60",
+            "na_mag_i_zapas": 213,
+            "w_koszykach_z_zapasu": 0,
+            "w_kolejce": 0,
+            "na_mag_i_zapas_z_kolejka": 213
+        }, {
+            "tytul": "11 papierowych serc",
+            "model": "9788367247054",
+            "ean": "9788367247054",
+            "ilosc_zamowionych": 33,
+            "ilosc_unikalnych_zamowien": 31,
+            "wartosc_produktow": "814.92",
+            "wartosc_zamowien": "19517.86",
+            "ilosc_zamowionych_w_promocji": 31,
+            "wartosc_produktow_w_promocji": "766.94",
+            "na_mag_i_zapas": 217,
+            "w_koszykach_z_zapasu": 0,
+            "w_kolejce": 0,
+            "na_mag_i_zapas_z_kolejka": 217
+        }, {
+            "tytul": "Ludzie, których spotykamy na wakacjach",
+            "model": "9788367247085",
+            "ean": "9788367247085",
+            "ilosc_zamowionych": 17,
+            "ilosc_unikalnych_zamowien": 17,
+            "wartosc_produktow": "472.43",
+            "wartosc_zamowien": "2594.95",
+            "ilosc_zamowionych_w_promocji": 16,
+            "wartosc_produktow_w_promocji": "445.44",
+            "na_mag_i_zapas": 348,
+            "w_koszykach_z_zapasu": 0,
+            "w_kolejce": 0,
+            "na_mag_i_zapas_z_kolejka": 348
+        }, {
+            "tytul": "Agla. Alef",
+            "model": "9788366178700",
+            "ean": "9788366178700",
+            "ilosc_zamowionych": 10,
+            "ilosc_unikalnych_zamowien": 10,
+            "wartosc_produktow": "406.20",
+            "wartosc_zamowien": "8285.52",
+            "ilosc_zamowionych_w_promocji": 10,
+            "wartosc_produktow_w_promocji": "406.20",
+            "na_mag_i_zapas": 49,
+            "w_koszykach_z_zapasu": 0,
+            "w_kolejce": 0,
+            "na_mag_i_zapas_z_kolejka": 49
+        }, {
+            "tytul": "Wzór na miłość",
+            "model": "9788367195317",
+            "ean": "9788367195317",
+            "ilosc_zamowionych": 4,
+            "ilosc_unikalnych_zamowien": 4,
+            "wartosc_produktow": "104.11",
+            "wartosc_zamowien": "588.94",
+            "ilosc_zamowionych_w_promocji": 4,
+            "wartosc_produktow_w_promocji": "104.11",
+            "na_mag_i_zapas": 0,
+            "w_koszykach_z_zapasu": 0,
+            "w_kolejce": 0,
+            "na_mag_i_zapas_z_kolejka": 0
+        }, {
+            "tytul": "Barbie Kabriolet",
+            "model": "194735001750",
+            "ean": "194735001750",
+            "ilosc_zamowionych": 0,
+            "ilosc_unikalnych_zamowien": 0,
+            "wartosc_produktow": "0.00",
+            "wartosc_zamowien": "0.00",
+            "ilosc_zamowionych_w_promocji": 0,
+            "wartosc_produktow_w_promocji": "0.00",
+            "na_mag_i_zapas": 6,
+            "w_koszykach_z_zapasu": 0,
+            "w_kolejce": 0,
+            "na_mag_i_zapas_z_kolejka": 6
+        }, {
+            "tytul": "Epoka mitu ",
+            "model": "9788366712263",
+            "ean": "9788366712263",
+            "ilosc_zamowionych": 0,
+            "ilosc_unikalnych_zamowien": 0,
+            "wartosc_produktow": "0.00",
+            "wartosc_zamowien": "0.00",
+            "ilosc_zamowionych_w_promocji": 0,
+            "wartosc_produktow_w_promocji": "0.00",
+            "na_mag_i_zapas": 0,
+            "w_koszykach_z_zapasu": 0,
+            "w_kolejce": 0,
+            "na_mag_i_zapas_z_kolejka": 0
+        }, {
+            "tytul": "Ósma szansa na miłość",
+            "model": "9788328720565",
+            "ean": "9788328720565",
+            "ilosc_zamowionych": 0,
+            "ilosc_unikalnych_zamowien": 0,
+            "wartosc_produktow": "0.00",
+            "wartosc_zamowien": "0.00",
+            "ilosc_zamowionych_w_promocji": 0,
+            "wartosc_produktow_w_promocji": "0.00",
+            "na_mag_i_zapas": 0,
+            "w_koszykach_z_zapasu": 0,
+            "w_kolejce": 0,
+            "na_mag_i_zapas_z_kolejka": 0
+        }, {
+            "tytul": "Miłość z widokiem na morze",
+            "model": "9788328714977",
+            "ean": "9788328714977",
+            "ilosc_zamowionych": 0,
+            "ilosc_unikalnych_zamowien": 0,
+            "wartosc_produktow": "0.00",
+            "wartosc_zamowien": "0.00",
+            "ilosc_zamowionych_w_promocji": 0,
+            "wartosc_produktow_w_promocji": "0.00",
+            "na_mag_i_zapas": 5,
+            "w_koszykach_z_zapasu": 0,
+            "w_kolejce": 0,
+            "na_mag_i_zapas_z_kolejka": 5
+        }, {
+            "tytul": "Jedno życie wystarczy. T.1 Nie czas na miłość",
+            "model": "9788366644618",
+            "ean": "9788366644618",
+            "ilosc_zamowionych": 0,
+            "ilosc_unikalnych_zamowien": 0,
+            "wartosc_produktow": "0.00",
+            "wartosc_zamowien": "0.00",
+            "ilosc_zamowionych_w_promocji": 0,
+            "wartosc_produktow_w_promocji": "0.00",
+            "na_mag_i_zapas": 1,
+            "w_koszykach_z_zapasu": 0,
+            "w_kolejce": 0,
+            "na_mag_i_zapas_z_kolejka": 1
+        }, {
+            "tytul": "Podróż nieślubna",
+            "model": "9788366005945",
+            "ean": "9788366005945",
+            "ilosc_zamowionych": 3,
+            "ilosc_unikalnych_zamowien": 2,
+            "wartosc_produktow": "80.99",
+            "wartosc_zamowien": "1879.65",
+            "ilosc_zamowionych_w_promocji": 3,
+            "wartosc_produktow_w_promocji": "80.99",
+            "na_mag_i_zapas": 0,
+            "w_koszykach_z_zapasu": 0,
+            "w_kolejce": 0,
+            "na_mag_i_zapas_z_kolejka": 0
+        }, {
+            "tytul": "Zaproszenie",
+            "model": "9788367137287",
+            "ean": "9788367137287",
+            "ilosc_zamowionych": 14,
+            "ilosc_unikalnych_zamowien": 13,
+            "wartosc_produktow": "373.79",
+            "wartosc_zamowien": "3926.68",
+            "ilosc_zamowionych_w_promocji": 13,
+            "wartosc_produktow_w_promocji": "345.80",
+            "na_mag_i_zapas": 232,
+            "w_koszykach_z_zapasu": 0,
+            "w_kolejce": 0,
+            "na_mag_i_zapas_z_kolejka": 232
+        }, {
+            "tytul": "Skarpetka na tropie, czyli kto ukradł złoty guzik? Niesamowite przygody dziesięciu skarpetek. Tom 2.5",
+            "model": "9788363960940",
+            "ean": "9788363960940",
+            "ilosc_zamowionych": 26,
+            "ilosc_unikalnych_zamowien": 6,
+            "wartosc_produktow": "457.86",
+            "wartosc_zamowien": "1810.63",
+            "ilosc_zamowionych_w_promocji": 26,
+            "wartosc_produktow_w_promocji": "457.86",
+            "na_mag_i_zapas": 0,
+            "w_koszykach_z_zapasu": 0,
+            "w_kolejce": 0,
+            "na_mag_i_zapas_z_kolejka": 0
+        }
+    ];
 
     return await getReport(url, { method: 'post', body: reqBody });
 }
@@ -2256,6 +2578,16 @@ function showGoUpBtn() {
 
 function rand(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function test(msg, error = 0, additionalPrint = null) {
+    if(! testMode) return;
+
+    if(typeof msg === 'object') {
+        msg = 'Tworzę obiekt: ' + Object.getPrototypeOf(msg).constructor.name;
+    }
+    console.debug(`%c${msg}`, `color: ${error ? 'red' : 'yellowgreen'}`);
+    if(additionalPrint) console.debug(additionalPrint);
 }
 
 function secFromStart(timestamp, logIt = true) {
