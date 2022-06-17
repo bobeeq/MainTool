@@ -2146,6 +2146,7 @@ async function getReport(url, additionalOptions = null) {
 }
 
 async function getSalesBundleReport(models, duration = 14, delay = 0) {
+	log(models);
     let reqBody = new FormData();
     reqBody.append('lista_modeli', models.join("\r\n"));
     reqBody.append('sklep', '2');
