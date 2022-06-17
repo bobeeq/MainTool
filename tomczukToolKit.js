@@ -985,7 +985,7 @@ class NativeCtrl {
         }
 
         this.ctrl.cfg.salesReportForTwoDays = await getSalesBundleReport(
-            this.ctrl.allModels,
+            [...this.ctrl.allModels],
             this.ctrl.cfg.daysForSalesBundleReport,
             0
         );
@@ -2123,8 +2123,8 @@ function selfCopyInput({ value, classes = '', id = null }) {
 async function getRawReport(url, additionalOptions = null) {
     let dom = await fetchPageDOM(url, additionalOptions);
   	return {
-        labels: dom?.qs('textarea#LabelsNames')?.value,
-        report: dom?.qs('textarea#SqlReport')?.value
+        labels: dom?.querySelector('textarea#LabelsNames')?.value,
+        report: dom?.querySelector('textarea#SqlReport')?.value
     };
 }
 
@@ -2142,16 +2142,20 @@ async function getReport(url, additionalOptions = null) {
         });
         result.push(obj);
     });
-    return result[0] ?? null;
+    return result ?? null;
 }
 
 async function getSalesBundleReport(models, duration = 14, delay = 0) {
-	log(models);
-    let reqBody = new FormData();
-    reqBody.append('lista_modeli', models.join("\r\n"));
-    reqBody.append('sklep', '2');
-    reqBody.append('csv', '0');
+      
     let [startDate, endDate] = prepareDates(duration, delay);
+    let reqBody = new FormData();
+    reqBody.append('lista_produktow', models.join("\r\n"));
+    reqBody.append('data_od', startDate);
+    reqBody.append('data_do', endDate);
+    reqBody.append('promo', '');
+    reqBody.append('sklep', '-1');
+    reqBody.append('source', '-1');
+    reqBody.append('csv', '0');
     let url = `https://cba.kierus.com.pl/?p=ShowSqlReport&r=ilosc+zamowionych+produktow+i+unikalnych+zamowien`;
 
     return await getReport(url, { method: 'post', body: reqBody });
