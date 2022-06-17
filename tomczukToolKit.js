@@ -1660,6 +1660,8 @@ class ListType {
                 style:'margin:auto;display:block'
             })
         );
+
+        if(this.product.reportData.data.stockForDays <= 5) this.element.style = 'background:tomato';
     }
 
     unbuildBox() {
