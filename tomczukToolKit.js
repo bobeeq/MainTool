@@ -923,7 +923,7 @@ class NativeCtrl {
      * @returns {void}
      */
     runListsObserver() {
-        var mutationSecondCheck = false;    // @DEBUG do debugowania, przed produkcją wyjebać.
+        // var mutationSecondCheck = false;    // @DEBUG do debugowania, przed produkcją wyjebać.
         let longestGap = 0;
         let observer = new MutationObserver(entries => {
             let now = Date.now();
@@ -931,7 +931,7 @@ class NativeCtrl {
             if(diff > longestGap) longestGap = diff;
 
             this.ctrl.cfg.lastMutationOccuredAt = Date.now();
-            if(mutationSecondCheck) log('JESZCZE COŚ TAM PYKŁO!'); // @DEBUG
+            // if(mutationSecondCheck) log('JESZCZE COŚ TAM PYKŁO!'); // @DEBUG
             // secFromStart();      // @DEBUG
             // log(entries);        // @DEBUG
         });
@@ -947,7 +947,8 @@ class NativeCtrl {
                 log(`Mutation finished, turning off interval... ${secFromStart(false, false)}`);
                 log(`Longest gap between mutations: ${(longestGap / 1000).toFixed(2)}s`);
                 clearInterval(checkLastMutationInterval);
-                mutationSecondCheck = true; // @DEBUG, na proda -> observer.disconnect();
+                observer.disconnect();
+                // mutationSecondCheck = true; // @DEBUG, na proda -> observer.disconnect();
                 this.loadLists().then(() => {
                     log(this.ctrl.cfg.salesReportForTwoDays);
                 });
@@ -963,7 +964,10 @@ class NativeCtrl {
         this.ctrl.listBundle.loadLists();
         this.ctrl.allModels = this.ctrl.listBundle.getAllModels();
         this.ctrl.allModels.add(this.ctrl.cfg.model);
-        this.ctrl.cfg.salesReportForTwoDays = await this.salesReportForLoadedBoxes(); //@THINK  ? ? ?
+        await this.salesReportForLoadedBoxes(); //@THINK  ? ? ?
+        if(this.ctrl.cfg.salesReportForTwoDays) {
+            log('This is the place to pin report for products.');
+        }
     }
 
     /** @THINK
@@ -973,12 +977,22 @@ class NativeCtrl {
         duration = this.ctrl.cfg.daysForSalesBundleReport,
         delay = 0
     ) {
-        let dom = await fetchPageDOM('https://google.pl');
-        return dom;
+        if(
+            this.ctrl.cfg.salesReportForTwoDays ||
+            ! app.storage.get('productListMode')
+        ) {
+            return;
+        }
+
+        this.ctrl.cfg.salesReportForTwoDays = await getSalesBundleReport(
+            this.ctrl.allModels,
+            this.ctrl.cfg.daysForSalesBundleReport,
+            0
+        );
         
-        //@TODO
-        // @DEPRECATED-BELOW:
-        let models = [...this.data.lists.allElements.keys()];
+        return;
+
+        // @DEPRECATED?
         let url = 'https://cba.kierus.com.pl/?p=ShowSqlReport&r=ilosc+zamowionych+produktow+i+unikalnych+zamowien';
         let reqBody = new FormData();
         let [startDate, endDate] = prepareDates(duration, delay);
