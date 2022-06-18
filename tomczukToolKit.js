@@ -1018,8 +1018,7 @@ class NativeCtrl {
     /** @THINK
      * 
      */
-     async salesReportForLoadedBoxes(
-    ) {
+     async salesReportForLoadedBoxes() {
         if(
             this.ctrl.cfg.salesReportForXDays ||
             ! app.storage.get('productListMode')
@@ -1031,28 +1030,10 @@ class NativeCtrl {
             this.ctrl.allModels,
             this.ctrl.cfg.daysForSalesBundleReport,
         ));
+
+        this.ctrl.cfg.wholesaleBundleReport = prepareReport(await getWholesaleBundleReport(this.ctrl.allModels));
         
         return;
-
-        // @DEPRECATED?
-        let url = 'https://cba.kierus.com.pl/?p=ShowSqlReport&r=ilosc+zamowionych+produktow+i+unikalnych+zamowien';
-        let reqBody = new FormData();
-        let [startDate, endDate] = prepareDates(duration, delay);
-        reqBody.append('lista_produktow', models.join("\r\n"));
-        reqBody.append('data_od', startDate);
-        reqBody.append('data_do', endDate);
-        reqBody.append('promo', '');
-        reqBody.append('sklep', '-1');
-        reqBody.append('source', '-1');
-        reqBody.append('csv', '0');
-
-        // let report = await getReport(url, { method: 'post', body: reqBody });
-
-        if( ! Array.isArray(report) || report.length === 0) return null;
-        for(let row of report) {
-            let box = this.data.lists.allElements.get(row.model)
-            if(box) box.tomczuk.saleReport = row;
-        }
     }
 
     /**
@@ -2541,6 +2522,19 @@ async function getSalesBundleReport(models, duration = 14, delay = 0) {
             "na_mag_i_zapas_z_kolejka": 0
         }
     ];
+
+    return await getReport(url, { method: 'post', body: reqBody });
+}
+
+async function getWholesaleBundleReport(models) {
+    let reqBody = new FormData();
+    reqBody.append('lista_modeli', models.join("\r\n"));
+    reqBody.append('dostawcy', '3,95,222,229,230,355,753,755');
+    reqBody.append('data_od', '2022-01-01');
+    reqBody.append('data_do', '2022-01-02');
+    reqBody.append('sklep[]', '2');
+    reqBody.append('csv', '0');
+    let url = `https://cba.kierus.com.pl/?p=ShowSqlReport&ceny+i+stany+dostawcow+po+modelach`;
 
     return await getReport(url, { method: 'post', body: reqBody });
 }
