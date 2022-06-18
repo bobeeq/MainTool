@@ -375,6 +375,7 @@ function useTomczukToolbarStyles() {
 
 .tomczuk-sales-box-table {
     font-size: inherit;
+    margin-top: 5px;
     width: 100%;
     box-sizing: border-box;
     border-collapse: collapse;
@@ -383,7 +384,7 @@ function useTomczukToolbarStyles() {
 .tomczuk-sales-box-table td {
     border: 1px solid black;
     font-size: inherit;
-    padding: 3px;
+    padding: 3px 6px;
 }
 
 .tomczuk-sales-box-table td:first-child {
@@ -399,6 +400,15 @@ function useTomczukToolbarStyles() {
 .tomczuk-list-sales-box {
     padding: 3px;
     font-size: .85rem;
+}
+
+.tomczuk-list-sales-box table,
+.tomczuk-list-sales-box tr,
+.tomczuk-list-sales-box button,
+.tomczuk-list-sales-box input,
+.tomczuk-list-sales-box div,
+.tomczuk-list-sales-box td {
+    font-size: inherit;
 }
 
 .tomczuk-supply-low {
@@ -418,6 +428,32 @@ function useTomczukToolbarStyles() {
 
 .tomczuk-height-auto {
     height: auto!important;
+}
+
+.tomczuk-wholesale-btn {
+    width: 100%;
+    margin: 5px 0;
+    cursor: pointer;
+}
+
+.tomczuk-wholesale-box {
+    position: relative;
+    overflow: visible;
+}
+
+.tomczuk-wholesale-box table {
+    border-collapse: collapse;
+    position: absolute;
+    padding: 2px;
+    margin: 5px 0;
+    background-color: white;
+    top: 0;
+    width: 100%;
+}
+
+.tomczuk-wholesale-box td {
+    border: 1px solid black;
+    text-align: center;
 }`;
 
     style.textContent = customUpdateableCSS;
@@ -1017,8 +1053,7 @@ class NativeCtrl {
     /** @THINK
      * 
      */
-     async salesReportForLoadedBoxes(
-    ) {
+     async salesReportForLoadedBoxes() {
         if(
             this.ctrl.cfg.salesReportForXDays ||
             ! app.storage.get('productListMode')
@@ -1030,28 +1065,10 @@ class NativeCtrl {
             this.ctrl.allModels,
             this.ctrl.cfg.daysForSalesBundleReport,
         ));
+
+        this.ctrl.cfg.wholesaleBundleReport = prepareReport(await getWholesaleBundleReport(this.ctrl.allModels));
         
         return;
-
-        // @DEPRECATED?
-        let url = 'https://cba.kierus.com.pl/?p=ShowSqlReport&r=ilosc+zamowionych+produktow+i+unikalnych+zamowien';
-        let reqBody = new FormData();
-        let [startDate, endDate] = prepareDates(duration, delay);
-        reqBody.append('lista_produktow', models.join("\r\n"));
-        reqBody.append('data_od', startDate);
-        reqBody.append('data_do', endDate);
-        reqBody.append('promo', '');
-        reqBody.append('sklep', '-1');
-        reqBody.append('source', '-1');
-        reqBody.append('csv', '0');
-
-        // let report = await getReport(url, { method: 'post', body: reqBody });
-
-        if( ! Array.isArray(report) || report.length === 0) return null;
-        for(let row of report) {
-            let box = this.data.lists.allElements.get(row.model)
-            if(box) box.tomczuk.saleReport = row;
-        }
     }
 
     /**
@@ -1700,6 +1717,12 @@ class ListType {
             data?.stockForDays ?? '-'
         );
         this.salesBox.append(table.table);
+        
+        const wholesale = new WholesaleEl;
+        wholesale.row('Ateneum', '24.11', '389');
+        wholesale.row('Platon', '24.38', '100');
+
+        this.salesBox.append(wholesale.btn);
     }
 
     unbuildBox() {
@@ -2071,18 +2094,53 @@ class ReportProductData {
 
 class Table {
     constructor() {
-        this.table = document.createElement('table');
-        this.table.classList.add('tomczuk-sales-box-table');
+        this.table = html('table', {classes: 'tomczuk-sales-box-table'});
     }
 
     row(name, val) {
-        const tr = document.createElement('tr');
-        const tdName = document.createElement('td');
-        tdName.textContent = name;
-        const tdVal = document.createElement('td');
-        tdVal.textContent = val;
+        const tr = html('tr');
+        const tdName = html('td', {textContent: name});
+        const tdVal = html('td', {textContent: val});
         tr.append(tdName, tdVal);
         this.table.append(tr);
+    }
+}
+
+class WholesaleEl {
+    constructor() {
+        this.btn = html('button', {
+            innerHTML: 'HURT (2142) &#128317;',
+            classes: 'tomczuk-wholesale-btn'
+        });
+
+        this.box = html('div', {classes: 'tomczuk-wholesale-box'});
+        this.table = html('table');
+        this.row('dostawca', 'brutto', 'ile');
+        this.box.append(this.table);
+        this.setUpListeners();
+    }
+
+    row(supplier, price, qty) {
+        const tr = html('tr');
+        tr.append(html('td', {textContent: supplier}));
+        tr.append(html('td', {textContent: price}));
+        tr.append(html('td', {textContent: qty}));
+        this.table.append(tr);
+    }
+
+    setUpListeners() {
+        const box = this.box;
+        const btn = this.btn;
+        btn.addEventListener('click', () => {
+            box.classList.toggle('tomczuk-wholesale-visible');
+            if(box.classList.contains('tomczuk-wholesale-visible')) {
+                btn.after(box);
+                btn.innerHTML = 'HURT (2142) &#128316;';
+            } else {
+                box.remove();
+                btn.innerHTML = 'HURT (2142) &#128317;';
+            }
+        });
     }
 }
 
@@ -2540,6 +2598,19 @@ async function getSalesBundleReport(models, duration = 14, delay = 0) {
             "na_mag_i_zapas_z_kolejka": 0
         }
     ];
+
+    return await getReport(url, { method: 'post', body: reqBody });
+}
+
+async function getWholesaleBundleReport(models) {
+    let reqBody = new FormData();
+    reqBody.append('lista_modeli', models.join("\r\n"));
+    reqBody.append('dostawcy', '3,95,222,229,230,355,753,755');
+    reqBody.append('data_od', '2022-01-01');
+    reqBody.append('data_do', '2022-01-02');
+    reqBody.append('sklep[]', '2');
+    reqBody.append('csv', '0');
+    let url = `https://cba.kierus.com.pl/?p=ShowSqlReport&r=ceny+i+stany+dostawcow+po+modelach`;
 
     return await getReport(url, { method: 'post', body: reqBody });
 }

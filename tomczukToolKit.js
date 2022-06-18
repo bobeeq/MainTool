@@ -402,6 +402,15 @@ function useTomczukToolbarStyles() {
     font-size: .85rem;
 }
 
+.tomczuk-list-sales-box table,
+.tomczuk-list-sales-box tr,
+.tomczuk-list-sales-box button,
+.tomczuk-list-sales-box input,
+.tomczuk-list-sales-box div,
+.tomczuk-list-sales-box td {
+    font-size: inherit;
+}
+
 .tomczuk-supply-low {
     box-shadow: inset 0 0 20px 5px #f00;
     background-color: rgba(255,0,0,.2);
@@ -419,6 +428,35 @@ function useTomczukToolbarStyles() {
 
 .tomczuk-height-auto {
     height: auto!important;
+}
+
+.tomczuk-wholesale-btn {
+    width: 100%;
+    margin: 5px 0;
+    cursor: pointer;
+}
+
+.tomczuk-wholesale-box {
+    position: relative;
+    overflow: visible;
+}
+
+.tomczuk-wholesale-box table {
+    border-collapse: collapse;
+    position: absolute;
+    padding: 2px;
+    background-color: white;
+    top: 0;
+    width: 100%;
+}
+
+.tomczuk-wholesale-box tr:first-child {
+    font-weight: 800;
+}
+
+.tomczuk-wholesale-box td {
+    border: 1px solid black;
+    text-align: center;
 }`;
 
     style.textContent = customUpdateableCSS;
@@ -1682,6 +1720,12 @@ class ListType {
             data?.stockForDays ?? '-'
         );
         this.salesBox.append(table.table);
+        
+        const wholesale = new WholesaleEl;
+        wholesale.row('Ateneum', '24.11', '389');
+        wholesale.row('Platon', '24.38', '100');
+
+        this.salesBox.append(wholesale.btn);
     }
 
     unbuildBox() {
@@ -2053,18 +2097,53 @@ class ReportProductData {
 
 class Table {
     constructor() {
-        this.table = document.createElement('table');
-        this.table.classList.add('tomczuk-sales-box-table');
+        this.table = html('table', {classes: 'tomczuk-sales-box-table'});
     }
 
     row(name, val) {
-        const tr = document.createElement('tr');
-        const tdName = document.createElement('td');
-        tdName.textContent = name;
-        const tdVal = document.createElement('td');
-        tdVal.textContent = val;
+        const tr = html('tr');
+        const tdName = html('td', {textContent: name});
+        const tdVal = html('td', {textContent: val});
         tr.append(tdName, tdVal);
         this.table.append(tr);
+    }
+}
+
+class WholesaleEl {
+    constructor() {
+        this.btn = html('button', {
+            innerHTML: 'HURT (2142) &#128317;',
+            classes: 'tomczuk-wholesale-btn'
+        });
+
+        this.box = html('div', {classes: 'tomczuk-wholesale-box'});
+        this.table = html('table');
+        this.row('dostawca', 'brutto', 'ile');
+        this.box.append(this.table);
+        this.setUpListeners();
+    }
+
+    row(supplier, price, qty) {
+        const tr = html('tr');
+        tr.append(html('td', {textContent: supplier}));
+        tr.append(html('td', {textContent: price}));
+        tr.append(html('td', {textContent: qty}));
+        this.table.append(tr);
+    }
+
+    setUpListeners() {
+        const box = this.box;
+        const btn = this.btn;
+        btn.addEventListener('click', () => {
+            box.classList.toggle('tomczuk-wholesale-visible');
+            if(box.classList.contains('tomczuk-wholesale-visible')) {
+                btn.after(box);
+                btn.innerHTML = 'HURT (2142) &#128316;';
+            } else {
+                box.remove();
+                btn.innerHTML = 'HURT (2142) &#128317;';
+            }
+        });
     }
 }
 
@@ -2304,7 +2383,7 @@ async function getReport(url, additionalOptions = null) {
 
 function prepareReport(report) {
     let obj = {};
-    for(let row of report) {
+    for(let row of report ?? []) {
         obj[row.model] = row;
     }
 
@@ -2534,7 +2613,7 @@ async function getWholesaleBundleReport(models) {
     reqBody.append('data_do', '2022-01-02');
     reqBody.append('sklep[]', '2');
     reqBody.append('csv', '0');
-    let url = `https://cba.kierus.com.pl/?p=ShowSqlReport&ceny+i+stany+dostawcow+po+modelach`;
+    let url = `https://cba.kierus.com.pl/?p=ShowSqlReport&r=ceny+i+stany+dostawcow+po+modelach`;
 
     return await getReport(url, { method: 'post', body: reqBody });
 }
