@@ -358,16 +358,10 @@ function useTomczukToolbarStyles() {
 
 .tomczuk-box-adjusted {
     height: auto!important;
-    transition: 500ms;
 }
 
 .tomczuk-box-adjusted .product-container {
     height: auto!important;
-}
-
-.tomczuk-box-adjusted.tomczuk-box-hovered {
-    box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.4);
-    background-color: rgba(255, 203, 172, .35);
 }
 
 .tomczuk-box-adjusted.tomczuk-tk-promo-list {
@@ -377,6 +371,54 @@ function useTomczukToolbarStyles() {
 .tomczuk-box-adjusted.tomczuk-tk-promo-list > div {
     height: 200px!important;
     top: 80px;
+}
+
+.tomczuk-sales-box-table {
+    font-size: inherit;
+    margin-top: 5px;
+    width: 100%;
+    box-sizing: border-box;
+    border-collapse: collapse;
+}
+
+.tomczuk-sales-box-table td {
+    border: 1px solid black;
+    font-size: inherit;
+    padding: 3px 6px;
+}
+
+.tomczuk-sales-box-table td:first-child {
+    text-align: right;
+}
+
+.tomczuk-sales-box-table td:last-child {
+    text-align: center;
+    font-weight: 800;
+    min-width: 20%;
+}
+
+.tomczuk-list-sales-box {
+    padding: 3px;
+    font-size: .85rem;
+}
+
+.tomczuk-supply-low {
+    box-shadow: inset 0 0 20px 5px #f00;
+    background-color: rgba(255,0,0,.2);
+}
+
+.tomczuk-supply-medium {
+    box-shadow: inset 0 0 20px 5px #ffa500;
+    background-color: rgba(255,165,0,.2);
+}
+
+.tomczuk-supply-overload {
+    box-shadow: inset 0 0 20px 5px #000;
+    background-color: rgba(0,0,0,.2);
+}
+
+.tomczuk-height-auto {
+    height: auto!important;
 }`;
 
     style.textContent = customUpdateableCSS;
@@ -1586,19 +1628,16 @@ class ListType {
 
     adjustBox() {
         this.element.classList.add('tomczuk-box-adjusted');
-
-        this.element.addEventListener('mouseover', () => {
-            this.element.classList.add('tomczuk-box-hovered');
-        });
-        this.element.addEventListener('mouseout', () => {
-            this.element.classList.remove('tomczuk-box-hovered');
-        });
     }
 
     unadjustBox() {
         this.element.classList.remove('tomczuk-box-adjusted');
-        // @THINK - nie usuwa event listenerow z elementu.
     }
+
+    /** @OVERRIDE IF NEEDED. */
+    adjustContainer(container) {}
+    /** @OVERRIDE IF NEEDED. */
+    unadjustContainer(container) {}
 
     /**
      * this keyword odnosi sie tu do:
@@ -1606,7 +1645,9 @@ class ListType {
      */
     buildBox() {
         if(this.salesBox) return;
+
         let data = this.product?.reportData?.data;
+
         this.salesBox = html('div', {
             classes:'tomczuk-list-sales-box'
         });
@@ -1616,66 +1657,61 @@ class ListType {
         this.salesBox.append(
             selfCopyInput({value: this.product.model})
         );
-
-        switch(true) {
-            case data.stockForDays <= 3:
-                this.element.classList.add('tomczuk-supply-low');
-                break;
-            case data.stockForDays <= 6:
-                this.element.classList.add('tomczuk-supply-medium');
-                break;
-            default:
-                this.element.classList.add('tomczuk-supply-high');
-                break;
+        if(data) {
+            switch(true) {
+                case data.stockForDays <= 3:
+                    this.element.classList.add('tomczuk-supply-low');
+                    break;
+                case data.stockForDays <= 6:
+                    this.element.classList.add('tomczuk-supply-medium');
+                    break;
+                case data.stockForDays >= 30:
+                    this.element.classList.add('tomczuk-supply-overload');
+                    break;
+                default:
+                    this.element.classList.add('tomczuk-supply-high');
+                    break;
+            }
         }
-
-        if( ! data) {
-            test(`Brak danych raportowych dla ${this.product.model}`, 1);
-            return;
-        }
-
-        this.salesBox.append(
-            html('div', {
-                textContent: `Sprzedaż dzienna: ${data.dailySaleQty}szt`,
-                classes: 'tomczuk-list tomczuk-list-daily-sale'
-            })
+        
+        const table = new Table;
+        
+        table.row(
+            'Sprzedaż dzienna',
+            data?.dailySaleQty ?? '-'
         );
 
-        this.salesBox.append(
-            html('div', {
-                textContent: `Stan: ${data.magQty}szt`,
-                classes: 'tomczuk-list tomczuk-list-mag-qty'
-            })
+        table.row(
+            'Stan MAG',
+            data?.magQty ?? '-'
         );
 
-        this.salesBox.append(
-            html('div', {
-                textContent: 
-                    `Śr cena sprz: ${(data.averageSoldPrice).toFixed(2)}zł`,
-                classes: 'tomczuk-list tomczuk-list-av-sold-price'
-            })
+        table.row(
+            'Śr cena sprz.',
+            data?.averageSoldPrice ?? '-'
         );
 
-        this.salesBox.append(
-            html('div', {
-                textContent: `Zapotrz 14dni: ${data.demandFor14Days}szt`,
-                classes: 'tomczuk-list tomczuk-list-14-days-demand'
-            })
+        table.row(
+            'Zapotrz 14 dni',
+            data?.demandFor14Days ?? '-'
         );
 
-        this.salesBox.append(
-            html('div', {
-                textContent: `Zapas na: ${data.stockForDays}dni`,
-                classes: 'tomczuk-list tomczuk-list-stock-for-days'
-            })
+        table.row(
+            'Zapas na dni',
+            data?.stockForDays ?? '-'
         );
+        this.salesBox.append(table.table);
     }
 
     unbuildBox() {
         if(this.salesBox) {
             this.salesBox.remove();
             this.salesBox = null;
-            this.element.classList.remove('tomczuk-built');
+            [...this.element.classList].forEach(className => {
+                if(/tomczuk/.test(className)) {
+                    this.element.classList.remove(className);
+                }
+            });
         }
     }
 
@@ -1721,7 +1757,6 @@ class List {
         test(this);
         this.container = container;
         this.listType = listType;
-        this.makeContainerHoverable();
         this.elements = new Map;
     }
 
@@ -1753,12 +1788,23 @@ class List {
         this.elements.forEach(elArr => {
             elArr.forEach(box => box.adjustBox());
         });
+
+        this.adjustContainer();
+    }
+
+    adjustContainer() {
+        this.listType.adjustContainer(this.container);
     }
 
     unadjust() {
         this.elements.forEach(elArr => {
             elArr.forEach(box => box.unadjustBox());
         });
+        this.unadjustContainer();
+    }
+
+    unadjustContainer() {
+        this.listType.adjustContainer(this.container);
     }
 
     build() {
@@ -1775,16 +1821,6 @@ class List {
 
     getAllModels() {
         return [...this.elements.keys()];
-    }
-    // @THINK
-    makeContainerHoverable() {
-        this.container.addEventListener('mouseenter', e => {
-            this.container.classList.add('tomczuk-container-hovered')
-        });
-
-        this.container.addEventListener('mouseleave', e => {
-            this.container.classList.remove('tomczuk-container-hovered')
-        });
     }
 }
 
@@ -1825,6 +1861,13 @@ class TKSliderList extends TKStandardList {
         let boxes = container.qsa('ul.clearfix > li');
         return boxes;
     }
+
+    adjustContainer(container) {
+        container.qs('[id^=slider_]').classList.add('tomczuk-height-auto');
+    }
+    unadjustContainer(container) {
+        container.qs('[id^=slider_]').classList.remove('tomczuk-height-auto');
+    }
 }
 
 class TKBestsellersList extends TKStandardList {
@@ -1847,10 +1890,8 @@ class TKPromoList extends TKStandardList {
     }
 
     adjustBox() {
-        this.element.classList.add(
-            'tomczuk-tk-promo-list',
-            'tomczuk-box-adjusted'
-        );
+        super.adjustBox();
+        this.element.classList.add('tomczuk-tk-promo-list');
     }
 
     unadjustBox() {
@@ -1866,11 +1907,6 @@ class BEEStandardList extends ListType {
 
     getBoxes(container) {
         return container.qsa('.product-container').map(el => el.parentElement);
-    }
-
-    adjustBox() {
-        super.adjustBox(box);
-        this.element.style.height = '500px';
     }
 }
 
@@ -2015,7 +2051,7 @@ class ReportProductData {
 
     prepare() {
         if( ! this.rawData) {
-            test(`Brakuje raportu dla produktu: ${this.model}`, 1);
+            // test(`Brakuje raportu dla produktu: ${this.model}`, 1);
             return;
         }
         this.data = {};
@@ -2023,14 +2059,31 @@ class ReportProductData {
         this.data.magQty = this.rawData.na_mag_i_zapas_z_kolejka;
         this.data.soldQty = this.rawData.ilosc_zamowionych;
         this.data.soldOrders = this.rawData.ilosc_unikalnych_zamowien;
-        this.data.averageSoldPrice = priceToFloat(
+        this.data.averageSoldPrice = this.data.soldQty == 0 ? '-' : priceToFloat(
             priceToFloat(this.rawData.wartosc_produktow) / this.data.soldQty
-        );
+        ).toFixed(2);
         this.data.dailySaleQty = parseFloat((this.rawData.ilosc_zamowionych / app.ctrl.cfg.daysForSalesBundleReport).toFixed(1));
         
-        this.data.stockForDays = parseInt(this.data.magQty / this.data.dailySaleQty);
+        this.data.stockForDays = this.data.dailySaleQty == 0 ? '-' : parseInt(this.data.magQty / this.data.dailySaleQty);
 
         this.data.demandFor14Days = Math.max((this.data.dailySaleQty * 14) - this.data.magQty, 0);
+    }
+}
+
+class Table {
+    constructor() {
+        this.table = document.createElement('table');
+        this.table.classList.add('tomczuk-sales-box-table');
+    }
+
+    row(name, val) {
+        const tr = document.createElement('tr');
+        const tdName = document.createElement('td');
+        tdName.textContent = name;
+        const tdVal = document.createElement('td');
+        tdVal.textContent = val;
+        tr.append(tdName, tdVal);
+        this.table.append(tr);
     }
 }
 

@@ -7,7 +7,9 @@
 // ========================== GLOBAL ==========================
 HTMLElement.prototype.qs = function(sel) { return this.querySelector(sel); }
 HTMLElement.prototype.qsa = function(sel) { return [...this.querySelectorAll(sel)]; }
+
 var run = true;
+var testMode = true;
 var app;
 
 // ========================== GLOBAL ==========================
@@ -356,25 +358,66 @@ function useTomczukToolbarStyles() {
 
 .tomczuk-box-adjusted {
     height: auto!important;
-    transition: 500ms;
 }
 
 .tomczuk-box-adjusted .product-container {
     height: auto!important;
 }
 
-.tomczuk-box-adjusted.tomczuk-box-hovered {
-    box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.4);
-    background-color: rgba(255, 203, 172, .35);
-}
-
 .tomczuk-box-adjusted.tomczuk-tk-promo-list {
-    height: 250px;
+    height: 250px!important;
 }
 
 .tomczuk-box-adjusted.tomczuk-tk-promo-list > div {
-    height: 200px;
+    height: 200px!important;
     top: 80px;
+}
+
+.tomczuk-sales-box-table {
+    font-size: inherit;
+    width: 100%;
+    box-sizing: border-box;
+    border-collapse: collapse;
+}
+
+.tomczuk-sales-box-table td {
+    border: 1px solid black;
+    font-size: inherit;
+    padding: 3px;
+}
+
+.tomczuk-sales-box-table td:first-child {
+    text-align: right;
+}
+
+.tomczuk-sales-box-table td:last-child {
+    text-align: center;
+    font-weight: 800;
+    min-width: 20%;
+}
+
+.tomczuk-list-sales-box {
+    padding: 3px;
+    font-size: .85rem;
+}
+
+.tomczuk-supply-low {
+    box-shadow: inset 0 0 20px 5px #f00;
+    background-color: rgba(255,0,0,.2);
+}
+
+.tomczuk-supply-medium {
+    box-shadow: inset 0 0 20px 5px #ffa500;
+    background-color: rgba(255,165,0,.2);
+}
+
+.tomczuk-supply-overload {
+    box-shadow: inset 0 0 20px 5px #000;
+    background-color: rgba(0,0,0,.2);
+}
+
+.tomczuk-height-auto {
+    height: auto!important;
 }`;
 
     style.textContent = customUpdateableCSS;
@@ -383,16 +426,15 @@ function useTomczukToolbarStyles() {
 }
 
 class App {
-    testMode = true;
-    
     /** @DONE
-     * @param {string} department 
+     * @param {string} department
      */
     constructor(department) {
+        test(this);
         app = this;
+        app.startUpTime = Date.now();
         app.department = department;
         app.storage = new Storage();
-
         switch (true) {
             case isCBA():
                 app.ctrl = new CBAController;
@@ -453,6 +495,7 @@ class App {
      * @returns 
      */
     allow(departments, feature) {
+        test('Odpalam funkcję app.allow()');
         return (departments.includes(app.department) && app.ctrl.native.showFeature(feature));
     }
 
@@ -782,11 +825,10 @@ class App {
         const copyListBtn = html('a', { innerHTML: '&#128203;', classes: 'tomczuk-btn tomczuk-copy-product-list' });
         const modifyListBtn = html('a', { innerHTML: '&#128200;', classes: 'tomczuk-btn tomczuk-modify-product-list' });
 
-            modifyListBtn.classList.toggle(
-                'tomczuk-product-list-mode',
-                app.storage.get('productListMode')
-            );
-
+        modifyListBtn.classList.toggle(
+            'tomczuk-product-list-mode',
+            app.storage.get('productListMode')
+        );
 
         modifyListBtn.addEventListener('click', async () => {
             let className = 'tomczuk-product-list-mode';
@@ -794,7 +836,7 @@ class App {
             modifyListBtn.classList.toggle(className, !currentMode);
             app.storage.set('productListMode', !currentMode);
 
-            app.ctrl.native.showLists();
+            app.ctrl.native.loadLists();
         });
 
         copyListBtn.addEventListener('click', e => {
@@ -870,6 +912,7 @@ class NativeCtrl {
      * @param {Controller} controller
      */
     constructor(controller) {
+        test(this);
         this.ctrl = controller;
         this.init();
     }
@@ -882,20 +925,23 @@ class NativeCtrl {
         this.ctrl.cfg = this.basicCfg();
         this.overrideCfg();
 
-        if (this.ctrl.cfg.access === false) return;
-        this.ctrl.listBundle = new ListBundle(this.ctrl.getLists());
-
-        this.ctrl.cfg.model = this.ctrl.productModel();
+        if (this.ctrl.cfg.access === false) {
+            test('ctrl.cfg.access == false, kończę inicjację NativeCtrl', 1);
+            return;
+        }
         if (isDev() && ! this.ctrl.cfg.model) this.ctrl.cfg.model = '9788382158106';
+        this.ctrl.listBundle = new ListBundle(this.ctrl.getLists());
+        this.ctrl.cfg.model = this.ctrl.productModel();
 
         this.runListsObserver();
     }
 
-    /** @TODO - do przeanalizowania, na pewno do zmian.
+    /** @TODO - do przeanalizowania
      * 
      * @returns {object}
      */
     basicCfg() {
+        test('Pobieram basicCfg() dla kontrolera')
         return {
             access: true,       // @DEPRECATED? 
             mutationBreakTimeMs: 3600,
@@ -913,6 +959,7 @@ class NativeCtrl {
      * @see TKController.getCfg
      */
     overrideCfg() {
+        test('Nadpisuję cfg kontrolera za pomocą overrideCfg()')
         let cfg = this.ctrl.getCfg();
         for(let setting of Object.keys(cfg)) {
             this.ctrl.cfg[setting] = cfg[setting];
@@ -923,7 +970,7 @@ class NativeCtrl {
      * @returns {void}
      */
     runListsObserver() {
-        var mutationSecondCheck = false;    // @DEBUG do debugowania, przed produkcją wyjebać.
+        // var mutationSecondCheck = false;    // @DEBUG do debugowania, przed produkcją wyjebać.
         let longestGap = 0;
         let observer = new MutationObserver(entries => {
             let now = Date.now();
@@ -931,7 +978,7 @@ class NativeCtrl {
             if(diff > longestGap) longestGap = diff;
 
             this.ctrl.cfg.lastMutationOccuredAt = Date.now();
-            if(mutationSecondCheck) log('JESZCZE COŚ TAM PYKŁO!'); // @DEBUG
+            // if(mutationSecondCheck) log('JESZCZE COŚ TAM PYKŁO!'); // @DEBUG
             // secFromStart();      // @DEBUG
             // log(entries);        // @DEBUG
         });
@@ -947,9 +994,9 @@ class NativeCtrl {
                 log(`Mutation finished, turning off interval... ${secFromStart(false, false)}`);
                 log(`Longest gap between mutations: ${(longestGap / 1000).toFixed(2)}s`);
                 clearInterval(checkLastMutationInterval);
-                mutationSecondCheck = true; // @DEBUG, na proda -> observer.disconnect();
+                observer.disconnect();
+                // mutationSecondCheck = true; // @DEBUG, na proda -> observer.disconnect();
                 this.loadLists();
-                this.showLists();
             }
         }, this.ctrl.cfg.checkLastMutationIntervalMs);
     }
@@ -960,9 +1007,53 @@ class NativeCtrl {
      */
     async loadLists() {
         this.ctrl.listBundle.loadLists();
-        await this.ctrl.salesReportForLoadedBoxes(); //@THINK  ? ? ?
-        
+        this.ctrl.allModels = this.ctrl.listBundle.getAllModels();
+        this.ctrl.allModels.push(this.ctrl.cfg.model);
+        await this.salesReportForLoadedBoxes();
+        this.ctrl.listBundle.loadProductsFromReport();
+        this.showLists();
     }
+
+    /** @THINK
+     * 
+     */
+     async salesReportForLoadedBoxes(
+    ) {
+        if(
+            this.ctrl.cfg.salesReportForXDays ||
+            ! app.storage.get('productListMode')
+        ) {
+            return;
+        }
+
+        this.ctrl.cfg.salesReportForXDays = prepareReport(await getSalesBundleReport(
+            this.ctrl.allModels,
+            this.ctrl.cfg.daysForSalesBundleReport,
+        ));
+        
+        return;
+
+        // @DEPRECATED?
+        let url = 'https://cba.kierus.com.pl/?p=ShowSqlReport&r=ilosc+zamowionych+produktow+i+unikalnych+zamowien';
+        let reqBody = new FormData();
+        let [startDate, endDate] = prepareDates(duration, delay);
+        reqBody.append('lista_produktow', models.join("\r\n"));
+        reqBody.append('data_od', startDate);
+        reqBody.append('data_do', endDate);
+        reqBody.append('promo', '');
+        reqBody.append('sklep', '-1');
+        reqBody.append('source', '-1');
+        reqBody.append('csv', '0');
+
+        // let report = await getReport(url, { method: 'post', body: reqBody });
+
+        if( ! Array.isArray(report) || report.length === 0) return null;
+        for(let row of report) {
+            let box = this.data.lists.allElements.get(row.model)
+            if(box) box.tomczuk.saleReport = row;
+        }
+    }
+
     /**
      * 
      */
@@ -1016,6 +1107,7 @@ class NativeCtrl {
 
 class Controller {
     constructor() {
+        test(this);
         this.native = new NativeCtrl(this);
     }
     
@@ -1039,62 +1131,6 @@ class Controller {
      */
     getCfg() {
         return {};
-    }
-
-    /** @THINK
-     * będzie zmiana referencji do listy produktów.
-     */
-    async salesReportForLoadedBoxes(duration = 2, delay = 0) {
-        return null; //@TODO
-
-        let models = [...this.data.lists.allElements.keys()];
-        let url = 'https://cba.kierus.com.pl/?p=ShowSqlReport&r=ilosc+zamowionych+produktow+i+unikalnych+zamowien';
-        let reqBody = new FormData();
-        let [startDate, endDate] = prepareDates(duration, delay);
-        reqBody.append('lista_produktow', models.join("\r\n"));
-        reqBody.append('data_od', startDate);
-        reqBody.append('data_do', endDate);
-        reqBody.append('promo', '');
-        reqBody.append('sklep', '-1');
-        reqBody.append('source', '-1');
-        reqBody.append('csv', '0');
-
-        // let report = await getReport(url, { method: 'post', body: reqBody });
-        let report = [{
-            tytul: "Żabki grają w łapki. Maluszki ćwiczą rączki, nóżki i paluszki",
-            model: "9788382404036",
-            ean: "9788382404036",
-            ilosc_zamowionych: "251",
-            ilosc_unikalnych_zamowien: "227",
-            wartosc_produktow: "6548.5100",
-            wartosc_zamowien: "39086.6200",
-            ilosc_zamowionych_w_promocji: "239",
-            wartosc_produktow_w_promocji: "6202.3800",
-            na_mag_i_zapas: "92",
-            w_koszykach_z_zapasu: "0",
-            w_kolejce: "106",
-            na_mag_i_zapas_z_kolejka: "198"
-          }, {
-            tytul: "Najszczęśliwsza książka pod chmurką",
-            model: "9788382511468",
-            ean: "9788382511468",
-            ilosc_zamowionych: "251",
-            ilosc_unikalnych_zamowien: "227",
-            wartosc_produktow: "6548.5100",
-            wartosc_zamowien: "39086.6200",
-            ilosc_zamowionych_w_promocji: "239",
-            wartosc_produktow_w_promocji: "6202.3800",
-            na_mag_i_zapas: "92",
-            w_koszykach_z_zapasu: "0",
-            w_kolejce: "106",
-            na_mag_i_zapas_z_kolejka: "198"
-        }];
-
-        if( ! Array.isArray(report) || report.length === 0) return null;
-        for(let row of report) {
-            let box = this.data.lists.allElements.get(row.model)
-            if(box) box.tomczuk.saleReport = row;
-        }
     }
 
     /** 
@@ -1338,7 +1374,6 @@ class GandalfController extends Controller {
         let details = qs('#product-details.details-list');
         if( ! details) return;
         let elem = details.qsa('tr').filter(tr => {
-            log(tr.textContent);
             return tr.textContent.match(/ISBN:?\s*(\d{13,16})/i)
         });
         return elem[0]?.textContent.match(/\d+/)?.[0];
@@ -1398,17 +1433,22 @@ class Storage {
      * 
      */
     constructor() {
+        test(this);
         if(window.localStorage) {
+            test('Ustawiam localStorage');
             this.type = 'localStorage';
         } else if(window.sessionStorage) {
+            test('Ustawiam sessionStorage');
             this.type = 'sessionStorage';
         } else {
+            test('Nie mogę ustawić storage', 1);
             this.type = null;
             this.storage = null;
         }
 
         if(this.type && !window[this.type].getItem('tomczukToolKit')) {
             window[this.type].setItem('tomczukToolKit', '');
+            test('Tworzę nowy klucz "tomczukToolKit" dla ' + this.type);
         }
     }
 
@@ -1464,8 +1504,11 @@ class Storage {
 
 class ListBundle {
     constructor(listTypes = []) {
+        test(this);
         this.listTypes = listTypes;
+        test('Przypisuję typy list:', 0, listTypes);
         this.loaded = false;
+        test('ListBundle.loaded = false');
     }
     
     addList(listType) {
@@ -1474,6 +1517,7 @@ class ListBundle {
         } else {
             this.listTypes.push(listType);
         }
+        test('Dodaję kolejne listy do BundleList', 0, this.listTypes);
     }
 
     loadLists() {
@@ -1481,10 +1525,12 @@ class ListBundle {
         this.listTypes.forEach(listType => listType.load());
         this.loaded = true;
     }
-    /** @TODO ?
-     * 
-     */
-    loadReport() {}
+    
+    loadProductsFromReport() {
+        this.listTypes.forEach(listType => 
+            listType.loadProductsFromReport()
+        );
+    }
 
     adjustAll() {
         this.listTypes.forEach(listType => listType.adjust());
@@ -1501,11 +1547,20 @@ class ListBundle {
     unbuildAll() {
         this.listTypes.forEach(listType => listType.unbuild());
     }
+
+    getAllModels() {
+        let models = [];
+        this.listTypes.forEach(listType => {
+            listType.getAllModels().forEach(model => models.push(model));
+        });
+        return [...new Set(models)];
+    }
 }
 
 
 class ListType {
     constructor() {
+        test(this);
         this.lists = [];
     }
     /**
@@ -1549,6 +1604,12 @@ class ListType {
         }
     }
 
+    loadProductsFromReport() {
+        this.lists.forEach(list => 
+            list.loadProductsFromReport()
+        );
+    }
+
     insertFunctions(box) {
         [
             this.getModel,
@@ -1566,45 +1627,136 @@ class ListType {
 
     adjustBox() {
         this.element.classList.add('tomczuk-box-adjusted');
-
-        this.element.addEventListener('mouseover', () => {
-            this.element.classList.add('tomczuk-box-hovered');
-        });
-        this.element.addEventListener('mouseout', () => {
-            this.element.classList.remove('tomczuk-box-hovered');
-        });
     }
 
     unadjustBox() {
         this.element.classList.remove('tomczuk-box-adjusted');
-        // @THINK - nie usuwa event listenerow z elementu.
     }
 
+    /** @OVERRIDE IF NEEDED. */
+    adjustContainer(container) {}
+    /** @OVERRIDE IF NEEDED. */
+    unadjustContainer(container) {}
+
+    /**
+     * this keyword odnosi sie tu do:
+     * @see Product
+     */
     buildBox() {
-        if(this.modelButton) return;
-        this.modelButton = html('button', {
-            textContent:  this.getModel(),
-            style:'margin:auto;display:block'
+        if(this.salesBox) return;
+
+        let data = this.product?.reportData?.data;
+
+        this.salesBox = html('div', {
+            classes:'tomczuk-list-sales-box'
         });
-        this.element.prepend(this.modelButton);
-        this.element.classList.add('tomczuk-built');
+        this.element.prepend(this.salesBox);
+        this.element.classList.add('tomczuk-list-built');
+
+        this.salesBox.append(
+            selfCopyInput({value: this.product.model})
+        );
+        if(data) {
+            switch(true) {
+                case data.stockForDays <= 3:
+                    this.element.classList.add('tomczuk-supply-low');
+                    break;
+                case data.stockForDays <= 6:
+                    this.element.classList.add('tomczuk-supply-medium');
+                    break;
+                case data.stockForDays >= 30:
+                    this.element.classList.add('tomczuk-supply-overload');
+                    break;
+                default:
+                    this.element.classList.add('tomczuk-supply-high');
+                    break;
+            }
+        }
+        
+        const table = new Table;
+        
+        table.row(
+            'Sprzedaż dzienna',
+            data?.dailySaleQty ?? '-'
+        );
+
+        table.row(
+            'Stan MAG',
+            data?.magQty ?? '-'
+        );
+
+        table.row(
+            'Śr cena sprz.',
+            data?.averageSoldPrice ?? '-'
+        );
+
+        table.row(
+            'Zapotrz 14 dni',
+            data?.demandFor14Days ?? '-'
+        );
+
+        table.row(
+            'Zapas na dni',
+            data?.stockForDays ?? '-'
+        );
+        this.salesBox.append(table.table);
     }
 
     unbuildBox() {
-        if(this.modelButton) {
-            this.modelButton.remove();
-            this.modelButton = null;
-            this.element.classList.remove('tomczuk-built');
+        if(this.salesBox) {
+            this.salesBox.remove();
+            this.salesBox = null;
+            [...this.element.classList].forEach(className => {
+                if(/tomczuk/.test(className)) {
+                    this.element.classList.remove(className);
+                }
+            });
         }
+    }
+
+    getAllModels() {
+        let models = [];
+        this.lists.forEach(list => {
+            list.getAllModels().forEach(model => models.push(model));
+        });
+        return models;
+    }
+
+    getTitle(box) {
+        return box.qs('[data-name]')?.dataset.name;
+    }
+
+    getPrice(box) {
+        return box.qs('.updateable > .product-price')?.textContent.trim();
+    }
+
+    getRetail(box) {
+        return box.qs('.product-price + del')?.textContent.trim();
+    }
+
+    getAuthors(box) {
+        return box.qs('.product-authors')?.textContent.trim();
+    }
+
+    getCategory(box) {
+        return box.qs('[data-category]')?.dataset.category;
+    }
+    
+    getRealShopUrl(box) {
+        return box.qs('a.ecommerce-datalayer[data-price][href]')?.href;
+    }
+
+    getType(box) {
+        return box.qs('.product-main-top-params > .produkt-listing.typename')?.textContent.trim();
     }
 }
 
 class List {
     constructor(listType, container = null) {
+        test(this);
         this.container = container;
         this.listType = listType;
-        this.makeContainerHoverable();
-        this.allElements = new Map;
+        this.elements = new Map;
     }
 
     /**
@@ -1621,42 +1773,149 @@ class List {
         }
     }
 
+    loadProductsFromReport() {
+        this.elements.forEach(boxes => {
+            boxes.forEach(box => box.loadProductFromReport());
+        });
+    }
+
     addBox(box) {
-        this.allElements.add(box.getModel(), box);
+        this.elements.add(box.getModel(), box);
     }
 
     adjust() {
-        this.allElements.forEach(elArr => {
+        this.elements.forEach(elArr => {
             elArr.forEach(box => box.adjustBox());
-        })
+        });
+
+        this.adjustContainer();
+    }
+
+    adjustContainer() {
+        this.listType.adjustContainer(this.container);
     }
 
     unadjust() {
-        this.allElements.forEach(elArr => {
+        this.elements.forEach(elArr => {
             elArr.forEach(box => box.unadjustBox());
-        })
+        });
+        this.unadjustContainer();
+    }
+
+    unadjustContainer() {
+        this.listType.adjustContainer(this.container);
     }
 
     build() {
-        this.allElements.forEach(elArr => {
+        this.elements.forEach(elArr => {
             elArr.forEach(box => box.buildBox());
         });
     }
 
     unbuild() {
-        this.allElements.forEach(elArr => {
+        this.elements.forEach(elArr => {
             elArr.forEach(box => box?.unbuildBox(box));
         });
     }
-    // @THINK
-    makeContainerHoverable() {
-        this.container.addEventListener('mouseenter', e => {
-            this.container.classList.add('tomczuk-container-hovered')
-        })
 
-        this.container.addEventListener('mouseleave', e => {
-            this.container.classList.remove('tomczuk-container-hovered')
-        });
+    getAllModels() {
+        return [...this.elements.keys()];
+    }
+}
+
+class TKStandardList extends ListType {
+    getContainers() {
+        return qsa('.book-list.xs-hidden ul.toggle-view.grid');
+    }
+
+    getBoxes(container) {
+        return container.qsa('.product-container').map(el => el.closest('li'));
+    }
+
+    getAvailab(box) {
+        return box.qs('.product-available')?.textContent.trim();
+    }
+}
+
+class TKProductPageList extends TKStandardList {
+    getContainers() {
+        return qsa('.book-list.xs-hidden .list-container.grid-desc.clearfix');
+    }
+
+    getBoxes(container) {
+        return container.qsa('.grid-desc-item');
+    }
+
+    getRetail(box) {
+        return box.qs('.grid-desc-price > strong + del')?.textContent.trim();
+    }
+}
+
+class TKSliderList extends TKStandardList {
+    getContainers() {
+        return qsa('.slider-grid.xs-hidden');
+    }
+
+    getBoxes(container) {
+        let boxes = container.qsa('ul.clearfix > li');
+        return boxes;
+    }
+
+    adjustContainer(container) {
+        container.qs('[id^=slider_]').classList.add('tomczuk-height-auto');
+    }
+    unadjustContainer(container) {
+        container.qs('[id^=slider_]').classList.remove('tomczuk-height-auto');
+    }
+}
+
+class TKBestsellersList extends TKStandardList {
+    getContainers() {
+        return qsa('ul#pagi-slide');
+    }
+
+    getBoxes(container) {
+        return container.qsa('li');
+    }
+}
+
+class TKPromoList extends TKStandardList {
+    getContainers() {
+        return qsa('.book-list .list-container ul.list');
+    }
+
+    getBoxes(container) {
+        return container.qsa('li');
+    }
+
+    adjustBox() {
+        super.adjustBox();
+        this.element.classList.add('tomczuk-tk-promo-list');
+    }
+
+    unadjustBox() {
+        super.unadjustBox();
+        this.element.classList.remove('tomczuk-tk-promo-list');
+    }
+}
+
+class BEEStandardList extends ListType {
+    getContainers() {
+        return qsa('.product_list.row');
+    }
+
+    getBoxes(container) {
+        return container.qsa('.product-container').map(el => el.parentElement);
+    }
+}
+
+class BEESliderList extends ListType {
+    getContainers() {
+        return qsa('.slider');
+    }
+    
+    getBoxes(container) {
+        return container.qsa('.li.slider-item').map(el => el.parentElement);
     }
 }
 
@@ -1669,15 +1928,33 @@ class Box {
         this.listType = listType;
         listType.insertFunctions(this);
         this.getModel?.();
-        this.product = new Product(this.model);
+        this.product = new Product(this.model, element, listType);
+    }
+
+    loadProductFromReport() {
+        this.product.loadFromReport();
     }
 }
 
 class Product {
     authors = [];
 
-    constructor(model = null) {
+    constructor(model = null, box = null, listType = null) {
         model && this.setModel(model);
+        if(box) {
+            this.box = box;
+            this.shopData = new ShopProductData(box, listType);
+        }
+        if(model) this.reportData = new ReportProductData(model);
+        this.setPrice(this.shopData.rawData.price);
+        this.setRetail(this.shopData.rawData.retail);
+        this.countDiscount();
+        // log(this); // @DEBUG
+    }
+
+    loadFromReport() {
+        this.reportData.load();
+        this.reportData.prepare();
     }
 
     setModel(model) {
@@ -1711,7 +1988,6 @@ class Product {
     }
     
     setShippingTime(shippingTime) {
-        
         this.shippingTime = shippingTime
     }
 
@@ -1734,99 +2010,80 @@ class Product {
     }
 }
 
-class TKStandardList extends ListType {
-    getContainers() {
-        return qsa('.book-list.xs-hidden ul.toggle-view.grid');
+class ShopProductData {
+    constructor(box, listType) {
+        this.box = box;
+        this.listType = listType;
+        this.rawData = {};
+        this.loadData();
     }
 
-    getBoxes(container) {
-        return container.qsa('.product-container').map(el => el.closest('li'));
+    loadData() {
+        let obj = this.listType;
+        let box = this.box;
+        let data = this.rawData;
+
+        data.price = obj.getPrice(box);
+        data.retail = obj.getRetail(box);
+        data.title = obj.getTitle(box);
+        data.authors = obj.getAuthors(box);
+        data.realShopUrl = obj.getRealShopUrl(box);
+        if(obj.getAvailab) data.availab = obj.getAvailab(box);
+        data.type = obj.getType(box);
     }
 }
 
-class TKProductPageList extends TKStandardList {
-    getContainers() {
-        return qsa('.book-list.xs-hidden .list-container.grid-desc.clearfix');
+class ReportProductData {
+    constructor(model) {
+        this.model = model;
+        this.rawData = null;
+        this.data = null;
     }
 
-    getBoxes(container) {
-        return container.qsa('.grid-desc-item');
+    load() {
+        if( ! app.ctrl.cfg.salesReportForXDays) {
+            log('brak raportu z dwóch dni', 1);
+            return;
+        }
+        this.rawData = app.ctrl.cfg.salesReportForXDays?.[this.model];
+    }
+
+    prepare() {
+        if( ! this.rawData) {
+            // test(`Brakuje raportu dla produktu: ${this.model}`, 1);
+            return;
+        }
+        this.data = {};
+        this.data.title = this.rawData.tytul;
+        this.data.magQty = this.rawData.na_mag_i_zapas_z_kolejka;
+        this.data.soldQty = this.rawData.ilosc_zamowionych;
+        this.data.soldOrders = this.rawData.ilosc_unikalnych_zamowien;
+        this.data.averageSoldPrice = this.data.soldQty == 0 ? '-' : priceToFloat(
+            priceToFloat(this.rawData.wartosc_produktow) / this.data.soldQty
+        ).toFixed(2);
+        this.data.dailySaleQty = parseFloat((this.rawData.ilosc_zamowionych / app.ctrl.cfg.daysForSalesBundleReport).toFixed(1));
+        
+        this.data.stockForDays = this.data.dailySaleQty == 0 ? '-' : parseInt(this.data.magQty / this.data.dailySaleQty);
+
+        this.data.demandFor14Days = Math.max((this.data.dailySaleQty * 14) - this.data.magQty, 0);
     }
 }
 
-class TKSliderList extends TKStandardList {
-    getContainers() {
-        return qsa('.slider-grid.xs-hidden');
+class Table {
+    constructor() {
+        this.table = document.createElement('table');
+        this.table.classList.add('tomczuk-sales-box-table');
     }
 
-    getBoxes(container) {
-        let boxes = container.qsa('ul.clearfix > li');
-        return boxes;
+    row(name, val) {
+        const tr = document.createElement('tr');
+        const tdName = document.createElement('td');
+        tdName.textContent = name;
+        const tdVal = document.createElement('td');
+        tdVal.textContent = val;
+        tr.append(tdName, tdVal);
+        this.table.append(tr);
     }
-}
-
-class TKBestsellersList extends TKStandardList {
-    getContainers() {
-        return qsa('ul#pagi-slide');
-    }
-
-    getBoxes(container) {
-        return container.qsa('li');
-    }
-}
-
-class TKPromoList extends TKStandardList {
-    getContainers() {
-        return qsa('.book-list .list-container ul.list');
-    }
-
-    getBoxes(container) {
-        return container.qsa('li');
-    }
-
-    adjustBox() {
-        this.element.classList.add(
-            'tomczuk-tk-promo-list',
-            'tomczuk-box-adjusted'
-        );
-    }
-
-    unadjustBox() {
-        this.element.classList.remove('tomczuk-tk-promo-list');
-    }
-}
-
-class BEEStandardList extends ListType {
-    getContainers() {
-        return qsa('.product_list.row');
-    }
-
-    getBoxes(container) {
-        return container.qsa('.product-container').map(el => el.parentElement);
-    }
-
-    adjustBox(box) {
-        super.adjustBox(box);
-        box.style.height = '500px';
-        box.qs('.product-container').style.height = 'auto';
-    }
-}
-
-class BEESliderList extends ListType {
-    getContainers() {
-        return qsa('.slider');
-    }
-    
-    getBoxes(container) {
-        return container.qsa('.li.slider-item').map(el => el.parentElement);
-    }
-}
-
-/** @THINK czy potrzebne?
- * 
- */
-class ProductBoxDataLoader {
-    
 }
 
 function toPrice(price) {
@@ -1887,7 +2144,6 @@ function isCurrentPage(page) {
 }
 
 /** @THINK - może pomyśleć o stylach w konsoli?
- * 
  * @param {string} message 
  * @param {number} type 0/1
  */
@@ -1987,7 +2243,6 @@ function box(title) {
     box.container = container;
     box.append(titleDiv, container);
 
-
     let minimizeOptName = title.toLowerCase() + 'BoxMinimized';
     if (app.storage.get(minimizeOptName) == true) {
         titleDiv.classList.add('minimized');
@@ -2043,8 +2298,8 @@ function selfCopyInput({ value, classes = '', id = null }) {
 async function getRawReport(url, additionalOptions = null) {
     let dom = await fetchPageDOM(url, additionalOptions);
   	return {
-        labels: dom?.qs('textarea#LabelsNames')?.value,
-        report: dom?.qs('textarea#SqlReport')?.value
+        labels: dom?.querySelector('textarea#LabelsNames')?.value,
+        report: dom?.querySelector('textarea#SqlReport')?.value
     };
 }
 
@@ -2062,16 +2317,229 @@ async function getReport(url, additionalOptions = null) {
         });
         result.push(obj);
     });
-    return result[0] ?? null;
+    return result ?? null;
+}
+
+function prepareReport(report) {
+    let obj = {};
+    for(let row of report) {
+        obj[row.model] = row;
+    }
+
+    return obj;
 }
 
 async function getSalesBundleReport(models, duration = 14, delay = 0) {
-    let reqBody = new FormData();
-    reqBody.append('lista_modeli', models.join("\r\n"));
-    reqBody.append('sklep', '2');
-    reqBody.append('csv', '0');
     let [startDate, endDate] = prepareDates(duration, delay);
+    let reqBody = new FormData();
+    reqBody.append('lista_produktow', models.join("\r\n"));
+    reqBody.append('data_od', startDate);
+    reqBody.append('data_do', endDate);
+    reqBody.append('promo', '');
+    reqBody.append('sklep', '-1');
+    reqBody.append('source', '-1');
+    reqBody.append('csv', '0');
     let url = `https://cba.kierus.com.pl/?p=ShowSqlReport&r=ilosc+zamowionych+produktow+i+unikalnych+zamowien`;
+
+    // @DEBUGGING, wywalić po przesiadce na VPN.
+    return [{
+            "tytul": "Reminders of Him. Cząstka ciebie, którą znam",
+            "model": "9788381351973",
+            "ean": "9788381351973",
+            "ilosc_zamowionych": 49,
+            "ilosc_unikalnych_zamowien": 49,
+            "wartosc_produktow": "1653.26",
+            "wartosc_zamowien": "7389.01",
+            "ilosc_zamowionych_w_promocji": 49,
+            "wartosc_produktow_w_promocji": "1653.26",
+            "na_mag_i_zapas": 179,
+            "w_koszykach_z_zapasu": 0,
+            "w_kolejce": 0,
+            "na_mag_i_zapas_z_kolejka": 179
+        }, {
+            "tytul": "Sezon luster",
+            "model": "9788367247191",
+            "ean": "9788367247191",
+            "ilosc_zamowionych": 36,
+            "ilosc_unikalnych_zamowien": 33,
+            "wartosc_produktow": "957.60",
+            "wartosc_zamowien": "22833.13",
+            "ilosc_zamowionych_w_promocji": 36,
+            "wartosc_produktow_w_promocji": "957.60",
+            "na_mag_i_zapas": 213,
+            "w_koszykach_z_zapasu": 0,
+            "w_kolejce": 0,
+            "na_mag_i_zapas_z_kolejka": 213
+        }, {
+            "tytul": "11 papierowych serc",
+            "model": "9788367247054",
+            "ean": "9788367247054",
+            "ilosc_zamowionych": 33,
+            "ilosc_unikalnych_zamowien": 31,
+            "wartosc_produktow": "814.92",
+            "wartosc_zamowien": "19517.86",
+            "ilosc_zamowionych_w_promocji": 31,
+            "wartosc_produktow_w_promocji": "766.94",
+            "na_mag_i_zapas": 217,
+            "w_koszykach_z_zapasu": 0,
+            "w_kolejce": 0,
+            "na_mag_i_zapas_z_kolejka": 217
+        }, {
+            "tytul": "Ludzie, których spotykamy na wakacjach",
+            "model": "9788367247085",
+            "ean": "9788367247085",
+            "ilosc_zamowionych": 17,
+            "ilosc_unikalnych_zamowien": 17,
+            "wartosc_produktow": "472.43",
+            "wartosc_zamowien": "2594.95",
+            "ilosc_zamowionych_w_promocji": 16,
+            "wartosc_produktow_w_promocji": "445.44",
+            "na_mag_i_zapas": 348,
+            "w_koszykach_z_zapasu": 0,
+            "w_kolejce": 0,
+            "na_mag_i_zapas_z_kolejka": 348
+        }, {
+            "tytul": "Agla. Alef",
+            "model": "9788366178700",
+            "ean": "9788366178700",
+            "ilosc_zamowionych": 10,
+            "ilosc_unikalnych_zamowien": 10,
+            "wartosc_produktow": "406.20",
+            "wartosc_zamowien": "8285.52",
+            "ilosc_zamowionych_w_promocji": 10,
+            "wartosc_produktow_w_promocji": "406.20",
+            "na_mag_i_zapas": 49,
+            "w_koszykach_z_zapasu": 0,
+            "w_kolejce": 0,
+            "na_mag_i_zapas_z_kolejka": 49
+        }, {
+            "tytul": "Wzór na miłość",
+            "model": "9788367195317",
+            "ean": "9788367195317",
+            "ilosc_zamowionych": 4,
+            "ilosc_unikalnych_zamowien": 4,
+            "wartosc_produktow": "104.11",
+            "wartosc_zamowien": "588.94",
+            "ilosc_zamowionych_w_promocji": 4,
+            "wartosc_produktow_w_promocji": "104.11",
+            "na_mag_i_zapas": 0,
+            "w_koszykach_z_zapasu": 0,
+            "w_kolejce": 0,
+            "na_mag_i_zapas_z_kolejka": 0
+        }, {
+            "tytul": "Barbie Kabriolet",
+            "model": "194735001750",
+            "ean": "194735001750",
+            "ilosc_zamowionych": 0,
+            "ilosc_unikalnych_zamowien": 0,
+            "wartosc_produktow": "0.00",
+            "wartosc_zamowien": "0.00",
+            "ilosc_zamowionych_w_promocji": 0,
+            "wartosc_produktow_w_promocji": "0.00",
+            "na_mag_i_zapas": 6,
+            "w_koszykach_z_zapasu": 0,
+            "w_kolejce": 0,
+            "na_mag_i_zapas_z_kolejka": 6
+        }, {
+            "tytul": "Epoka mitu ",
+            "model": "9788366712263",
+            "ean": "9788366712263",
+            "ilosc_zamowionych": 0,
+            "ilosc_unikalnych_zamowien": 0,
+            "wartosc_produktow": "0.00",
+            "wartosc_zamowien": "0.00",
+            "ilosc_zamowionych_w_promocji": 0,
+            "wartosc_produktow_w_promocji": "0.00",
+            "na_mag_i_zapas": 0,
+            "w_koszykach_z_zapasu": 0,
+            "w_kolejce": 0,
+            "na_mag_i_zapas_z_kolejka": 0
+        }, {
+            "tytul": "Ósma szansa na miłość",
+            "model": "9788328720565",
+            "ean": "9788328720565",
+            "ilosc_zamowionych": 0,
+            "ilosc_unikalnych_zamowien": 0,
+            "wartosc_produktow": "0.00",
+            "wartosc_zamowien": "0.00",
+            "ilosc_zamowionych_w_promocji": 0,
+            "wartosc_produktow_w_promocji": "0.00",
+            "na_mag_i_zapas": 0,
+            "w_koszykach_z_zapasu": 0,
+            "w_kolejce": 0,
+            "na_mag_i_zapas_z_kolejka": 0
+        }, {
+            "tytul": "Miłość z widokiem na morze",
+            "model": "9788328714977",
+            "ean": "9788328714977",
+            "ilosc_zamowionych": 0,
+            "ilosc_unikalnych_zamowien": 0,
+            "wartosc_produktow": "0.00",
+            "wartosc_zamowien": "0.00",
+            "ilosc_zamowionych_w_promocji": 0,
+            "wartosc_produktow_w_promocji": "0.00",
+            "na_mag_i_zapas": 5,
+            "w_koszykach_z_zapasu": 0,
+            "w_kolejce": 0,
+            "na_mag_i_zapas_z_kolejka": 5
+        }, {
+            "tytul": "Jedno życie wystarczy. T.1 Nie czas na miłość",
+            "model": "9788366644618",
+            "ean": "9788366644618",
+            "ilosc_zamowionych": 0,
+            "ilosc_unikalnych_zamowien": 0,
+            "wartosc_produktow": "0.00",
+            "wartosc_zamowien": "0.00",
+            "ilosc_zamowionych_w_promocji": 0,
+            "wartosc_produktow_w_promocji": "0.00",
+            "na_mag_i_zapas": 1,
+            "w_koszykach_z_zapasu": 0,
+            "w_kolejce": 0,
+            "na_mag_i_zapas_z_kolejka": 1
+        }, {
+            "tytul": "Podróż nieślubna",
+            "model": "9788366005945",
+            "ean": "9788366005945",
+            "ilosc_zamowionych": 3,
+            "ilosc_unikalnych_zamowien": 2,
+            "wartosc_produktow": "80.99",
+            "wartosc_zamowien": "1879.65",
+            "ilosc_zamowionych_w_promocji": 3,
+            "wartosc_produktow_w_promocji": "80.99",
+            "na_mag_i_zapas": 0,
+            "w_koszykach_z_zapasu": 0,
+            "w_kolejce": 0,
+            "na_mag_i_zapas_z_kolejka": 0
+        }, {
+            "tytul": "Zaproszenie",
+            "model": "9788367137287",
+            "ean": "9788367137287",
+            "ilosc_zamowionych": 14,
+            "ilosc_unikalnych_zamowien": 13,
+            "wartosc_produktow": "373.79",
+            "wartosc_zamowien": "3926.68",
+            "ilosc_zamowionych_w_promocji": 13,
+            "wartosc_produktow_w_promocji": "345.80",
+            "na_mag_i_zapas": 232,
+            "w_koszykach_z_zapasu": 0,
+            "w_kolejce": 0,
+            "na_mag_i_zapas_z_kolejka": 232
+        }, {
+            "tytul": "Skarpetka na tropie, czyli kto ukradł złoty guzik? Niesamowite przygody dziesięciu skarpetek. Tom 2.5",
+            "model": "9788363960940",
+            "ean": "9788363960940",
+            "ilosc_zamowionych": 26,
+            "ilosc_unikalnych_zamowien": 6,
+            "wartosc_produktow": "457.86",
+            "wartosc_zamowien": "1810.63",
+            "ilosc_zamowionych_w_promocji": 26,
+            "wartosc_produktow_w_promocji": "457.86",
+            "na_mag_i_zapas": 0,
+            "w_koszykach_z_zapasu": 0,
+            "w_kolejce": 0,
+            "na_mag_i_zapas_z_kolejka": 0
+        }
+    ];
 
     return await getReport(url, { method: 'post', body: reqBody });
 }
@@ -2173,6 +2641,16 @@ function rand(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
+function test(msg, error = 0, additionalPrint = null) {
+    if(! testMode) return;
+
+    if(typeof msg === 'object') {
+        msg = 'Tworzę obiekt: ' + Object.getPrototypeOf(msg).constructor.name;
+    }
+    console.debug(`%c${msg}`, `color: ${error ? 'red' : 'yellowgreen'}`);
+    if(additionalPrint) console.debug(additionalPrint);
+}
+
 function secFromStart(timestamp, logIt = true) {
     if( ! timestamp) timestamp = Date.now();
     let time = ((timestamp - app.startUpTime) / 1000).toFixed(2) + 's';
@@ -2189,7 +2667,6 @@ function printConsoleStartingMessage() {
 
 async function init(department) {
     new App(department);
-    app.startUpTime = Date.now();
     printConsoleStartingMessage();
     if ( ! isDev()) useTomczukToolbarStyles();
     app.ctrl.native.redirectFromSearchPage();
