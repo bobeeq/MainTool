@@ -1606,62 +1606,69 @@ class ListType {
      */
     buildBox() {
         if(this.salesBox) return;
+        let data = this.product?.reportData?.data;
         this.salesBox = html('div', {
-            style:'border: 1px solid gray; height: 160px'
+            classes:'tomczuk-list-sales-box'
         });
         this.element.prepend(this.salesBox);
-        this.element.classList.add('tomczuk-built');
+        this.element.classList.add('tomczuk-list-built');
 
         this.salesBox.append(
-            html('button', {
-                style: 'display: block;',
-                textContent: this.product.model
-            })
+            selfCopyInput({value: this.product.model})
         );
 
-        if(! this.product?.reportData?.data) return;
+        switch(true) {
+            case data.stockForDays <= 3:
+                this.element.classList.add('tomczuk-supply-low');
+                break;
+            case data.stockForDays <= 6:
+                this.element.classList.add('tomczuk-supply-medium');
+                break;
+            default:
+                this.element.classList.add('tomczuk-supply-high');
+                break;
+        }
+
+        if( ! data) {
+            test(`Brak danych raportowych dla ${this.product.model}`, 1);
+            return;
+        }
 
         this.salesBox.append(
             html('div', {
-                textContent: 
-                    `Sprzedaż dzienna: ${this.product.reportData.data.dailySaleQty}szt`,
-                style:'margin:auto;display:block'
-            })
-        );
-
-        this.salesBox.append(
-            html('div', {
-                textContent: 
-                    `Stan: ${this.product.reportData.data.magQty}szt`,
-                style:'margin:auto;display:block'
-            })
-        );
-
-        this.salesBox.append(
-            html('div', {
-                textContent: 
-                    `Śr cena sprz: ${(this.product.reportData.data.averageSoldPrice).toFixed(2)}zł`,
-                style:'margin:auto;display:block'
+                textContent: `Sprzedaż dzienna: ${data.dailySaleQty}szt`,
+                classes: 'tomczuk-list tomczuk-list-daily-sale'
             })
         );
 
         this.salesBox.append(
             html('div', {
-                textContent: 
-                    `Zapotrz 14dni: ${this.product.reportData.data.demandFor14Days}szt`,
-                style:'margin:auto;display:block'
+                textContent: `Stan: ${data.magQty}szt`,
+                classes: 'tomczuk-list tomczuk-list-mag-qty'
             })
         );
 
         this.salesBox.append(
             html('div', {
                 textContent: 
-                    `Zapas na: ${this.product.reportData.data.stockForDays}dni`,
-                style:'margin:auto;display:block'
+                    `Śr cena sprz: ${(data.averageSoldPrice).toFixed(2)}zł`,
+                classes: 'tomczuk-list tomczuk-list-av-sold-price'
             })
         );
 
-        if(this.product.reportData.data.stockForDays <= 5) this.element.style = 'background:tomato';
+        this.salesBox.append(
+            html('div', {
+                textContent: `Zapotrz 14dni: ${data.demandFor14Days}szt`,
+                classes: 'tomczuk-list tomczuk-list-14-days-demand'
+            })
+        );
+
+        this.salesBox.append(
+            html('div', {
+                textContent: `Zapas na: ${data.stockForDays}dni`,
+                classes: 'tomczuk-list tomczuk-list-stock-for-days'
+            })
+        );
     }
 
     unbuildBox() {

@@ -344,3 +344,19 @@
     height: 200px!important;
     top: 80px;
 }
+
+.tomczuk.list {
+    text-align: center;
+}
+.tomczuk-supply-low .tomczuk-list,
+.tomczuk-supply-medium .tomczuk-list {
+    color: white;
+}
+
+.tomczuk-supply-low {
+    background-color: red;
+}
+
+.tomczuk-supply-medium {
+    background-color: orange;
+}
