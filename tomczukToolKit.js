@@ -2176,9 +2176,17 @@ class WholesaleEl {
     row(supplier, price, qty) {
         const tr = html('tr');
         tr.append(html('td', {textContent: supplier}));
-        tr.append(html('td', {textContent: price}));
+        tr.append(html('td', {classes: 'price', textContent: price}));
         tr.append(html('td', {textContent: qty}));
-        this.table.append(tr);
+        let lastTr = this.table.querySelector('tr:last-child');
+        let lastPrice = lastTr.querySelector('.price').textContent;
+        if(lastPrice !== 'brutto') {
+            if(parseFloat(price) < parseFloat(lastPrice)) {
+                lastTr.before(tr);
+            } else {
+                lastTr.after(tr);
+            }
+        }
     }
 
     setUpListeners() {
