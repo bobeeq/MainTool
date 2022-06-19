@@ -1746,7 +1746,7 @@ class ListType {
                 )
             }
         }
-
+        wholesale.sort();
         this.salesBox.append(wholesale.btn);
     }
 
@@ -2176,21 +2176,24 @@ class WholesaleEl {
     row(supplier, price, qty) {
         const tr = html('tr');
         tr.append(html('td', {textContent: supplier}));
-        tr.append(html('td', {classes: 'price', textContent: price}));
+        if(price == 'brutto') tr.classList.add('tomczuk-table-header');
+        tr.append(html('td', {classes: 'tomczuk-price', textContent: price}));
         tr.append(html('td', {textContent: qty}));
-        let lastTr = this.table.querySelector('tr:last-child');
-        if(lastTr) {
-            let lastPrice = lastTr.querySelector('.price').textContent;
-            if(lastPrice !== 'brutto') {
-                if(parseFloat(price) < parseFloat(lastPrice)) {
-                    lastTr.before(tr);
-                } else {
-                    lastTr.after(tr);
-                }
-            }
-        } else {
-            this.table.append(tr);
-        }
+        this.table.append(tr);
+    }
+
+    sort() {
+        let trs = this.table.qsa('tr:not(.tomczuk-table-header)');
+        trs.forEach(tr => this.table.removeChild(tr));
+        let sorted = trs.sort((tr1, tr2) => {
+            let price1 = tr1.qs('.tomczuk-price')?.textContent;
+            let price2 = tr2.qs('.tomczuk-price')?.textContent;
+            if(price1) price1 = parseFloat(price1);
+            if(price1) price2 = parseFloat(price2);
+            return price2 - price1;
+        });
+        this.table.innerHTML = '';
+        sorted.forEach(tr => this.table.append(tr));
     }
 
     setUpListeners() {
