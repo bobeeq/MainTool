@@ -1975,11 +1975,11 @@ class Product {
         this.setPrice(this.shopData.rawData.price);
         this.setRetail(this.shopData.rawData.retail);
         this.countDiscount();
-        // log(this); // @DEBUG
     }
 
     loadFromReport() {
-        this.reportData.load();
+        this.reportData.loadSales();
+        this.reportData.loadWholesaleAvailab();
         this.reportData.prepare();
     }
 
@@ -2064,19 +2064,27 @@ class ReportProductData {
         this.model = model;
         this.rawData = null;
         this.data = null;
+        this.wholesaleAvailab = null;
     }
 
-    load() {
+    loadSales() {
         if( ! app.ctrl.cfg.salesReportForXDays) {
-            log('brak raportu z dwóch dni', 1);
+            log('brak raportu sprzedaży z dwóch dni', 1);
             return;
         }
         this.rawData = app.ctrl.cfg.salesReportForXDays?.[this.model];
     }
 
+    loadWholesaleAvailab() {
+        if( ! app.ctrl.cfg.wholesaleBundleReport) {
+            log('brak raportu dostępności w hurtowniach', 1);
+            return;
+        }
+        this.rawData.wholesale = app.ctrl.cfg.wholesaleBundleReport?.[this.model];
+    }
+
     prepare() {
         if( ! this.rawData) {
-            // test(`Brakuje raportu dla produktu: ${this.model}`, 1);
             return;
         }
         this.data = {};
@@ -2092,6 +2100,19 @@ class ReportProductData {
         this.data.stockForDays = this.data.dailySaleQty == 0 ? '-' : parseInt(this.data.magQty / this.data.dailySaleQty);
 
         this.data.demandFor14Days = Math.max((this.data.dailySaleQty * 14) - this.data.magQty, 0);
+
+        if(this.rawData.wholesale) {
+            this.data.wholesale = {};
+
+            for(let property in this.rawData.wholesale) {
+                let matches = property.match(/(\w+)_(qty|cost)/);
+                if( ! matches) continue;
+                if( ! this.data.wholesale[matches[0]]) {
+                    this.data.wholesale[matches[0]] = {};
+                }
+                this.data.wholesale[matches[0]][matches[1]] = this.rawData.wholesale[property];
+            }
+        }
     }
 }
 
