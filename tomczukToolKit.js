@@ -1721,9 +1721,16 @@ class ListType {
         );
         this.salesBox.append(table.table);
         
-        const wholesale = new WholesaleEl;
-        wholesale.row('Ateneum', '24.11', '389');
-        wholesale.row('Platon', '24.38', '100');
+        const wholesale = new WholesaleEl(data.wholesaleTotalQty);
+        for(let supplier in data.wholesale) {
+            if(data.wholesale[supplier].qty.match(/[1-9]|[1-9]\d+/)) {
+                wholesale.row(
+                    supplier.toUpperCase(),
+                    data.wholesale[supplier].cost,
+                    data.wholesale[supplier].qty,
+                )
+            }
+        }
 
         this.salesBox.append(wholesale.btn);
     }
@@ -2103,14 +2110,17 @@ class ReportProductData {
 
         if(this.rawData.wholesale) {
             this.data.wholesale = {};
-
+            this.data.wholesaleTotalQty = 0;
             for(let property in this.rawData.wholesale) {
                 let matches = property.match(/(\w+)_(qty|cost)/);
                 if( ! matches) continue;
-                if( ! this.data.wholesale[matches[0]]) {
-                    this.data.wholesale[matches[0]] = {};
+                if(matches[2] == 'qty') {
+                    this.data.wholesaleTotalQty += parseInt(matches[2]);
                 }
-                this.data.wholesale[matches[0]][matches[1]] = this.rawData.wholesale[property];
+                if( ! this.data.wholesale[matches[1]]) {
+                    this.data.wholesale[matches[1]] = {};
+                }
+                this.data.wholesale[matches[1]][matches[2]] = this.rawData.wholesale[property];
             }
         }
     }
@@ -2131,9 +2141,10 @@ class Table {
 }
 
 class WholesaleEl {
-    constructor() {
+    constructor(totalQty) {
+        this.totalQty = totalQty;
         this.btn = html('button', {
-            innerHTML: 'HURT (2142) &#128317;',
+            innerHTML: `HURT (${this.totalQty ?? '-'}) &#128317;`,
             classes: 'tomczuk-wholesale-btn'
         });
 
@@ -2159,10 +2170,10 @@ class WholesaleEl {
             box.classList.toggle('tomczuk-wholesale-visible');
             if(box.classList.contains('tomczuk-wholesale-visible')) {
                 btn.after(box);
-                btn.innerHTML = 'HURT (2142) &#128316;';
+                btn.innerHTML = `HURT (${this.totalQty ?? '-'}) &#128316;`;
             } else {
                 box.remove();
-                btn.innerHTML = 'HURT (2142) &#128317;';
+                btn.innerHTML = `HURT (${this.totalQty ?? '-'}) &#128317;`;
             }
         });
     }
