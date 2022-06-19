@@ -2179,13 +2179,17 @@ class WholesaleEl {
         tr.append(html('td', {classes: 'price', textContent: price}));
         tr.append(html('td', {textContent: qty}));
         let lastTr = this.table.querySelector('tr:last-child');
-        let lastPrice = lastTr.querySelector('.price').textContent;
-        if(lastPrice !== 'brutto') {
-            if(parseFloat(price) < parseFloat(lastPrice)) {
-                lastTr.before(tr);
-            } else {
-                lastTr.after(tr);
+        if(lastTr) {
+            let lastPrice = lastTr.querySelector('.price').textContent;
+            if(lastPrice !== 'brutto') {
+                if(parseFloat(price) < parseFloat(lastPrice)) {
+                    lastTr.before(tr);
+                } else {
+                    lastTr.after(tr);
+                }
             }
+        } else {
+            this.table.append(tr);
         }
     }
 
