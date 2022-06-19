@@ -1726,14 +1726,6 @@ class ListType {
             data?.stockForDays ?? '-'
         );
         this.salesBox.append(table.table);
-
-        if(
-            data.wholesaleTotalQty > 10
-            && data.demandFor14Days >= 50
-            && data.wholesaleTotalQty < (data.demandFor14Days * 2)
-        ) {
-            this.element.classList.add('tomczuk-supply-availab-danger');
-        }
         
         const wholesale = new WholesaleEl(data.wholesaleTotalQty);
         for(let supplier in data.wholesale) {
@@ -1747,6 +1739,16 @@ class ListType {
             }
         }
         wholesale.sort();
+        
+        if(
+            data.wholesaleTotalQty > 10
+            && data.demandFor14Days >= 50
+            && data.wholesaleTotalQty < (data.demandFor14Days * 2)
+            && (data.averageSoldPrice - wholesale.cheapest) >= 1
+        ) {
+            this.element.classList.add('tomczuk-supply-availab-danger');
+        }
+
         this.salesBox.append(wholesale.btn);
     }
 
@@ -2190,10 +2192,11 @@ class WholesaleEl {
             let price2 = tr2.qs('.tomczuk-price')?.textContent;
             if(price1) price1 = parseFloat(price1);
             if(price1) price2 = parseFloat(price2);
-            return price2 - price1;
+            return price1 - price2;
         });
-        this.table.innerHTML = '';
         sorted.forEach(tr => this.table.append(tr));
+        let cheapest = this.table.qs('tr:last-child > .tomczuk-price')?.textContent;
+        this.cheapest = cheapest ? parseFloat(cheapest) : 9999;
     }
 
     setUpListeners() {
