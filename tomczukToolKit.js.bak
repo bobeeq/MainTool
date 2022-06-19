@@ -417,6 +417,11 @@ function useTomczukToolbarStyles() {
     background-color: rgba(255,0,0,.2);
 }
 
+.tomczuk-supply-availab-danger {
+    box-shadow: inset 0 0 20px 10px #f00;
+    background-color: rgba(255,0,0,.5);
+}
+
 .tomczuk-supply-medium {
     box-shadow: inset 0 0 20px 5px #ffa500;
     background-color: rgba(255,165,0,.2);
@@ -1721,14 +1726,6 @@ class ListType {
             data?.stockForDays ?? '-'
         );
         this.salesBox.append(table.table);
-
-        if(
-            data.wholesaleTotalQty > 10
-            && data.demandFor14Days >= 50
-            && data.wholesaleTotalQty < (data.demandFor14Days * 2)
-        ) {
-            this.element.classList.add('tomczuk-supply-availab-danger');
-        }
         
         const wholesale = new WholesaleEl(data.wholesaleTotalQty);
         for(let supplier in data.wholesale) {
@@ -1741,7 +1738,26 @@ class ListType {
                 )
             }
         }
-
+        wholesale.sort();
+        let profit = data.averageSoldPrice - wholesale.cheapest;
+        if(
+            data.wholesaleTotalQty > 10
+            && data.demandFor14Days >= 50
+            && data.wholesaleTotalQty < (data.demandFor14Days * 2)
+            && (profit) >= 1
+        ) {
+            this.element.classList.add('tomczuk-supply-availab-danger');
+        }
+        table.row(
+            'Zysk',
+            profit.toFixed(2)
+        )
+        if(profit <= 0) {
+            this.element.classList.remove('tomczuk-supply-low');
+            this.element.classList.remove('tomczuk-supply-medium');
+            this.element.classList.remove('tomczuk-supply-availab-danger');
+            this.element.classList.add('tomczuk-supply-check');
+        }
         this.salesBox.append(wholesale.btn);
     }
 
@@ -2171,9 +2187,25 @@ class WholesaleEl {
     row(supplier, price, qty) {
         const tr = html('tr');
         tr.append(html('td', {textContent: supplier}));
-        tr.append(html('td', {textContent: price}));
+        if(price == 'brutto') tr.classList.add('tomczuk-table-header');
+        tr.append(html('td', {classes: 'tomczuk-price', textContent: price}));
         tr.append(html('td', {textContent: qty}));
         this.table.append(tr);
+    }
+
+    sort() {
+        let trs = this.table.qsa('tr:not(.tomczuk-table-header)');
+        trs.forEach(tr => this.table.removeChild(tr));
+        let sorted = trs.sort((tr1, tr2) => {
+            let price1 = tr1.qs('.tomczuk-price')?.textContent;
+            let price2 = tr2.qs('.tomczuk-price')?.textContent;
+            if(price1) price1 = parseFloat(price1);
+            if(price1) price2 = parseFloat(price2);
+            return price1 - price2;
+        });
+        sorted.forEach(tr => this.table.append(tr));
+        let cheapest = this.table.qs('tr:not(.tomczuk-table-header) > .tomczuk-price')?.textContent;
+        this.cheapest = cheapest ? parseFloat(cheapest) : 9999;
     }
 
     setUpListeners() {

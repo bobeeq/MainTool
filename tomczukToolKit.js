@@ -417,6 +417,11 @@ function useTomczukToolbarStyles() {
     background-color: rgba(255,0,0,.2);
 }
 
+.tomczuk-supply-check {
+    box-shadow: inset 0 0 20px 5px #00f;
+    background-color: rgba(0,0,255,.2);
+}
+
 .tomczuk-supply-availab-danger {
     box-shadow: inset 0 0 20px 10px #f00;
     background-color: rgba(255,0,0,.5);
@@ -1739,19 +1744,25 @@ class ListType {
             }
         }
         wholesale.sort();
-        
+        let profit = data.averageSoldPrice - wholesale.cheapest;
         if(
             data.wholesaleTotalQty > 10
             && data.demandFor14Days >= 50
             && data.wholesaleTotalQty < (data.demandFor14Days * 2)
-            && (data.averageSoldPrice - wholesale.cheapest) >= 1
+            && (profit) >= 1
         ) {
             this.element.classList.add('tomczuk-supply-availab-danger');
         }
         table.row(
             'Zysk',
-            (data.averageSoldPrice - wholesale.cheapest).toFixed(2)
+            profit.toFixed(2)
         )
+        if(profit <= 0) {
+            this.element.classList.remove('tomczuk-supply-low');
+            this.element.classList.remove('tomczuk-supply-medium');
+            this.element.classList.remove('tomczuk-supply-availab-danger');
+            this.element.classList.add('tomczuk-supply-check');
+        }
         this.salesBox.append(wholesale.btn);
     }
 
