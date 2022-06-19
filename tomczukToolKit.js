@@ -417,6 +417,11 @@ function useTomczukToolbarStyles() {
     background-color: rgba(255,0,0,.2);
 }
 
+.tomczuk-supply-availab-danger {
+    box-shadow: inset 0 0 20px 10px #f00;
+    background-color: rgba(255,0,0,.5);
+}
+
 .tomczuk-supply-medium {
     box-shadow: inset 0 0 20px 5px #ffa500;
     background-color: rgba(255,165,0,.2);
@@ -1721,10 +1726,18 @@ class ListType {
             data?.stockForDays ?? '-'
         );
         this.salesBox.append(table.table);
+
+        if(
+            data.wholesaleTotalQty > 10
+            && data.demandFor14Days >= 50
+            && data.wholesaleTotalQty < (data.demandFor14Days * 2)
+        ) {
+            this.element.classList.add('tomczuk-supply-availab-danger');
+        }
         
         const wholesale = new WholesaleEl(data.wholesaleTotalQty);
         for(let supplier in data.wholesale) {
-            let qty = String(data.wholesale[supplier.qty]);
+            let qty = String(data.wholesale[supplier].qty);
             if(qty.match(/^(?:[1-9]|[1-9]\d+)$/)) {
                 wholesale.row(
                     supplier.toUpperCase(),
