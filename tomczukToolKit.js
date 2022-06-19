@@ -1748,7 +1748,10 @@ class ListType {
         ) {
             this.element.classList.add('tomczuk-supply-availab-danger');
         }
-
+        table.row(
+            'Zysk',
+            (data.averageSoldPrice - wholesale.cheapest).toFixed(2)
+        )
         this.salesBox.append(wholesale.btn);
     }
 
@@ -2195,7 +2198,7 @@ class WholesaleEl {
             return price1 - price2;
         });
         sorted.forEach(tr => this.table.append(tr));
-        let cheapest = this.table.qs('tr:last-child > .tomczuk-price')?.textContent;
+        let cheapest = this.table.qs('tr:not(.tomczuk-table-header) > .tomczuk-price')?.textContent;
         this.cheapest = cheapest ? parseFloat(cheapest) : 9999;
     }
 
