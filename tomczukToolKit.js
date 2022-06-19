@@ -1744,7 +1744,7 @@ class ListType {
             }
         }
         wholesale.sort();
-        let profit = data.averageSoldPrice - wholesale.cheapest;
+        let profit = wholesale.cheapest != 9999 ? data.averageSoldPrice - wholesale.cheapest : 0;
         if(
             data.wholesaleTotalQty > 10
             && data.demandFor14Days >= 50
