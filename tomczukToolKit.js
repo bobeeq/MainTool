@@ -1724,7 +1724,8 @@ class ListType {
         
         const wholesale = new WholesaleEl(data.wholesaleTotalQty);
         for(let supplier in data.wholesale) {
-            if(data.wholesale[supplier].qty.match(/^(?:[1-9]|[1-9]\d+)$/)) {
+            let qty = String(data.wholesale[supplier.qty]);
+            if(qty.match(/^(?:[1-9]|[1-9]\d+)$/)) {
                 wholesale.row(
                     supplier.toUpperCase(),
                     data.wholesale[supplier].cost,
