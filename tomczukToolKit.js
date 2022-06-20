@@ -1757,7 +1757,7 @@ class ListType {
             'Zysk',
             profit.toFixed(2)
         )
-        if(profit <= 0) {
+        if(profit < 0) {
             this.element.classList.remove('tomczuk-supply-low');
             this.element.classList.remove('tomczuk-supply-medium');
             this.element.classList.remove('tomczuk-supply-availab-danger');
