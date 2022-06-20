@@ -1,21 +1,28 @@
 // ==UserScript==
-// @name     tomczukToolKit
+// @name     .tomczukToolKit
 // @version  1
 // @grant    none
 // ==/UserScript==
 
+// ======================= USER CONFIG ======================
+var USER_CFG = {
+    department: 'handlowy',
+    min_zapotrz_na_14_dni: 40,
+    mnoznik_zapotrz_a_dost: 2,
+    min_zysk_w_zl: 0.50
+}
+// ======================= USER CONFIG ======================
+
+// ======================= DEV CONFIG =======================
+var cbaMachine = false;
+var run = true;
+var testMode = true;
+// ======================= DEV CONFIG =======================
+
+
 // ========================== GLOBAL ==========================
 HTMLElement.prototype.qs = function(sel) { return this.querySelector(sel); }
 HTMLElement.prototype.qsa = function(sel) { return [...this.querySelectorAll(sel)]; }
-
-var run = true;
-var testMode = true;
-var app;
-var lapek = false;
-
-// ========================== GLOBAL ==========================
-
-
 Map.prototype.add = function(key, val) {
     let current = this.get(key);
     if(current) {
@@ -25,6 +32,10 @@ Map.prototype.add = function(key, val) {
         this.set(key, [val]);
     }
 }
+
+var app;
+// ========================== GLOBAL ==========================
+
 
 /** @DONE
  * 
@@ -43,7 +54,6 @@ function useTomczukToolbarStyles() {
 .tomczuk {
     all: revert;
     font-family: calibri;
-    /* z-index: 99999; */
     outline: none;
     font-size: 17px;
     line-height: normal;
@@ -56,6 +66,7 @@ function useTomczukToolbarStyles() {
     position: fixed;
     top: 0;
     right: 0;
+    z-index: 2147483645; /* max: 2147483647 */
     border-left: 3px solid #000;
     background: rgba(0, 0, 0, 0.5);
     height: 100vh;
@@ -190,7 +201,7 @@ function useTomczukToolbarStyles() {
     padding: 5px;
     overflow: hidden;
     opacity: 1;
-    max-height: 160px;
+    max-height: 220px;
     pointer-events: inherit;
     transition: .5s;
 }
@@ -345,7 +356,7 @@ function useTomczukToolbarStyles() {
     right: 0;
     bottom: 0;
     font-size: 12px;
-    z-index: 100000;
+    z-index: 2147483647;
 }
 
 .tomczuk-invisible-btn:hover {
@@ -468,17 +479,14 @@ function useTomczukToolbarStyles() {
     font-weight: 800;
 }
 
-.tomczuk-wholesale-box td {
+.tomczuk-wholesale-box td,
+.tomczuk-wholesale-box th {
     border: 1px solid black;
     text-align: center;
 }
 
 .tomczuk-tk-slider-btns {
     bottom: 700px!important;
-}
-
-.tomczuk-non-white-price {
-    background-color: rgba(0,0,0,0)!important;
 }`;
 
     style.textContent = customUpdateableCSS;
@@ -488,13 +496,13 @@ function useTomczukToolbarStyles() {
 
 class App {
     /** @DONE
-     * @param {string} department
+     * 
      */
-    constructor(department) {
+    constructor() {
         test(this);
         app = this;
         app.startUpTime = Date.now();
-        app.department = department;
+        app.department = USER_CFG.department;
         app.storage = new Storage();
         switch (true) {
             case isCBA():
@@ -1729,7 +1737,7 @@ class ListType {
 
         table.row(
             'Śr cena sprz.',
-            data?.averageSoldPrice ?? '-'
+            data?.averageSoldPrice + ' zł' ?? '-'
         );
 
         table.row(
@@ -1742,31 +1750,31 @@ class ListType {
             data?.stockForDays ?? '-'
         );
         this.salesBox.append(table.table);
-        
-        const wholesale = new WholesaleEl(data.wholesaleTotalQty);
+        if( ! data.wholesale) return;
+
+        const wholesale = new WholesaleEl();
         for(let supplier in data.wholesale) {
-            let qty = String(data.wholesale[supplier].qty);
-            if(qty.match(/^(?:[1-9]|[1-9]\d+)$/)) {
-                wholesale.row(
-                    supplier.toUpperCase(),
-                    data.wholesale[supplier].cost,
-                    data.wholesale[supplier].qty,
-                )
-            }
+            wholesale.add(
+                supplier,
+                data.wholesale[supplier].cost,
+                data.wholesale[supplier].qty
+            );
         }
-        wholesale.sort();
+        wholesale.createTable();
         let profit = wholesale.cheapest != 9999 ? data.averageSoldPrice - wholesale.cheapest : 0;
+        if(isNaN(profit)) profit = 0;
+
         if(
-            data.wholesaleTotalQty > 10
-            && data.demandFor14Days >= 50
-            && data.wholesaleTotalQty < (data.demandFor14Days * 2)
-            && (profit) >= 1
+            data.wholesale.totalQty > 0
+            && data.demandFor14Days >= USER_CFG.min_zapotrz_na_14_dni
+            && data.wholesale.totalQty < (data.demandFor14Days * USER_CFG.mnoznik_zapotrz_a_dost)
+            && (profit) >= USER_CFG.min_zysk_w_zl
         ) {
             this.element.classList.add('tomczuk-supply-availab-danger');
         }
         table.row(
             'Zysk',
-            profit.toFixed(2)
+            profit.toFixed(2) + ' zł'
         )
         if(profit < 0) {
             this.element.classList.remove('tomczuk-supply-low');
@@ -2146,20 +2154,15 @@ class ReportProductData {
         
         this.data.stockForDays = this.data.dailySaleQty == 0 ? '-' : parseInt(this.data.magQty / this.data.dailySaleQty);
 
-        this.data.demandFor14Days = Math.max((this.data.dailySaleQty * 14) - this.data.magQty, 0);
+        this.data.demandFor14Days = toTens(
+            (this.data.dailySaleQty * 14) - this.data.magQty
+        );
 
         if(this.rawData.wholesale) {
             this.data.wholesale = {};
-            this.data.wholesaleTotalQty = 0;
             for(let property in this.rawData.wholesale) {
                 let matches = property.match(/(\w+)_(qty|cost)/);
                 if( ! matches) continue;
-                if(matches[2] == 'qty') {
-                    let qty = String(this.rawData.wholesale[property]);
-                    if(qty && qty.match(/^(?:[1-9]|[1-9]\d+)$/)) {
-                        this.data.wholesaleTotalQty += parseInt(qty);
-                    }
-                }
                 if( ! this.data.wholesale[matches[1]]) {
                     this.data.wholesale[matches[1]] = {};
                 }
@@ -2184,42 +2187,76 @@ class Table {
 }
 
 class WholesaleEl {
-    constructor(totalQty) {
-        this.totalQty = totalQty;
+    data = [];
+    totalQty = 0;
+    cheapest = 9999;
+
+    constructor() {
         this.btn = html('button', {
-            innerHTML: `HURT (${this.totalQty ?? '-'}) &#128317;`,
+            // innerHTML: `HURT (${this.totalQty ?? '-'}) &#128317;`,
+            innerHTML: 'DOSTAWCY (0)',
             classes: 'tomczuk-wholesale-btn'
         });
-
+        this.btn.disabled = true;
         this.box = html('div', {classes: 'tomczuk-wholesale-box'});
-        this.table = html('table');
-        this.row('dostawca', 'brutto', 'ile');
-        this.box.append(this.table);
+    }
+
+    add(supplier, price, qty) {
+        qty = String(qty);
+        if( ! /^(?:[1-9]|[1,9]\d*)$/.test(qty)) return;
+        qty = parseInt(qty);
+
+        this.btn.disabled = false;
         this.setUpListeners();
+
+        this.totalQty += qty;
+        this.btn.innerHTML.replace(/\(\d+\)/, this.totalQty);
+        supplier = supplier.replaceAll('_', ' ');
+        let newRecord = {supplier, price, qty};
+        
+        if(this.data.length === 0) {
+            this.data.push(newRecord);
+            this.cheapest = newRecord.price;
+            return;
+        }
+
+        for(const [i, record] of this.data.entries()) {
+            if(price < record.price) {
+                this.data.unshift(newRecord);
+                this.data.cheapest = newRecord.price;
+                break;
+            } else if(price === record.price) {
+                if(qty >= record.qty) {
+                    this.data.splice(index, 0, newRecord);
+                } else {
+                    this.data.splice(index + 1, 0, newRecord);
+                }
+                break;
+            }
+        }
+        if(this.data[this.data.length - 1] !== newRecord) {
+            this.data.push(newRecord);
+        }
     }
 
-    row(supplier, price, qty) {
-        const tr = html('tr');
-        tr.append(html('td', {textContent: supplier}));
-        if(price == 'brutto') tr.classList.add('tomczuk-table-header');
-        tr.append(html('td', {classes: 'tomczuk-price', textContent: price}));
-        tr.append(html('td', {textContent: qty}));
-        this.table.append(tr);
-    }
+    createTable() {
+        if(this.data.length == 0) return null;
 
-    sort() {
-        let trs = this.table.qsa('tr:not(.tomczuk-table-header)');
-        trs.forEach(tr => this.table.removeChild(tr));
-        let sorted = trs.sort((tr1, tr2) => {
-            let price1 = tr1.qs('.tomczuk-price')?.textContent;
-            let price2 = tr2.qs('.tomczuk-price')?.textContent;
-            if(price1) price1 = parseFloat(price1);
-            if(price1) price2 = parseFloat(price2);
-            return price1 - price2;
-        });
-        sorted.forEach(tr => this.table.append(tr));
-        let cheapest = this.table.qs('tr:not(.tomczuk-table-header) > .tomczuk-price')?.textContent;
-        this.cheapest = cheapest ? parseFloat(cheapest) : 9999;
+        this.table = html('table')
+        let header = html('tr');
+        header.append(html('th', {textContent: 'dostawca'}));
+        header.append(html('th', {textContent: 'brutto'}));
+        header.append(html('th', {textContent: 'ile'}));
+        this.table.append(header);
+        for(let row of this.data) {
+            let tr = html('tr');
+            this.table.append(tr);
+            tr.append(html('td', {textContent: row.supplier}));
+            tr.append(html('td', {textContent: row.price}));
+            tr.append(html('td', {textContent: row.qty}));
+        }
+        this.box.append(this.table);
+        this.btn.after(this.box);
     }
 
     setUpListeners() {
@@ -2229,10 +2266,10 @@ class WholesaleEl {
             box.classList.toggle('tomczuk-wholesale-visible');
             if(box.classList.contains('tomczuk-wholesale-visible')) {
                 btn.after(box);
-                btn.innerHTML = `HURT (${this.totalQty ?? '-'}) &#128316;`;
+                btn.innerHTML.replace("&#128317;", "&#128316;");
             } else {
                 box.remove();
-                btn.innerHTML = `HURT (${this.totalQty ?? '-'}) &#128317;`;
+                btn.innerHTML.replace("&#128316;", "&#128317;");
             }
         });
     }
@@ -2242,6 +2279,13 @@ function toPrice(price) {
     if(typeof price === 'number') price = price.toString();
     let stripped = price.match(/\d+(?:[.,]{1}\d{1,2})?/)?.[0].replace(',','.');
     return parseFloat(stripped).toFixed(2).replace('.',',') + 'zł';
+}
+
+function toTens(num) {
+    if(isNaN(num)) {
+        test('Musisz podać liczbę dla funkcji toTens()', 1);
+    }
+    return Math.ceil(num/10) * 10;
 }
 
 function priceToFloat(price) {
@@ -2494,7 +2538,7 @@ async function getSalesBundleReport(models, duration = 14, delay = 0) {
     let url = `https://cba.kierus.com.pl/?p=ShowSqlReport&r=ilosc+zamowionych+produktow+i+unikalnych+zamowien`;
 
     // @DEBUGGING, wywalić po przesiadce na VPN.
-    if( ! lapek) {
+    if( ! cbaMachine) {
         return [{
                 "tytul": "Reminders of Him. Cząstka ciebie, którą znam",
                 "model": "9788381351973",
@@ -2698,6 +2742,19 @@ async function getSalesBundleReport(models, duration = 14, delay = 0) {
 }
 
 async function getWholesaleBundleReport(models) {
+    if( ! cbaMachine) {
+        let mockReport = [];
+        for(let model of models) {
+            mockReport.push({
+                model: model,
+                'ATENEUM_qty': 1000,
+                'ATENEUM_cost': 23.49,
+                'TESTOWY_DOSTAWCA_qty': 325,
+                'TESTOWY_DOSTAWCA_cost': 22.89
+            });
+        }
+        return mockReport;
+    }
     let reqBody = new FormData();
     reqBody.append('lista_modeli', models.join("\r\n"));
     reqBody.append('dostawcy', '3,95,222,229,230,355,753,755');
@@ -2711,7 +2768,7 @@ async function getWholesaleBundleReport(models) {
 }
 
 async function getSaleReportForProduct(model = null, duration = null, delay = null) {
-    if(model === null) model = app.ctrl.cfg.model;
+    model = app.ctrl.cfg.model;
     if(!model) return null;
     if(delay === null) delay = app.rightPanel?.qs('.tomczuk-delay')?.value;
     if(duration === null) duration =  app.rightPanel?.qs('.tomczuk-duration')?.value;
@@ -2733,10 +2790,10 @@ async function getSaleReportForProduct(model = null, duration = null, delay = nu
     app.rightPanel.container.primary.salesBox.container.append(box);
     
     let sellUrl = `https://cba.kierus.com.pl/?p=ShowSqlReport&r=ilosc+zamowionych+produktow+i+unikalnych+zamowien&lista_produktow=${model}&data_od=${startDate}&data_do=${endDate}&promo=&sklep=-1&source=-1&csv=0`;
-    let report = null;
-	// let report = await getReport(sellUrl);
-    if( ! report) {
-        box.innerText = 'Nie mogę pobrać raportu.';
+	let report = await getReport(sellUrl);
+    if(report) report = report[0];
+    else {
+        box.innerText = 'Nie mogę pobrać raportu. Zaloguj się do CBA?';
         return null;
     };
 	box.innerHTML = '';
@@ -2831,8 +2888,8 @@ function printConsoleStartingMessage() {
     );
 }
 
-async function init(department) {
-    new App(department);
+async function init() {
+    new App();
     printConsoleStartingMessage();
     if ( ! isDev()) useTomczukToolbarStyles();
     app.ctrl.native.redirectFromSearchPage();
@@ -2843,13 +2900,13 @@ async function init(department) {
 //START APP
 
 
-(async function(department = 'handlowy') {
+(async function boot() {
+    if( ! run) return;
     if(window.location.href.match('opineo.pl/')) {
         log('OPINEO, KILLING SCRIPT...');
         return;
     }
-    if(typeof run === 'undefined') return;
-    await init(department);
+    await init();
     app.navBox();
     app.productBox();
     app.salesBox();
