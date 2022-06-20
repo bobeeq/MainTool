@@ -468,6 +468,10 @@ function useTomczukToolbarStyles() {
 .tomczuk-wholesale-box td {
     border: 1px solid black;
     text-align: center;
+}
+
+.tomczuk-tk-slider-btns {
+    bottom: 700px!important;
 }`;
 
     style.textContent = customUpdateableCSS;
@@ -1927,9 +1931,11 @@ class TKSliderList extends TKStandardList {
 
     adjustContainer(container) {
         container.qs('[id^=slider_]').classList.add('tomczuk-height-auto');
+        container.qs('.slider-next-prev').classList.add('tomczuk-tk-slider-btns');
     }
     unadjustContainer(container) {
         container.qs('[id^=slider_]').classList.remove('tomczuk-height-auto');
+        container.qs('.slider-next-prev').classList.remove('tomczuk-tk-slider-btns');
     }
 }
 
@@ -2100,8 +2106,8 @@ class ShopProductData {
 class ReportProductData {
     constructor(model) {
         this.model = model;
-        this.rawData = null;
-        this.data = null;
+        this.rawData = {};
+        this.data = {};
         this.wholesaleAvailab = null;
     }
 
@@ -2110,7 +2116,7 @@ class ReportProductData {
             log('brak raportu sprzedaży z dwóch dni', 1);
             return;
         }
-        this.rawData = app.ctrl.cfg.salesReportForXDays?.[this.model];
+        this.rawData = app.ctrl.cfg.salesReportForXDays?.[this.model] ?? {};
     }
 
     loadWholesaleAvailab() {
@@ -2122,10 +2128,6 @@ class ReportProductData {
     }
 
     prepare() {
-        if( ! this.rawData) {
-            return;
-        }
-        this.data = {};
         this.data.title = this.rawData.tytul;
         this.data.magQty = this.rawData.na_mag_i_zapas_z_kolejka;
         this.data.soldQty = this.rawData.ilosc_zamowionych;
