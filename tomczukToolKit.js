@@ -43,7 +43,7 @@ function useTomczukToolbarStyles() {
 .tomczuk {
     all: revert;
     font-family: calibri;
-    z-index: 99999;
+    /* z-index: 99999; */
     outline: none;
     font-size: 17px;
     line-height: normal;
@@ -366,12 +366,15 @@ function useTomczukToolbarStyles() {
 }
 
 .tomczuk-box-adjusted.tomczuk-tk-promo-list {
-    height: 250px!important;
+    height: 410px!important;
 }
 
-.tomczuk-box-adjusted.tomczuk-tk-promo-list > div {
-    height: 200px!important;
-    top: 80px;
+.tomczuk-box-adjusted.tomczuk-tk-promo-list > .tomczuk-list-sales-box {
+    top: 0;
+}
+
+.tomczuk-box-adjusted.tomczuk-tk-promo-list > .has-available {
+    top: 220px;
 }
 
 .tomczuk-sales-box-table {
