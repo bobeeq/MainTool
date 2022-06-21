@@ -416,6 +416,7 @@ function useTomczukToolbarStyles() {
 .tomczuk-list-sales-box {
     padding: 3px;
     font-size: .8rem;
+    height: 220px;
 }
 
 .tomczuk-list-sales-box table,
@@ -485,10 +486,22 @@ function useTomczukToolbarStyles() {
 .tomczuk-wholesale-box th {
     border: 1px solid black;
     text-align: center;
+    font-size: inherit;
 }
 
 .tomczuk-tk-slider-btns {
     bottom: 700px!important;
+}
+
+.tomczuk-go-to-cba {
+    text-align: center;
+    display: block;
+    font-size: inherit;
+    color: black;
+}
+
+.tomczuk-go-to-cba:hover {
+    color: red;
 }`;
 
     style.textContent = customUpdateableCSS;
@@ -804,9 +817,14 @@ class App {
         });
 
         reCacheBtn.addEventListener('click', async () => {
-            const basicUrl = window.location.href.match(/^https?:\/\/[^\/]*/);
-            try { await fetch(basicUrl + '/?ReCache=1'); } catch (e) { }
-            window.location.reload();
+            let url = window.location.href;
+            if(url.match(/recache=1/i)) {
+                window.location.reload();
+                return;
+            }
+            url += (url.match(/\?/) ? '&' : '?') + 'ReCache=1';
+            window.location.href = url;
+            // window.location.reload();
         });
 
         return reCacheBtn;
@@ -1692,7 +1710,7 @@ class ListType {
 
     /**
      * this keyword odnosi sie tu do:
-     * @see Product
+     * @see Box
      */
     buildBox() {
         if(this.salesBox) return;
@@ -1708,7 +1726,18 @@ class ListType {
         this.salesBox.append(
             selfCopyInput({value: this.product.model})
         );
-        if(data) {
+        this.salesBox.append(
+            html('a', { 
+                textContent: 'Idź do CBA', 
+                href: this.product.cbaUrl ?? '',
+                classes: 'tomczuk-go-to-cba'
+            })
+        );
+        if(
+            data
+            && ! this.product.isElectronic()
+            && ! this.product.isPreview()
+        ) {
             switch(true) {
                 case data.stockForDays <= 3:
                     this.element.classList.add('tomczuk-supply-low');
@@ -1739,7 +1768,7 @@ class ListType {
 
         table.row(
             'Śr cena sprz.',
-            data?.averageSoldPrice.replace('.',',') + 'zł' ?? '-'
+            data?.averageSoldPrice.toFixed(2).replace('.',',') + 'zł' ?? '-'
         );
 
         table.row(
@@ -1753,7 +1782,6 @@ class ListType {
         );
         this.salesBox.append(table.table);
         if( ! data.wholesale) return;
-
         const wholesale = new WholesaleEl();
         for(let supplier in data.wholesale) {
             wholesale.add(
@@ -1785,6 +1813,7 @@ class ListType {
             this.element.classList.add('tomczuk-supply-check');
         }
         this.salesBox.append(wholesale.btn);
+        log(this.product);
     }
 
     unbuildBox() {
@@ -2092,8 +2121,15 @@ class Product {
         this.discount = ((1 - (this.price / this.retail)) * 100).toFixed(0) + '%';
     }
 
-    setBox(box) {
-        this.box = box;
+    isElectronic() {
+        if(! this.model) return false;
+        return /^@/.test(this.model);
+    }
+
+    isPreview() {
+        if(this.shopData?.rawData?.availab) {
+            return /^dostępny za/i.test(this.shopData.rawData.availab);
+        }
     }
 }
 
@@ -2151,7 +2187,7 @@ class ReportProductData {
         this.data.soldOrders = this.rawData.ilosc_unikalnych_zamowien;
         this.data.averageSoldPrice = this.data.soldQty == 0 ? '-' : priceToFloat(
             priceToFloat(this.rawData.wartosc_produktow) / this.data.soldQty
-        ).toFixed(2);
+        );
         this.data.dailySaleQty = parseFloat((this.rawData.ilosc_zamowionych / app.ctrl.cfg.daysForSalesBundleReport).toFixed(1));
         
         this.data.stockForDays = this.data.dailySaleQty == 0 ? '-' : parseInt(this.data.magQty / this.data.dailySaleQty);
@@ -2206,38 +2242,16 @@ class WholesaleEl {
         qty = String(qty);
         if( ! /^(?:[1-9]|[1-9]\d*)$/.test(qty)) return;
         qty = parseInt(qty);
-
+        price = parseFloat(price);
         this.totalQty += qty;
-        supplier = supplier.replaceAll('_', ' ');
-        let newRecord = {supplier, price, qty};
-        if(this.data.length === 0) {
-            this.data.push(newRecord);
-            this.cheapest = newRecord.price;
-            return;
-        }
-        let added = false;
-        for(const [i, record] of this.data.entries()) {
-            if(price < record.price) {
-                this.data.unshift(newRecord);
-                added = true;
-                this.data.cheapest = newRecord.price;
-                break;
-            } else if(price === record.price) {
-                if(qty >= record.qty) {
-                    this.data.splice(i, 0, newRecord);
-                    added = true;
-                } else {
-                    this.data.splice(i + 1, 0, newRecord);
-                    added = true;
-                }
-                break;
-            }
-        }
-        if( ! added) this.data.push(newRecord);
+        supplier = supplier.replaceAll('_', ' ').toUpperCase();
+        this.data.push({supplier, price, qty});
     }
 
     createTable() {
         if(this.data.length == 0) return null;
+        this.data = this.data.sort((a,b) => a.price - b.price);
+        this.cheapest = this.data[0]?.price;
         this.btn.disabled = false;
         this.setUpListeners();
 
