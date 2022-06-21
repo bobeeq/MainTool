@@ -934,7 +934,7 @@ class App {
             setTimeout(() => {
                 copyListBtn.classList.remove('tomczuk-hidden');
             }, 1200);
-            navigator.clipboard.writeText(objToXls(app.ctrl.productList()));
+            this.ctrl.native.copyProductList();
         });
 
         productListBox.container.append(btnsContainer);
@@ -1103,6 +1103,18 @@ class NativeCtrl {
         this.showLists();
     }
 
+    copyProductList() {
+        let copyVal = "model\ttytul\tautor\tcena_tk\tcena_detal\trabat\ttyp\tdost\tlink_sklep\tstan\tsprzedaz_dzienna";
+        this.ctrl.allBoxes.forEach(boxArr => {
+            boxArr.forEach(box => {
+                let shop = box.product?.shopData?.rawData;
+                let report = box.product?.reportData;
+                copyVal += `\n${box.model}\t${shop.title}\t${shop.authors??'-'}\t${shop.price}\t${shop.retail}\t${box.product.discount??'-'}\t${shop.type??'-'}\t${shop.availab??'-'}\t${shop.realShopUrl}\t${report?.data?.magQty??'?'}\t${report?.data?.dailySaleQty?.toString().replace('.',',')??'?'}`;
+            });
+        });
+        navigator.clipboard.writeText(copyVal);
+    }
+
     /** @THINK
      * 
      */
@@ -1178,6 +1190,7 @@ class NativeCtrl {
 class Controller {
     constructor() {
         test(this);
+        this.allBoxes = new Map;
         this.native = new NativeCtrl(this);
     }
     
@@ -1895,6 +1908,7 @@ class List {
 
     addBox(box) {
         this.elements.add(box.getModel(), box);
+        app.ctrl.allBoxes.add(box.getModel(), box);
     }
 
     adjust() {
@@ -1947,7 +1961,9 @@ class TKStandardList extends ListType {
     }
 
     getAvailab(box) {
-        return box.qs('.product-available')?.textContent.trim();
+        let avail = box.qs('.product-available')?.textContent.trim();
+        if(! avail) avail = box.qs('.product-announce')?.textContent.trim();
+        return avail;
     }
 }
 
