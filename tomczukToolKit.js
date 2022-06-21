@@ -9,7 +9,8 @@ var USER_CFG = {
     department: 'handlowy',
     min_zapotrz_na_14_dni: 40,
     mnoznik_zapotrz_a_dost: 2,
-    min_zysk_w_zl: 0.50
+    min_zysk_w_zl: 0.50,
+    id_dostawcow: '3,95,222,229,230,355,753,755'
 }
 // ======================= USER CONFIG ======================
 
@@ -409,12 +410,12 @@ function useTomczukToolbarStyles() {
 .tomczuk-sales-box-table td:last-child {
     text-align: center;
     font-weight: 800;
-    min-width: 20%;
+    min-width: 42%;
 }
 
 .tomczuk-list-sales-box {
     padding: 3px;
-    font-size: .85rem;
+    font-size: .8rem;
 }
 
 .tomczuk-list-sales-box table,
@@ -1738,7 +1739,7 @@ class ListType {
 
         table.row(
             'Śr cena sprz.',
-            data?.averageSoldPrice + ' zł' ?? '-'
+            data?.averageSoldPrice.replace('.',',') + 'zł' ?? '-'
         );
 
         table.row(
@@ -1775,7 +1776,7 @@ class ListType {
         }
         table.row(
             'Zysk',
-            profit.toFixed(2) + ' zł'
+            profit.toFixed(2).replace('.',',') + 'zł'
         )
         if(profit < 0) {
             this.element.classList.remove('tomczuk-supply-low');
@@ -2758,7 +2759,7 @@ async function getWholesaleBundleReport(models) {
     }
     let reqBody = new FormData();
     reqBody.append('lista_modeli', models.join("\r\n"));
-    reqBody.append('dostawcy', '3,95,222,229,230,355,753,755');
+    reqBody.append('dostawcy', USER_CFG.id_dostawcow);
     reqBody.append('data_od', '2022-01-01');
     reqBody.append('data_do', '2022-01-02');
     reqBody.append('sklep[]', '2');

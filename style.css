@@ -363,12 +363,12 @@
 .tomczuk-sales-box-table td:last-child {
     text-align: center;
     font-weight: 800;
-    min-width: 20%;
+    min-width: 42%;
 }
 
 .tomczuk-list-sales-box {
     padding: 3px;
-    font-size: .85rem;
+    font-size: .8rem;
 }
 
 .tomczuk-list-sales-box table,

@@ -9,7 +9,8 @@ var USER_CFG = {
     department: 'handlowy',
     min_zapotrz_na_14_dni: 40,
     mnoznik_zapotrz_a_dost: 2,
-    min_zysk_w_zl: 0.50
+    min_zysk_w_zl: 0.50,
+    id_dostawcow: '3,95,222,229,230,355,753,755'
 }
 // ======================= USER CONFIG ======================
 
@@ -409,12 +410,12 @@ function useTomczukToolbarStyles() {
 .tomczuk-sales-box-table td:last-child {
     text-align: center;
     font-weight: 800;
-    min-width: 20%;
+    min-width: 30%;
 }
 
 .tomczuk-list-sales-box {
     padding: 3px;
-    font-size: .85rem;
+    font-size: .8rem;
 }
 
 .tomczuk-list-sales-box table,
@@ -473,6 +474,7 @@ function useTomczukToolbarStyles() {
     background-color: white;
     top: 0;
     width: 100%;
+    z-index: 100;
 }
 
 .tomczuk-wholesale-box tr:first-child {
@@ -2193,7 +2195,6 @@ class WholesaleEl {
 
     constructor() {
         this.btn = html('button', {
-            // innerHTML: `HURT (${this.totalQty ?? '-'}) &#128317;`,
             innerHTML: 'DOSTAWCY (0)',
             classes: 'tomczuk-wholesale-btn'
         });
@@ -2203,45 +2204,44 @@ class WholesaleEl {
 
     add(supplier, price, qty) {
         qty = String(qty);
-        if( ! /^(?:[1-9]|[1,9]\d*)$/.test(qty)) return;
+        if( ! /^(?:[1-9]|[1-9]\d*)$/.test(qty)) return;
         qty = parseInt(qty);
 
-        this.btn.disabled = false;
-        this.setUpListeners();
-
         this.totalQty += qty;
-        this.btn.innerHTML.replace(/\(\d+\)/, this.totalQty);
         supplier = supplier.replaceAll('_', ' ');
         let newRecord = {supplier, price, qty};
-        
         if(this.data.length === 0) {
             this.data.push(newRecord);
             this.cheapest = newRecord.price;
             return;
         }
-
+        let added = false;
         for(const [i, record] of this.data.entries()) {
             if(price < record.price) {
                 this.data.unshift(newRecord);
+                added = true;
                 this.data.cheapest = newRecord.price;
                 break;
             } else if(price === record.price) {
                 if(qty >= record.qty) {
                     this.data.splice(index, 0, newRecord);
+                    added = true;
                 } else {
                     this.data.splice(index + 1, 0, newRecord);
+                    added = true;
                 }
                 break;
             }
         }
-        if(this.data[this.data.length - 1] !== newRecord) {
-            this.data.push(newRecord);
-        }
+        if( ! added) this.data.push(newRecord);
     }
 
     createTable() {
         if(this.data.length == 0) return null;
+        this.btn.disabled = false;
+        this.setUpListeners();
 
+        this.btn.innerHTML = this.btn.innerHTML.replace(/\(\d+\)/, `(${this.totalQty})`);
         this.table = html('table')
         let header = html('tr');
         header.append(html('th', {textContent: 'dostawca'}));
@@ -2262,14 +2262,16 @@ class WholesaleEl {
     setUpListeners() {
         const box = this.box;
         const btn = this.btn;
+        btn.innerHTML += " &#128317;"; // w dół
         btn.addEventListener('click', () => {
             box.classList.toggle('tomczuk-wholesale-visible');
+
             if(box.classList.contains('tomczuk-wholesale-visible')) {
                 btn.after(box);
-                btn.innerHTML.replace("&#128317;", "&#128316;");
+                btn.innerHTML = `DOSTAWCY (${this.totalQty}) &#128316;`;
             } else {
                 box.remove();
-                btn.innerHTML.replace("&#128316;", "&#128317;");
+                btn.innerHTML = `DOSTAWCY (${this.totalQty}) &#128317;`;
             }
         });
     }
@@ -2757,7 +2759,7 @@ async function getWholesaleBundleReport(models) {
     }
     let reqBody = new FormData();
     reqBody.append('lista_modeli', models.join("\r\n"));
-    reqBody.append('dostawcy', '3,95,222,229,230,355,753,755');
+    reqBody.append('dostawcy', USER_CFG.id_dostawcow);
     reqBody.append('data_od', '2022-01-01');
     reqBody.append('data_do', '2022-01-02');
     reqBody.append('sklep[]', '2');
