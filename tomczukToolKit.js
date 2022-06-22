@@ -7,6 +7,8 @@
 // ======================= USER CONFIG ======================
 var USER_CFG = {
     department: 'handlowy',
+    z_ilu_dni_liczyc_sprzedaz: 2,
+    na_ile_dni_wyliczac_zaporzebowanie: 7,
     min_zapotrz_na_14_dni: 40,
     mnoznik_zapotrz_a_dost: 2,
     min_zysk_w_zl: 0.50,
@@ -416,7 +418,7 @@ function useTomczukToolbarStyles() {
 .tomczuk-list-sales-box {
     padding: 3px;
     font-size: .8rem;
-    height: 220px;
+    height: 230px;
 }
 
 .tomczuk-list-sales-box table,
@@ -498,10 +500,12 @@ function useTomczukToolbarStyles() {
     display: block;
     font-size: inherit;
     color: black;
+    margin:3px;
 }
 
 .tomczuk-go-to-cba:hover {
     color: red;
+    background-color: rgba(0,0,0,.1);
 }`;
 
     style.textContent = customUpdateableCSS;
@@ -941,6 +945,12 @@ class App {
         btnsContainer.append(copyListBtn);
         btnsContainer.append(modifyListBtn);
         app.rightPanel.container.primary.append(productListBox);
+        
+        let sortBtn = html('button', {textContent: 'SORTUJ (beta)', classes: 'tomczuk-btn'});
+        sortBtn.addEventListener('click', () => {
+            app.ctrl.listBundle.sortByProfit();
+        });
+        productListBox.append(sortBtn);
     };
 
     /** @DONE
@@ -1034,7 +1044,7 @@ class NativeCtrl {
         return {
             access: true,       // @DEPRECATED? 
             mutationBreakTimeMs: 3600,
-            daysForSalesBundleReport: 2,
+            daysForSalesBundleReport: USER_CFG.z_ilu_dni_liczyc_sprzedaz,
             checkLastMutationIntervalMs: 200,
             model: null,
             lastMutationOccuredAt: Date.now()
@@ -1096,8 +1106,9 @@ class NativeCtrl {
      */
     async loadLists() {
         this.ctrl.listBundle.loadLists();
-        this.ctrl.allModels = this.ctrl.listBundle.getAllModels();
-        this.ctrl.allModels.push(this.ctrl.cfg.model);
+        if(this.ctrl.cfg.model) {
+            this.ctrl.allModels.push(this.ctrl.cfg.model);
+        }
         await this.salesReportForLoadedBoxes();
         this.ctrl.listBundle.loadProductsFromReport();
         this.showLists();
@@ -1191,6 +1202,7 @@ class Controller {
     constructor() {
         test(this);
         this.allBoxes = new Map;
+        this.allModels = [];
         this.native = new NativeCtrl(this);
     }
     
@@ -1615,6 +1627,12 @@ class ListBundle {
         );
     }
 
+    sortByProfit() {
+        this.listTypes.forEach(listType => 
+            listType.sortByProfit()
+        );
+    }
+
     adjustAll() {
         this.listTypes.forEach(listType => listType.adjust());
     }
@@ -1629,14 +1647,6 @@ class ListBundle {
 
     unbuildAll() {
         this.listTypes.forEach(listType => listType.unbuild());
-    }
-
-    getAllModels() {
-        let models = [];
-        this.listTypes.forEach(listType => {
-            listType.getAllModels().forEach(model => models.push(model));
-        });
-        return [...new Set(models)];
     }
 }
 
@@ -1690,6 +1700,12 @@ class ListType {
     loadProductsFromReport() {
         this.lists.forEach(list => 
             list.loadProductsFromReport()
+        );
+    }
+
+    sortByProfit() {
+        this.lists.forEach(list => 
+            list.sortByProfit()
         );
     }
 
@@ -1804,22 +1820,22 @@ class ListType {
             );
         }
         wholesale.createTable();
-        let profit = wholesale.cheapest != 9999 ? data.averageSoldPrice - wholesale.cheapest : 0;
-        if(isNaN(profit)) profit = 0;
+        this.product.profit = wholesale.cheapest != 9999 ? data.averageSoldPrice - wholesale.cheapest : 0;
+        if(isNaN(this.product.profit)) this.product.profit = 0;
 
         if(
             data.wholesale.totalQty > 0
             && data.demandFor14Days >= USER_CFG.min_zapotrz_na_14_dni
             && data.wholesale.totalQty < (data.demandFor14Days * USER_CFG.mnoznik_zapotrz_a_dost)
-            && (profit) >= USER_CFG.min_zysk_w_zl
+            && (this.product.profit) >= USER_CFG.min_zysk_w_zl
         ) {
             this.element.classList.add('tomczuk-supply-availab-danger');
         }
         table.row(
             'Zysk',
-            profit.toFixed(2).replace('.',',') + 'zł'
+            this.product.profit.toFixed(2).replace('.',',') + 'zł'
         )
-        if(profit < 0) {
+        if(this.product.profit < 0) {
             this.element.classList.remove('tomczuk-supply-low');
             this.element.classList.remove('tomczuk-supply-medium');
             this.element.classList.remove('tomczuk-supply-availab-danger');
@@ -1839,14 +1855,6 @@ class ListType {
                 }
             });
         }
-    }
-
-    getAllModels() {
-        let models = [];
-        this.lists.forEach(list => {
-            list.getAllModels().forEach(model => models.push(model));
-        });
-        return models;
     }
 
     getTitle(box) {
@@ -1906,9 +1914,26 @@ class List {
         });
     }
 
+    sortByProfit() {
+        this.container.innerHTML = '';
+        let arr = [];
+        this.elements.forEach(elArr => {
+            elArr.forEach(el => arr.push(el));
+        })
+        let sorted = arr.sort((a,b) => {
+            if( ! b.product.reportData.data.demandFor14Days) b.product.reportData.data.demandFor14Days = 0;
+            if( ! a.product.reportData.data.demandFor14Days) a.product.reportData.data.demandFor14Days = 0;
+            return b.product.reportData.data.demandFor14Days - a.product.reportData.data.demandFor14Days
+        });
+        sorted.forEach(el => this.container.append(el.element));
+    }
+
     addBox(box) {
-        this.elements.add(box.getModel(), box);
-        app.ctrl.allBoxes.add(box.getModel(), box);
+        let model = box.getModel();
+        if( ! model) return;
+        this.elements.add(model, box);
+        app.ctrl.allBoxes.add(model, box);
+        app.ctrl.allModels.push(model);
     }
 
     adjust() {
@@ -1945,10 +1970,6 @@ class List {
             elArr.forEach(box => box?.unbuildBox(box));
         });
     }
-
-    getAllModels() {
-        return [...this.elements.keys()];
-    }
 }
 
 class TKStandardList extends ListType {
@@ -1983,7 +2004,7 @@ class TKProductPageList extends TKStandardList {
 
 class TKSliderList extends TKStandardList {
     getContainers() {
-        return qsa('.slider-grid.xs-hidden');
+        return qsa('.slider-grid.xs-hidden ul.toggle-view');
     }
 
     getBoxes(container) {
@@ -1992,12 +2013,12 @@ class TKSliderList extends TKStandardList {
     }
 
     adjustContainer(container) {
-        container.qs('[id^=slider_]').classList.add('tomczuk-height-auto');
-        container.qs('.slider-next-prev').classList.add('tomczuk-tk-slider-btns');
+        container.closest('.slider-grid.xs-hidden').qs('[id^=slider_]').classList.add('tomczuk-height-auto');
+        container.closest('.slider-grid.xs-hidden').qs('.slider-next-prev').classList.add('tomczuk-tk-slider-btns');
     }
     unadjustContainer(container) {
-        container.qs('[id^=slider_]').classList.remove('tomczuk-height-auto');
-        container.qs('.slider-next-prev').classList.remove('tomczuk-tk-slider-btns');
+        container.closest('.slider-grid.xs-hidden').qs('[id^=slider_]').classList.remove('tomczuk-height-auto');
+        container.closest('.slider-grid.xs-hidden').qs('.slider-next-prev').classList.remove('tomczuk-tk-slider-btns');
     }
 }
 
@@ -2209,7 +2230,7 @@ class ReportProductData {
         this.data.stockForDays = this.data.dailySaleQty == 0 ? '-' : parseInt(this.data.magQty / this.data.dailySaleQty);
 
         this.data.demandFor14Days = toTens(
-            (this.data.dailySaleQty * 14) - this.data.magQty
+            (this.data.dailySaleQty * USER_CFG.na_ile_dni_wyliczac_zaporzebowanie) - this.data.magQty
         );
 
         if(this.rawData.wholesale) {

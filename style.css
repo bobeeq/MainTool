@@ -369,7 +369,7 @@
 .tomczuk-list-sales-box {
     padding: 3px;
     font-size: .8rem;
-    height: 220px;
+    height: 230px;
 }
 
 .tomczuk-list-sales-box table,
@@ -451,8 +451,10 @@
     display: block;
     font-size: inherit;
     color: black;
+    margin:3px;
 }
 
 .tomczuk-go-to-cba:hover {
     color: red;
+    background-color: rgba(0,0,0,.1);
 }

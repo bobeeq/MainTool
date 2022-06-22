@@ -7,6 +7,8 @@
 // ======================= USER CONFIG ======================
 var USER_CFG = {
     department: 'handlowy',
+    z_ilu_dni_liczyc_sprzedaz: 2,
+    na_ile_dni_wyliczac_zaporzebowanie: 7,
     min_zapotrz_na_14_dni: 40,
     mnoznik_zapotrz_a_dost: 2,
     min_zysk_w_zl: 0.50,
@@ -494,13 +496,16 @@ function useTomczukToolbarStyles() {
 }
 
 .tomczuk-go-to-cba {
+    text-align: center;
     display: block;
     font-size: inherit;
     color: black;
+    margin:3px;
 }
 
 .tomczuk-go-to-cba:hover {
     color: red;
+    background-color: rgba(0,0,0,.1);
 }`;
 
     style.textContent = customUpdateableCSS;
@@ -933,7 +938,7 @@ class App {
             setTimeout(() => {
                 copyListBtn.classList.remove('tomczuk-hidden');
             }, 1200);
-            navigator.clipboard.writeText(objToXls(app.ctrl.productList()));
+            this.ctrl.native.copyProductList();
         });
 
         productListBox.container.append(btnsContainer);
@@ -1033,7 +1038,7 @@ class NativeCtrl {
         return {
             access: true,       // @DEPRECATED? 
             mutationBreakTimeMs: 3600,
-            daysForSalesBundleReport: 2,
+            daysForSalesBundleReport: USER_CFG.z_ilu_dni_liczyc_sprzedaz,
             checkLastMutationIntervalMs: 200,
             model: null,
             lastMutationOccuredAt: Date.now()
@@ -1095,11 +1100,24 @@ class NativeCtrl {
      */
     async loadLists() {
         this.ctrl.listBundle.loadLists();
-        this.ctrl.allModels = this.ctrl.listBundle.getAllModels();
-        this.ctrl.allModels.push(this.ctrl.cfg.model);
+        if(this.ctrl.cfg.model) {
+            this.ctrl.allModels.push(this.ctrl.cfg.model);
+        }
         await this.salesReportForLoadedBoxes();
         this.ctrl.listBundle.loadProductsFromReport();
         this.showLists();
+    }
+
+    copyProductList() {
+        let copyVal = "model\ttytul\tautor\tcena_tk\tcena_detal\trabat\ttyp\tdost\tlink_sklep\tstan\tsprzedaz_dzienna";
+        this.ctrl.allBoxes.forEach(boxArr => {
+            boxArr.forEach(box => {
+                let shop = box.product?.shopData?.rawData;
+                let report = box.product?.reportData;
+                copyVal += `\n${box.model}\t${shop.title}\t${shop.authors??'-'}\t${shop.price}\t${shop.retail}\t${box.product.discount??'-'}\t${shop.type??'-'}\t${shop.availab??'-'}\t${shop.realShopUrl}\t${report?.data?.magQty??'?'}\t${report?.data?.dailySaleQty?.toString().replace('.',',')??'?'}`;
+            });
+        });
+        navigator.clipboard.writeText(copyVal);
     }
 
     /** @THINK
@@ -1177,6 +1195,8 @@ class NativeCtrl {
 class Controller {
     constructor() {
         test(this);
+        this.allBoxes = new Map;
+        this.allModels = [];
         this.native = new NativeCtrl(this);
     }
     
@@ -1616,14 +1636,6 @@ class ListBundle {
     unbuildAll() {
         this.listTypes.forEach(listType => listType.unbuild());
     }
-
-    getAllModels() {
-        let models = [];
-        this.listTypes.forEach(listType => {
-            listType.getAllModels().forEach(model => models.push(model));
-        });
-        return [...new Set(models)];
-    }
 }
 
 
@@ -1767,7 +1779,7 @@ class ListType {
 
         table.row(
             'Śr cena sprz.',
-            data?.averageSoldPrice.replace('.',',') + 'zł' ?? '-'
+            data?.averageSoldPrice.toFixed(2).replace('.',',') + 'zł' ?? '-'
         );
 
         table.row(
@@ -1812,6 +1824,7 @@ class ListType {
             this.element.classList.add('tomczuk-supply-check');
         }
         this.salesBox.append(wholesale.btn);
+        log(this.product);
     }
 
     unbuildBox() {
@@ -1824,14 +1837,6 @@ class ListType {
                 }
             });
         }
-    }
-
-    getAllModels() {
-        let models = [];
-        this.lists.forEach(list => {
-            list.getAllModels().forEach(model => models.push(model));
-        });
-        return models;
     }
 
     getTitle(box) {
@@ -1892,7 +1897,11 @@ class List {
     }
 
     addBox(box) {
-        this.elements.add(box.getModel(), box);
+        let model = box.getModel();
+        if( ! model) return;
+        this.elements.add(model, box);
+        app.ctrl.allBoxes.add(model, box);
+        app.ctrl.allModels.push(model);
     }
 
     adjust() {
@@ -1929,10 +1938,6 @@ class List {
             elArr.forEach(box => box?.unbuildBox(box));
         });
     }
-
-    getAllModels() {
-        return [...this.elements.keys()];
-    }
 }
 
 class TKStandardList extends ListType {
@@ -1945,7 +1950,9 @@ class TKStandardList extends ListType {
     }
 
     getAvailab(box) {
-        return box.qs('.product-available')?.textContent.trim();
+        let avail = box.qs('.product-available')?.textContent.trim();
+        if(! avail) avail = box.qs('.product-announce')?.textContent.trim();
+        return avail;
     }
 }
 
@@ -2185,13 +2192,13 @@ class ReportProductData {
         this.data.soldOrders = this.rawData.ilosc_unikalnych_zamowien;
         this.data.averageSoldPrice = this.data.soldQty == 0 ? '-' : priceToFloat(
             priceToFloat(this.rawData.wartosc_produktow) / this.data.soldQty
-        ).toFixed(2);
+        );
         this.data.dailySaleQty = parseFloat((this.rawData.ilosc_zamowionych / app.ctrl.cfg.daysForSalesBundleReport).toFixed(1));
         
         this.data.stockForDays = this.data.dailySaleQty == 0 ? '-' : parseInt(this.data.magQty / this.data.dailySaleQty);
 
         this.data.demandFor14Days = toTens(
-            (this.data.dailySaleQty * 14) - this.data.magQty
+            (this.data.dailySaleQty * USER_CFG.na_ile_dni_wyliczac_zaporzebowanie) - this.data.magQty
         );
 
         if(this.rawData.wholesale) {
