@@ -1,18 +1,17 @@
 // ==UserScript==
 // @name     .tomczukToolKit
-// @version  1
+// @version  1.0
 // @grant    none
 // ==/UserScript==
-
 // ======================= USER CONFIG ======================
 var USER_CFG = {
     department: 'handlowy',
-    z_ilu_dni_liczyc_sprzedaz: 2,
-    na_ile_dni_wyliczac_zaporzebowanie: 7,
+    z_ilu_dni_liczyc_sprzedaz: 7,
+    na_ile_dni_wyliczac_zaporzebowanie: 14,
     min_zapotrz_na_14_dni: 40,
+  	min_il_do_zwrotu: 50,
     mnoznik_zapotrz_a_dost: 2,
-    min_zysk_w_zl: 0.50,
-    id_dostawcow: '3,95,222,229,230,355,753,755,938,1066,982,1138,1065,785,698,611,81,996,583,562,948,670,694,955,454,936,650,65,906,642'
+    min_zysk_w_zl: 0.50
 }
 // ======================= USER CONFIG ======================
 
@@ -69,7 +68,8 @@ function useTomczukToolbarStyles() {
     position: fixed;
     top: 0;
     right: 0;
-    z-index: 2147483645; /* max: 2147483647 */
+    z-index: 2147483645;
+    /* max: 2147483647 */
     border-left: 3px solid #000;
     background: rgba(0, 0, 0, 0.5);
     height: 100vh;
@@ -383,11 +383,24 @@ function useTomczukToolbarStyles() {
     height: 410px!important;
 }
 
-.tomczuk-box-adjusted.tomczuk-tk-promo-list > .tomczuk-list-sales-box {
+.tomczuk-box-adjusted.tomczuk-tk-promo-list>.tomczuk-list-sales-box {
     top: 0;
 }
 
-.tomczuk-box-adjusted.tomczuk-tk-promo-list > .has-available {
+.tomczuk-remember-sales-cfg {
+    cursor: pointer;
+    font-size: .8rem;
+}
+
+.tomczuk-remember-sales-cfg input {
+    margin-right: 5px;
+}
+
+.tomczuk-remember-sales-cfg:hover {
+    color: #0060df;
+}
+
+.tomczuk-box-adjusted.tomczuk-tk-promo-list>.has-available {
     top: 220px;
 }
 
@@ -396,6 +409,7 @@ function useTomczukToolbarStyles() {
     margin-top: 5px;
     width: 100%;
     box-sizing: border-box;
+    white-space: nowrap;
     border-collapse: collapse;
 }
 
@@ -418,7 +432,7 @@ function useTomczukToolbarStyles() {
 .tomczuk-list-sales-box {
     padding: 3px;
     font-size: .8rem;
-    height: 220px;
+    height: 225px;
 }
 
 .tomczuk-list-sales-box table,
@@ -432,27 +446,32 @@ function useTomczukToolbarStyles() {
 
 .tomczuk-supply-low {
     box-shadow: inset 0 0 20px 5px #f00;
-    background-color: rgba(255,0,0,.2);
+    background-color: rgba(255, 0, 0, .2);
 }
 
 .tomczuk-supply-check {
     box-shadow: inset 0 0 20px 5px #00f;
-    background-color: rgba(0,0,255,.2);
+    background-color: rgba(0, 0, 255, .2);
 }
 
 .tomczuk-supply-availab-danger {
-    box-shadow: inset 0 0 20px 10px #f00;
-    background-color: rgba(255,0,0,.5);
+    box-shadow: inset 0 0 20px 10px #ff1493;
+    background-color: rgba(255,20,147, .5);
+    transition: 450ms;
+}
+
+.tomczuk-supply-availab-danger:hover {
+    background-color: rgba(255,20,147, .8);
 }
 
 .tomczuk-supply-medium {
     box-shadow: inset 0 0 20px 5px #ffa500;
-    background-color: rgba(255,165,0,.2);
+    background-color: rgba(255, 165, 0, .2);
 }
 
 .tomczuk-supply-overload {
     box-shadow: inset 0 0 20px 5px #000;
-    background-color: rgba(0,0,0,.2);
+    background-color: rgba(0, 0, 0, .2);
 }
 
 .tomczuk-height-auto {
@@ -500,12 +519,12 @@ function useTomczukToolbarStyles() {
     display: block;
     font-size: inherit;
     color: black;
-    margin:3px;
+    margin: 3px;
 }
 
 .tomczuk-go-to-cba:hover {
     color: red;
-    background-color: rgba(0,0,0,.1);
+    background-color: rgba(0, 0, 0, .1);
 }`;
 
     style.textContent = customUpdateableCSS;
@@ -757,7 +776,11 @@ class App {
      * 
      */
     getPanelToggler(pinned) {
-        const panelToggler = html('div', { classes: 'tomczuk-panel-toggler', innerHTML: '&#128204;' });
+        const panelToggler = html('div', {
+            classes: 'tomczuk-panel-toggler',
+            innerHTML: '&#128204;',
+            title: 'Przypnij'
+        });
         const activeClass = 'tomczuk-active';
 
         if (pinned == 'pinned') panelToggler.classList.add(activeClass);
@@ -793,7 +816,8 @@ class App {
 
         const goUpBtn = html('a', {
             innerHTML: '&#11014;&#65039;',
-            classes: 'tomczuk-btn tomczuk-nav-btn tomczuk-goup-btn'
+            classes: 'tomczuk-btn tomczuk-nav-btn tomczuk-goup-btn',
+            title: 'Do góry strony'
         });
         goUpBtn.classList.toggle('tomczuk-hidden', ! window.scrollY);
 
@@ -817,7 +841,8 @@ class App {
         if (!allowed) return null;
         const reCacheBtn = html('a', {
             classes: 'tomczuk-btn tomczuk-nav-btn tomczuk-recache-btn',
-            innerHTML: '&#128260;'
+            innerHTML: '&#128260;',
+            title: 'ReCache'
         });
 
         reCacheBtn.addEventListener('click', async () => {
@@ -843,7 +868,8 @@ class App {
 
         const mobileBtn = html('a', {
             innerHTML: '&#128241;',
-            classes: 'tomczuk-btn tomczuk-nav-btn tomczuk-mobile-btn'
+            classes: 'tomczuk-btn tomczuk-nav-btn tomczuk-mobile-btn',
+            title: 'Mobile Mode'
         });
 
         if (sessionStorage.tomczukMobileMode !== 'true') {
@@ -915,8 +941,17 @@ class App {
         
         const productListBox = box('Lista produktów');
         const btnsContainer = html('div', { classes: 'tomczuk-product-btns-container tomczuk-row-btns' });
-        const copyListBtn = html('a', { innerHTML: '&#128203;', classes: 'tomczuk-btn tomczuk-copy-product-list' });
-        const modifyListBtn = html('a', { innerHTML: '&#128200;', classes: 'tomczuk-btn tomczuk-modify-product-list' });
+        const copyListBtn = html('a', {
+            innerHTML: '&#128203;',
+            classes: 'tomczuk-btn tomczuk-copy-product-list',
+            title: 'Kopiuj listy produktów'
+        });
+
+        const modifyListBtn = html('a', {
+            innerHTML: '&#128200;',
+            classes: 'tomczuk-btn tomczuk-modify-product-list',
+            title: 'Pokaż statystyki'
+        });
 
         modifyListBtn.classList.toggle(
             'tomczuk-product-list-mode',
@@ -945,6 +980,12 @@ class App {
         btnsContainer.append(copyListBtn);
         btnsContainer.append(modifyListBtn);
         app.rightPanel.container.primary.append(productListBox);
+        
+        let sortBtn = html('button', {textContent: 'SORTUJ (beta)', classes: 'tomczuk-btn'});
+        sortBtn.addEventListener('click', () => {
+            app.ctrl.listBundle.sortByProfit();
+        });
+        productListBox.append(sortBtn);
     };
 
     /** @DONE
@@ -962,6 +1003,32 @@ class App {
         salesBox.container.append(salesBox.container.controlPanel);
         app.rightPanel.container.primary.append(salesBox);
         app.rightPanel.container.primary.salesBox = salesBox;
+        
+        const remember = html('label', {
+            textContent: 'zapamiętaj',
+            classes: 'tomczuk-remember-sales-cfg'
+        });
+        const rememberInput = html('input', {type: 'checkbox'});
+        remember.prepend(rememberInput);
+        salesBox.container.controlPanel.after(remember);
+        if(app.storage.get('saleReportDuration')) {
+            rememberInput.checked = true;
+        } else rememberInput.checked = false;
+        rememberInput.addEventListener('change', e => {
+            if(e.target.checked) {
+                app.storage.set(
+                    'saleReportDuration',
+                    salesBox.container.controlPanel.qs('.tomczuk-duration').value
+                );
+                app.storage.set(
+                    'saleReportDelay',
+                    salesBox.container.controlPanel.qs('.tomczuk-delay').value
+                );
+            } else {
+                app.storage.set('saleReportDuration', '');
+                app.storage.set('saleReportDelay', '');
+            }
+        });
         getSaleReportForProduct();
     }
 
@@ -979,7 +1046,8 @@ class App {
             type: 'number',
             min: '-1',
             value: app.storage.get('saleReportDelay') ?? '0',
-            classes: 'tomczuk-input-ctrl tomczuk-delay'
+            classes: 'tomczuk-input-ctrl tomczuk-delay',
+            title: "Ile dni temu był ostatni dzień sprzedaży\n0 dla wczoraj\n-1 dla dzisiaj"
         });
         delayInput.addEventListener('click', () => delayInput.select());
         delayInput.addEventListener('change', getSaleReportForProduct);
@@ -990,12 +1058,12 @@ class App {
             min: '0',
             value: app.storage.get('saleReportDuration') ?? '14',
             step: '7',
-            classes: 'tomczuk-input-ctrl tomczuk-duration'
+            classes: 'tomczuk-input-ctrl tomczuk-duration',
+            title: 'Długość okresu sprzedaży'
         });
         durationInput.addEventListener('click', () => durationInput.select());
         durationInput.addEventListener('change', getSaleReportForProduct);
         container.append(durationInput);
-
         return container;
     }
 }
@@ -1621,6 +1689,12 @@ class ListBundle {
         );
     }
 
+    sortByProfit() {
+        this.listTypes.forEach(listType => 
+            listType.sortByProfit()
+        );
+    }
+
     adjustAll() {
         this.listTypes.forEach(listType => listType.adjust());
     }
@@ -1691,6 +1765,12 @@ class ListType {
         );
     }
 
+    sortByProfit() {
+        this.lists.forEach(list => 
+            list.sortByProfit()
+        );
+    }
+
     insertFunctions(box) {
         [
             this.getModel,
@@ -1748,15 +1828,27 @@ class ListType {
             data
             && ! this.product.isElectronic()
             && ! this.product.isPreview()
+            && ! this.product.isOutlet()
         ) {
             switch(true) {
-                case data.stockForDays <= 3:
+                case (
+                    data.stockForDays <= 3 &&
+                    data.demandForOneDay * 14 >= USER_CFG.min_zapotrz_na_14_dni
+                ):
                     this.element.classList.add('tomczuk-supply-low');
                     break;
-                case data.stockForDays <= 6:
+                case (
+                    data.stockForDays <= 6 &&
+                    data.demandForOneDay * 14 >= USER_CFG.min_zapotrz_na_14_dni
+                ):
                     this.element.classList.add('tomczuk-supply-medium');
                     break;
-                case data.stockForDays >= 30:
+                case (
+                    data.stockForDays >=
+                    USER_CFG.na_ile_dni_wyliczac_zaporzebowanie &&
+                    data.demandForXDays < -USER_CFG.min_il_do_zwrotu &&
+                    data.dailySaleQty < 4
+                ):
                     this.element.classList.add('tomczuk-supply-overload');
                     break;
                 default:
@@ -1779,12 +1871,12 @@ class ListType {
 
         table.row(
             'Śr cena sprz.',
-            data?.averageSoldPrice.toFixed(2).replace('.',',') + 'zł' ?? '-'
+            data?.averageSoldPrice == '-' ? '-' : data?.averageSoldPrice?.toFixed(2).replace('.',',') + 'zł'
         );
 
         table.row(
-            'Zapotrz 14 dni',
-            data?.demandFor14Days ?? '-'
+            `Zapotrz ${USER_CFG.na_ile_dni_wyliczac_zaporzebowanie} dni`,
+            data?.demandForXDays ?? '-'
         );
 
         table.row(
@@ -1802,22 +1894,22 @@ class ListType {
             );
         }
         wholesale.createTable();
-        let profit = wholesale.cheapest != 9999 ? data.averageSoldPrice - wholesale.cheapest : 0;
-        if(isNaN(profit)) profit = 0;
+        this.product.profit = wholesale.cheapest != 9999 ? data.averageSoldPrice - wholesale.cheapest : 0;
+        if(isNaN(this.product.profit)) this.product.profit = 0;
 
         if(
             data.wholesale.totalQty > 0
-            && data.demandFor14Days >= USER_CFG.min_zapotrz_na_14_dni
-            && data.wholesale.totalQty < (data.demandFor14Days * USER_CFG.mnoznik_zapotrz_a_dost)
-            && (profit) >= USER_CFG.min_zysk_w_zl
+            && data.demandForXDays >= USER_CFG.min_zapotrz_na_14_dni
+            && data.wholesale.totalQty < (data.demandForXDays * USER_CFG.mnoznik_zapotrz_a_dost)
+            && (this.product.profit) >= USER_CFG.min_zysk_w_zl
         ) {
             this.element.classList.add('tomczuk-supply-availab-danger');
         }
         table.row(
             'Zysk',
-            profit.toFixed(2).replace('.',',') + 'zł'
+            this.product.profit.toFixed(2).replace('.',',') + 'zł'
         )
-        if(profit < 0) {
+        if(this.product.profit < 0) {
             this.element.classList.remove('tomczuk-supply-low');
             this.element.classList.remove('tomczuk-supply-medium');
             this.element.classList.remove('tomczuk-supply-availab-danger');
@@ -1896,6 +1988,20 @@ class List {
         });
     }
 
+    sortByProfit() {
+        this.container.innerHTML = '';
+        let arr = [];
+        this.elements.forEach(elArr => {
+            elArr.forEach(el => arr.push(el));
+        })
+        let sorted = arr.sort((a,b) => {
+            if( ! b.product.reportData.data.demandForXDays) b.product.reportData.data.demandForXDays = 0;
+            if( ! a.product.reportData.data.demandForXDays) a.product.reportData.data.demandForXDays = 0;
+            return b.product.reportData.data.demandForXDays - a.product.reportData.data.demandForXDays
+        });
+        sorted.forEach(el => this.container.append(el.element));
+    }
+
     addBox(box) {
         let model = box.getModel();
         if( ! model) return;
@@ -1924,7 +2030,7 @@ class List {
     }
 
     unadjustContainer() {
-        this.listType.adjustContainer(this.container);
+        this.listType.unadjustContainer(this.container);
     }
 
     build() {
@@ -1972,7 +2078,7 @@ class TKProductPageList extends TKStandardList {
 
 class TKSliderList extends TKStandardList {
     getContainers() {
-        return qsa('.slider-grid.xs-hidden');
+        return qsa('.slider-grid.xs-hidden ul.toggle-view');
     }
 
     getBoxes(container) {
@@ -1981,12 +2087,12 @@ class TKSliderList extends TKStandardList {
     }
 
     adjustContainer(container) {
-        container.qs('[id^=slider_]').classList.add('tomczuk-height-auto');
-        container.qs('.slider-next-prev').classList.add('tomczuk-tk-slider-btns');
+        container.closest('.slider-grid.xs-hidden').qs('[id^=slider_]').classList.add('tomczuk-height-auto');
+        container.closest('.slider-grid.xs-hidden').qs('.slider-next-prev').classList.add('tomczuk-tk-slider-btns');
     }
     unadjustContainer(container) {
-        container.qs('[id^=slider_]').classList.remove('tomczuk-height-auto');
-        container.qs('.slider-next-prev').classList.remove('tomczuk-tk-slider-btns');
+        container.closest('.slider-grid.xs-hidden').qs('[id^=slider_]').classList.remove('tomczuk-height-auto');
+        container.closest('.slider-grid.xs-hidden').qs('.slider-next-prev').classList.remove('tomczuk-tk-slider-btns');
     }
 }
 
@@ -2127,7 +2233,7 @@ class Product {
     }
 
     isElectronic() {
-        if(! this.model) return false;
+        if( ! this.model) return false;
         return /^@/.test(this.model);
     }
 
@@ -2135,6 +2241,11 @@ class Product {
         if(this.shopData?.rawData?.availab) {
             return /^dostępny za/i.test(this.shopData.rawData.availab);
         }
+    }
+
+    isOutlet() {
+        if( ! this.model) return false;
+        return /^\d{13}33$/.test(this.model);
     }
 }
 
@@ -2197,9 +2308,11 @@ class ReportProductData {
         
         this.data.stockForDays = this.data.dailySaleQty == 0 ? '-' : parseInt(this.data.magQty / this.data.dailySaleQty);
 
-        this.data.demandFor14Days = toTens(
+        this.data.demandForXDays = toTens(
             (this.data.dailySaleQty * USER_CFG.na_ile_dni_wyliczac_zaporzebowanie) - this.data.magQty
         );
+
+        this.data.demandForOneDay = this?.data?.demandForXDays / USER_CFG.na_ile_dni_wyliczac_zaporzebowanie;
 
         if(this.rawData.wholesale) {
             this.data.wholesale = {};
@@ -2245,10 +2358,11 @@ class WholesaleEl {
 
     add(supplier, price, qty) {
         qty = String(qty);
-        if( ! /^(?:[1-9]|[1-9]\d*)$/.test(qty)) return;
-        qty = parseInt(qty);
+				if(qty == '') return;
+        if(/^(?:[1-9]|[1-9]\d*)$/.test(qty)) qty = parseInt(qty);
+				if(supplier.match(/zapas|polautomat/i)) return;
         price = parseFloat(price);
-        this.totalQty += qty;
+        if(Number.isInteger(qty)) this.totalQty += qty;
         supplier = supplier.replaceAll('_', ' ').toUpperCase();
         this.data.push({supplier, price, qty});
     }
@@ -2491,7 +2605,7 @@ function btn({ value, url }) {
 function selfCopyInput({ value, classes = '', id = null }) {
     classes = classes ? classes + ' tomczuk-self-input' : 'tomczuk-self-input';
     const input = html('input', { value, classes, id });
-
+    input.title = 'Kopiuj do schowka';
     input.addEventListener('click', () => {
         navigator.clipboard.writeText(value).then(() => {
             const delayClassName = 'tomczuk-self-input-copying';
@@ -5062,9 +5176,11 @@ async function getWholesaleBundleReport(models) {
           }
         ];
     }
+    let suppliersIds = '1';
+    for(let i = 2; i <= 2000; i++) suppliersIds += `,${i}`;
     let reqBody = new FormData();
     reqBody.append('lista_modeli', models.join("\r\n"));
-    reqBody.append('dostawcy', USER_CFG.id_dostawcow);
+    reqBody.append('dostawcy', suppliersIds);
     reqBody.append('data_od', '2022-01-01');
     reqBody.append('data_do', '2022-01-02');
     reqBody.append('sklep[]', '2');
@@ -5088,9 +5204,10 @@ async function getSaleReportForProduct(model = null, duration = null, delay = nu
     if(duration < 1) duration = 1;
 
     app.rightPanel.qs('.tomczuk-duration').value = duration;
-
-    app.storage.set('saleReportDelay', delay);
-    app.storage.set('saleReportDuration', duration);
+    if(app.rightPanel?.qs('label > input:checked')) {
+        app.storage.set('saleReportDelay', delay);
+        app.storage.set('saleReportDuration', duration);
+    }
     let [startDate, endDate] = prepareDates(duration, delay);
     let box = app.rightPanel.container.primary.salesBox.container.qs('.tomczuk-sale-report-container');
     if(!box) {

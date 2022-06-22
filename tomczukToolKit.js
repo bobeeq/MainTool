@@ -1,10 +1,8 @@
 // ==UserScript==
 // @name     .tomczukToolKit
-// @version  1
+// @version  1.0
 // @grant    none
 // ==/UserScript==
-let suppArrTest = [];
-for(let i = 0; i <= 2000; i++) suppArrTest.push(i);
 // ======================= USER CONFIG ======================
 var USER_CFG = {
     department: 'handlowy',
@@ -13,14 +11,12 @@ var USER_CFG = {
     min_zapotrz_na_14_dni: 40,
   	min_il_do_zwrotu: 50,
     mnoznik_zapotrz_a_dost: 2,
-    min_zysk_w_zl: 0.50,
-  	id_dostawcow: suppArrTest.join(',')
-//     id_dostawcow: '3,95,222,229,230,355,753,755,938,1066,982,1138,1065,785,698,611,81,996,583,562,948,670,694,955,454,936,650,65,906,642'
+    min_zysk_w_zl: 0.50
 }
 // ======================= USER CONFIG ======================
 
 // ======================= DEV CONFIG =======================
-var cbaMachine = true;
+var cbaMachine = false;
 var run = true;
 var testMode = true;
 // ======================= DEV CONFIG =======================
@@ -72,7 +68,8 @@ function useTomczukToolbarStyles() {
     position: fixed;
     top: 0;
     right: 0;
-    z-index: 2147483645; /* max: 2147483647 */
+    z-index: 2147483645;
+    /* max: 2147483647 */
     border-left: 3px solid #000;
     background: rgba(0, 0, 0, 0.5);
     height: 100vh;
@@ -386,11 +383,24 @@ function useTomczukToolbarStyles() {
     height: 410px!important;
 }
 
-.tomczuk-box-adjusted.tomczuk-tk-promo-list > .tomczuk-list-sales-box {
+.tomczuk-box-adjusted.tomczuk-tk-promo-list>.tomczuk-list-sales-box {
     top: 0;
 }
 
-.tomczuk-box-adjusted.tomczuk-tk-promo-list > .has-available {
+.tomczuk-remember-sales-cfg {
+    cursor: pointer;
+    font-size: .8rem;
+}
+
+.tomczuk-remember-sales-cfg input {
+    margin-right: 5px;
+}
+
+.tomczuk-remember-sales-cfg:hover {
+    color: #0060df;
+}
+
+.tomczuk-box-adjusted.tomczuk-tk-promo-list>.has-available {
     top: 220px;
 }
 
@@ -399,6 +409,7 @@ function useTomczukToolbarStyles() {
     margin-top: 5px;
     width: 100%;
     box-sizing: border-box;
+    white-space: nowrap;
     border-collapse: collapse;
 }
 
@@ -421,7 +432,7 @@ function useTomczukToolbarStyles() {
 .tomczuk-list-sales-box {
     padding: 3px;
     font-size: .8rem;
-    height: 240px;
+    height: 225px;
 }
 
 .tomczuk-list-sales-box table,
@@ -435,27 +446,32 @@ function useTomczukToolbarStyles() {
 
 .tomczuk-supply-low {
     box-shadow: inset 0 0 20px 5px #f00;
-    background-color: rgba(255,0,0,.2);
+    background-color: rgba(255, 0, 0, .2);
 }
 
 .tomczuk-supply-check {
     box-shadow: inset 0 0 20px 5px #00f;
-    background-color: rgba(0,0,255,.2);
+    background-color: rgba(0, 0, 255, .2);
 }
 
 .tomczuk-supply-availab-danger {
-    box-shadow: inset 0 0 20px 10px #f00;
-    background-color: rgba(255,0,0,.5);
+    box-shadow: inset 0 0 20px 10px #ff1493;
+    background-color: rgba(255,20,147, .5);
+    transition: 450ms;
+}
+
+.tomczuk-supply-availab-danger:hover {
+    background-color: rgba(255,20,147, .8);
 }
 
 .tomczuk-supply-medium {
     box-shadow: inset 0 0 20px 5px #ffa500;
-    background-color: rgba(255,165,0,.2);
+    background-color: rgba(255, 165, 0, .2);
 }
 
 .tomczuk-supply-overload {
     box-shadow: inset 0 0 20px 5px #000;
-    background-color: rgba(0,0,0,.2);
+    background-color: rgba(0, 0, 0, .2);
 }
 
 .tomczuk-height-auto {
@@ -503,12 +519,11 @@ function useTomczukToolbarStyles() {
     display: block;
     font-size: inherit;
     color: black;
-    margin:3px;
+    margin: 3px;
 }
 
 .tomczuk-go-to-cba:hover {
-    color: red;
-    background-color: rgba(0,0,0,.1);
+    background-color: rgba(0, 0, 0, .2);
 }`;
 
     style.textContent = customUpdateableCSS;
@@ -760,7 +775,11 @@ class App {
      * 
      */
     getPanelToggler(pinned) {
-        const panelToggler = html('div', { classes: 'tomczuk-panel-toggler', innerHTML: '&#128204;' });
+        const panelToggler = html('div', {
+            classes: 'tomczuk-panel-toggler',
+            innerHTML: '&#128204;',
+            title: 'Przypnij'
+        });
         const activeClass = 'tomczuk-active';
 
         if (pinned == 'pinned') panelToggler.classList.add(activeClass);
@@ -796,7 +815,8 @@ class App {
 
         const goUpBtn = html('a', {
             innerHTML: '&#11014;&#65039;',
-            classes: 'tomczuk-btn tomczuk-nav-btn tomczuk-goup-btn'
+            classes: 'tomczuk-btn tomczuk-nav-btn tomczuk-goup-btn',
+            title: 'Do góry strony'
         });
         goUpBtn.classList.toggle('tomczuk-hidden', ! window.scrollY);
 
@@ -820,7 +840,8 @@ class App {
         if (!allowed) return null;
         const reCacheBtn = html('a', {
             classes: 'tomczuk-btn tomczuk-nav-btn tomczuk-recache-btn',
-            innerHTML: '&#128260;'
+            innerHTML: '&#128260;',
+            title: 'ReCache'
         });
 
         reCacheBtn.addEventListener('click', async () => {
@@ -846,7 +867,8 @@ class App {
 
         const mobileBtn = html('a', {
             innerHTML: '&#128241;',
-            classes: 'tomczuk-btn tomczuk-nav-btn tomczuk-mobile-btn'
+            classes: 'tomczuk-btn tomczuk-nav-btn tomczuk-mobile-btn',
+            title: 'Mobile Mode'
         });
 
         if (sessionStorage.tomczukMobileMode !== 'true') {
@@ -918,8 +940,17 @@ class App {
         
         const productListBox = box('Lista produktów');
         const btnsContainer = html('div', { classes: 'tomczuk-product-btns-container tomczuk-row-btns' });
-        const copyListBtn = html('a', { innerHTML: '&#128203;', classes: 'tomczuk-btn tomczuk-copy-product-list' });
-        const modifyListBtn = html('a', { innerHTML: '&#128200;', classes: 'tomczuk-btn tomczuk-modify-product-list' });
+        const copyListBtn = html('a', {
+            innerHTML: '&#128203;',
+            classes: 'tomczuk-btn tomczuk-copy-product-list',
+            title: 'Kopiuj listy produktów'
+        });
+
+        const modifyListBtn = html('a', {
+            innerHTML: '&#128200;',
+            classes: 'tomczuk-btn tomczuk-modify-product-list',
+            title: 'Pokaż statystyki'
+        });
 
         modifyListBtn.classList.toggle(
             'tomczuk-product-list-mode',
@@ -971,6 +1002,32 @@ class App {
         salesBox.container.append(salesBox.container.controlPanel);
         app.rightPanel.container.primary.append(salesBox);
         app.rightPanel.container.primary.salesBox = salesBox;
+        
+        const remember = html('label', {
+            textContent: 'zapamiętaj',
+            classes: 'tomczuk-remember-sales-cfg'
+        });
+        const rememberInput = html('input', {type: 'checkbox'});
+        remember.prepend(rememberInput);
+        salesBox.container.controlPanel.after(remember);
+        if(app.storage.get('saleReportDuration')) {
+            rememberInput.checked = true;
+        } else rememberInput.checked = false;
+        rememberInput.addEventListener('change', e => {
+            if(e.target.checked) {
+                app.storage.set(
+                    'saleReportDuration',
+                    salesBox.container.controlPanel.qs('.tomczuk-duration').value
+                );
+                app.storage.set(
+                    'saleReportDelay',
+                    salesBox.container.controlPanel.qs('.tomczuk-delay').value
+                );
+            } else {
+                app.storage.set('saleReportDuration', '');
+                app.storage.set('saleReportDelay', '');
+            }
+        });
         getSaleReportForProduct();
     }
 
@@ -988,7 +1045,8 @@ class App {
             type: 'number',
             min: '-1',
             value: app.storage.get('saleReportDelay') ?? '0',
-            classes: 'tomczuk-input-ctrl tomczuk-delay'
+            classes: 'tomczuk-input-ctrl tomczuk-delay',
+            title: "Ile dni temu był ostatni dzień sprzedaży\n0 dla wczoraj\n-1 dla dzisiaj"
         });
         delayInput.addEventListener('click', () => delayInput.select());
         delayInput.addEventListener('change', getSaleReportForProduct);
@@ -999,12 +1057,12 @@ class App {
             min: '0',
             value: app.storage.get('saleReportDuration') ?? '14',
             step: '7',
-            classes: 'tomczuk-input-ctrl tomczuk-duration'
+            classes: 'tomczuk-input-ctrl tomczuk-duration',
+            title: 'Długość okresu sprzedaży'
         });
         durationInput.addEventListener('click', () => durationInput.select());
         durationInput.addEventListener('change', getSaleReportForProduct);
         container.append(durationInput);
-
         return container;
     }
 }
@@ -1769,15 +1827,27 @@ class ListType {
             data
             && ! this.product.isElectronic()
             && ! this.product.isPreview()
+            && ! this.product.isOutlet()
         ) {
             switch(true) {
-                case data.stockForDays <= 3 && data.demandFor14Days >= USER_CFG.min_zapotrz_na_14_dni:
+                case (
+                    data.stockForDays <= 3 &&
+                    data.demandForOneDay * 14 >= USER_CFG.min_zapotrz_na_14_dni
+                ):
                     this.element.classList.add('tomczuk-supply-low');
                     break;
-                case data.stockForDays <= 6 && data.demandFor14Days >= USER_CFG.min_zapotrz_na_14_dni:
+                case (
+                    data.stockForDays <= 6 &&
+                    data.demandForOneDay * 14 >= USER_CFG.min_zapotrz_na_14_dni
+                ):
                     this.element.classList.add('tomczuk-supply-medium');
                     break;
-                case data.stockForDays >= 30 && data.magQty >= USER_CFG.min_il_do_zwrotu:
+                case (
+                    data.stockForDays >=
+                    USER_CFG.na_ile_dni_wyliczac_zaporzebowanie &&
+                    data.demandForXDays < -USER_CFG.min_il_do_zwrotu &&
+                    data.dailySaleQty < 4
+                ):
                     this.element.classList.add('tomczuk-supply-overload');
                     break;
                 default:
@@ -1805,7 +1875,7 @@ class ListType {
 
         table.row(
             `Zapotrz ${USER_CFG.na_ile_dni_wyliczac_zaporzebowanie} dni`,
-            data?.demandFor14Days ?? '-'
+            data?.demandForXDays ?? '-'
         );
 
         table.row(
@@ -1828,8 +1898,8 @@ class ListType {
 
         if(
             data.wholesale.totalQty > 0
-            && data.demandFor14Days >= USER_CFG.min_zapotrz_na_14_dni
-            && data.wholesale.totalQty < (data.demandFor14Days * USER_CFG.mnoznik_zapotrz_a_dost)
+            && data.demandForXDays >= USER_CFG.min_zapotrz_na_14_dni
+            && data.wholesale.totalQty < (data.demandForXDays * USER_CFG.mnoznik_zapotrz_a_dost)
             && (this.product.profit) >= USER_CFG.min_zysk_w_zl
         ) {
             this.element.classList.add('tomczuk-supply-availab-danger');
@@ -1924,9 +1994,9 @@ class List {
             elArr.forEach(el => arr.push(el));
         })
         let sorted = arr.sort((a,b) => {
-            if( ! b.product.reportData.data.demandFor14Days) b.product.reportData.data.demandFor14Days = 0;
-            if( ! a.product.reportData.data.demandFor14Days) a.product.reportData.data.demandFor14Days = 0;
-            return b.product.reportData.data.demandFor14Days - a.product.reportData.data.demandFor14Days
+            if( ! b.product.reportData.data.demandForXDays) b.product.reportData.data.demandForXDays = 0;
+            if( ! a.product.reportData.data.demandForXDays) a.product.reportData.data.demandForXDays = 0;
+            return b.product.reportData.data.demandForXDays - a.product.reportData.data.demandForXDays
         });
         sorted.forEach(el => this.container.append(el.element));
     }
@@ -2162,7 +2232,7 @@ class Product {
     }
 
     isElectronic() {
-        if(! this.model) return false;
+        if( ! this.model) return false;
         return /^@/.test(this.model);
     }
 
@@ -2170,6 +2240,11 @@ class Product {
         if(this.shopData?.rawData?.availab) {
             return /^dostępny za/i.test(this.shopData.rawData.availab);
         }
+    }
+
+    isOutlet() {
+        if( ! this.model) return false;
+        return /^\d{13}33$/.test(this.model);
     }
 }
 
@@ -2232,9 +2307,11 @@ class ReportProductData {
         
         this.data.stockForDays = this.data.dailySaleQty == 0 ? '-' : parseInt(this.data.magQty / this.data.dailySaleQty);
 
-        this.data.demandFor14Days = toTens(
+        this.data.demandForXDays = toTens(
             (this.data.dailySaleQty * USER_CFG.na_ile_dni_wyliczac_zaporzebowanie) - this.data.magQty
         );
+
+        this.data.demandForOneDay = this?.data?.demandForXDays / USER_CFG.na_ile_dni_wyliczac_zaporzebowanie;
 
         if(this.rawData.wholesale) {
             this.data.wholesale = {};
@@ -2527,7 +2604,7 @@ function btn({ value, url }) {
 function selfCopyInput({ value, classes = '', id = null }) {
     classes = classes ? classes + ' tomczuk-self-input' : 'tomczuk-self-input';
     const input = html('input', { value, classes, id });
-
+    input.title = 'Kopiuj do schowka';
     input.addEventListener('click', () => {
         navigator.clipboard.writeText(value).then(() => {
             const delayClassName = 'tomczuk-self-input-copying';
@@ -5098,9 +5175,11 @@ async function getWholesaleBundleReport(models) {
           }
         ];
     }
+    let suppliersIds = '1';
+    for(let i = 2; i <= 2000; i++) suppliersIds += `,${i}`;
     let reqBody = new FormData();
     reqBody.append('lista_modeli', models.join("\r\n"));
-    reqBody.append('dostawcy', USER_CFG.id_dostawcow);
+    reqBody.append('dostawcy', suppliersIds);
     reqBody.append('data_od', '2022-01-01');
     reqBody.append('data_do', '2022-01-02');
     reqBody.append('sklep[]', '2');
@@ -5124,9 +5203,10 @@ async function getSaleReportForProduct(model = null, duration = null, delay = nu
     if(duration < 1) duration = 1;
 
     app.rightPanel.qs('.tomczuk-duration').value = duration;
-
-    app.storage.set('saleReportDelay', delay);
-    app.storage.set('saleReportDuration', duration);
+    if(app.rightPanel?.qs('label > input:checked')) {
+        app.storage.set('saleReportDelay', delay);
+        app.storage.set('saleReportDuration', duration);
+    }
     let [startDate, endDate] = prepareDates(duration, delay);
     let box = app.rightPanel.container.primary.salesBox.container.qs('.tomczuk-sale-report-container');
     if(!box) {
