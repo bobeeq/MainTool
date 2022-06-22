@@ -1803,7 +1803,7 @@ class ListType {
         );
 
         table.row(
-            'Zapotrz 14 dni',
+            `Zapotrz ${USER_CFG.na_ile_dni_wyliczac_zaporzebowanie} dni`,
             data?.demandFor14Days ?? '-'
         );
 
