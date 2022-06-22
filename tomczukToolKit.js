@@ -3,7 +3,8 @@
 // @version  1
 // @grant    none
 // ==/UserScript==
-
+let suppArrTest = [];
+for(let i = 0; i <= 2000; i++) suppArrTest.push(i);
 // ======================= USER CONFIG ======================
 var USER_CFG = {
     department: 'handlowy',
@@ -12,12 +13,13 @@ var USER_CFG = {
     min_zapotrz_na_14_dni: 40,
     mnoznik_zapotrz_a_dost: 2,
     min_zysk_w_zl: 0.50,
-    id_dostawcow: '3,95,222,229,230,355,753,755,938,1066,982,1138,1065,785,698,611,81,996,583,562,948,670,694,955,454,936,650,65,906,642'
+  	id_dostawcow: suppArrTest.join(',')
+//     id_dostawcow: '3,95,222,229,230,355,753,755,938,1066,982,1138,1065,785,698,611,81,996,583,562,948,670,694,955,454,936,650,65,906,642'
 }
 // ======================= USER CONFIG ======================
 
 // ======================= DEV CONFIG =======================
-var cbaMachine = false;
+var cbaMachine = true;
 var run = true;
 var testMode = true;
 // ======================= DEV CONFIG =======================
@@ -2277,10 +2279,11 @@ class WholesaleEl {
 
     add(supplier, price, qty) {
         qty = String(qty);
-        if( ! /^(?:[1-9]|[1-9]\d*)$/.test(qty)) return;
-        qty = parseInt(qty);
+				if(qty == '') return;
+        if(/^(?:[1-9]|[1-9]\d*)$/.test(qty)) qty = parseInt(qty);
+				if(supplier.match(/zapas|polautomat/i)) return;
         price = parseFloat(price);
-        this.totalQty += qty;
+        if(Number.isInteger(qty)) this.totalQty += qty;
         supplier = supplier.replaceAll('_', ' ').toUpperCase();
         this.data.push({supplier, price, qty});
     }
