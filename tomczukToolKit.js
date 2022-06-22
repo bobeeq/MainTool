@@ -8,9 +8,10 @@ for(let i = 0; i <= 2000; i++) suppArrTest.push(i);
 // ======================= USER CONFIG ======================
 var USER_CFG = {
     department: 'handlowy',
-    z_ilu_dni_liczyc_sprzedaz: 2,
-    na_ile_dni_wyliczac_zaporzebowanie: 7,
+    z_ilu_dni_liczyc_sprzedaz: 7,
+    na_ile_dni_wyliczac_zaporzebowanie: 14,
     min_zapotrz_na_14_dni: 40,
+  	min_il_do_zwrotu: 50,
     mnoznik_zapotrz_a_dost: 2,
     min_zysk_w_zl: 0.50,
   	id_dostawcow: suppArrTest.join(',')
@@ -1770,13 +1771,13 @@ class ListType {
             && ! this.product.isPreview()
         ) {
             switch(true) {
-                case data.stockForDays <= 3:
+                case data.stockForDays <= 3 && data.demandFor14Days >= USER_CFG.min_zapotrz_na_14_dni:
                     this.element.classList.add('tomczuk-supply-low');
                     break;
-                case data.stockForDays <= 6:
+                case data.stockForDays <= 6 && data.demandFor14Days >= USER_CFG.min_zapotrz_na_14_dni:
                     this.element.classList.add('tomczuk-supply-medium');
                     break;
-                case data.stockForDays >= 30:
+                case data.stockForDays >= 30 && data.magQty >= USER_CFG.min_il_do_zwrotu:
                     this.element.classList.add('tomczuk-supply-overload');
                     break;
                 default:
@@ -1958,7 +1959,7 @@ class List {
     }
 
     unadjustContainer() {
-        this.listType.adjustContainer(this.container);
+        this.listType.unadjustContainer(this.container);
     }
 
     build() {
