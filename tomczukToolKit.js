@@ -418,7 +418,7 @@ function useTomczukToolbarStyles() {
 .tomczuk-list-sales-box {
     padding: 3px;
     font-size: .8rem;
-    height: 230px;
+    height: 240px;
 }
 
 .tomczuk-list-sales-box table,
@@ -1797,7 +1797,7 @@ class ListType {
 
         table.row(
             'Śr cena sprz.',
-            data?.averageSoldPrice.toFixed(2).replace('.',',') + 'zł' ?? '-'
+            data?.averageSoldPrice == '-' ? '-' : data?.averageSoldPrice?.toFixed(2).replace('.',',') + 'zł'
         );
 
         table.row(
