@@ -1392,7 +1392,7 @@ class CBAController extends Controller {
     }
 
     mainContainerSelectors() {
-        return 'document > center > table';
+        return 'body > center > table';
     }
 
     featuresPermissions() {
