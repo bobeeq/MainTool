@@ -16,7 +16,7 @@ var USER_CFG = {
 // ======================= USER CONFIG ======================
 
 // ======================= DEV CONFIG =======================
-var cbaMachine = false;
+var cbaMachine = true;
 var run = true;
 var testMode = true;
 // ======================= DEV CONFIG =======================
@@ -1004,7 +1004,7 @@ class App {
         app.rightPanel.container.primary.salesBox = salesBox;
         
         const remember = html('label', {
-            textContent: 'zapamiętaj',
+            textContent: 'zapamiętuj',
             classes: 'tomczuk-remember-sales-cfg'
         });
         const rememberInput = html('input', {type: 'checkbox'});
