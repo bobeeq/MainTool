@@ -1859,7 +1859,7 @@ class ListType {
         const table = new Table;
         
         table.row(
-            'Sprzedaż dzienna',
+            'Sprz. dzienna',
             data?.dailySaleQty ?? '-'
         );
 
