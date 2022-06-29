@@ -1897,9 +1897,9 @@ class ListType {
         if(isNaN(this.product.profit)) this.product.profit = 0;
 
         if(
-            data.wholesale.totalQty > 0
+            wholesale.totalQty > 0
             && data.demandForXDays >= USER_CFG.min_zapotrz_na_14_dni
-            && data.wholesale.totalQty < (data.demandForXDays * USER_CFG.mnoznik_zapotrz_a_dost)
+            && wholesale.totalQty < (data.demandForXDays * USER_CFG.mnoznik_zapotrz_a_dost)
             && (this.product.profit) >= USER_CFG.min_zysk_w_zl
         ) {
             this.element.classList.add('tomczuk-supply-availab-danger');
