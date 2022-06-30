@@ -5,38 +5,40 @@
 // ==/UserScript==
 var rawSelectedTxt = '';
 var currentEl;
+console.debug('selection script is working.');
+
 
 document.addEventListener('selectionchange', e => {
     let rawTxt = window.getSelection().toString();
-    if( ! rawTxt) return;
+    if (!rawTxt) return;
     rawSelectedTxt = rawTxt;
 });
 
 document.addEventListener('mouseup', e => {
-    if( ! window.getSelection().toString()) {
-        if(e.altKey && e.button === 0) {
-            txt = e.target.textContent.replaceAll(/[^0-9a-zęóąśłżźćń\s]/ig, ' ').replaceAll(/\s+/g, ' ').trim();
-            showBox(e, txt);
-        } else {
-            if( 
-                ! e.target.classList.contains('tomczuk-info-box') &&
-                ! e.target.closest('.tomczuk-info-box')
-            )
-        	currentEl.remove();
+    if (!window.getSelection().toString()) {
+        if (
+            !e.target.classList.contains('tomczuk-info-box') &&
+            !e.target.closest('.tomczuk-info-box')
+        ) {
+            console.debug('usuwam currentEl');
+            if (currentEl) currentEl.remove();
             currentEl = undefined;
         }
-    } else if(e.altKey) {
+        console.log(e);
+        if (e.altKey && e.button === 0) {
+            console.log('z altem');
+            txt = e.target.textContent.replaceAll(/[^0-9a-zęóąśłżźćń\s]/ig, ' ').replaceAll(/\s+/g, ' ').trim();
+            showBox(e, txt);
+        }
+    } else if (e.altKey) {
         let txt = rawSelectedTxt.replaceAll(/[^0-9a-zęóąśłżźćń\s]/ig, ' ').replaceAll(/\s+/g, ' ').trim();
         console.debug(txt);
         showBox(e, txt);
-    } else {
-        currentEl.remove();
-        currentEl = undefined;
     }
 });
 
 async function showBox(event, txt) {
-    if(currentEl) {
+    if (currentEl) {
         currentEl.remove();
         currentEl = undefined;
     }
@@ -73,33 +75,36 @@ async function showBox(event, txt) {
     title.style.borderBottom = '1px dotted black';
     const search = title.querySelector('span:nth-child(2)')
     search.textContent = txt;
-    if(search.textContent.length > 30) search.textContent = search.textContent.substring(0, 30) + '...';
+    if (search.textContent.length > 30) search.textContent = search.textContent.substring(0, 30) + '...';
     search.style.fontWeight = '800';
     search.style.color = 'blue';
     currentEl.prepend(title);
     let tkUrl = null;
-    if(txt.match(/\d{11}(?:\d{2}(?:33)?|KS)/)) {
+    let cbaUrl = null;
+    let isBasket = false;
+    if (txt.match(/\d{11}(?:(?:\d{2}(?:33)?)|KS)/)) {
+        cbaUrl = `https://cba.kierus.com.pl/?p=EditProduct&load=*${txt}`;
         let dom = await fetchPageDOM(`https://www.taniaksiazka.pl/Szukaj/q-${txt}`);
         let foundProducts = [...dom.querySelectorAll('.product-container')];
-        if(foundProducts.length > 0) {
+        if (foundProducts.length > 0) {
             let foundProduct;
-            if(foundProducts.length === 1) {
+            if (foundProducts.length === 1) {
                 foundProduct = foundProducts[0];
             } else {
-                for(let prod of foundProducts) {
-                    if( ! prod.querySelector(`[data-model="${txt}"]`)) {
+                for (let prod of foundProducts) {
+                    if (!prod.querySelector(`[data-model="${txt}"]`)) {
                         continue;
                     }
                     foundProduct = prod;
                     break;
                 }
             }
-            if( ! foundProduct) return;
+            if (!foundProduct) return;
             let productTitle = foundProduct.querySelector('[data-name]')?.dataset?.name;
             let imgSrc = foundProduct.querySelector('img[data-src]');
             tkUrl = foundProduct.querySelector('a[data-model]')?.getAttribute('href');
             tkUrl = `https://taniaksiazka.pl${tkUrl}`;
-            if(imgSrc) {
+            if (imgSrc) {
                 let imgEl = document.createElement('img');
                 imgEl.src = imgSrc.dataset.src;
                 right.append(imgEl);
@@ -109,16 +114,20 @@ async function showBox(event, txt) {
             currentEl.prepend(tit);
         }
     }
+    if (txt.match(/^\d{6}$/)) isBasket = true;
     a('TK', tkUrl ? tkUrl : `https://www.taniaksiazka.pl/Szukaj/q-${txt}`);
     a('Bee', `https://www.bee.pl/Szukaj/q-${txt}`);
-  	a('LubimyCzytac', `https://lubimyczytac.pl/szukaj/ksiazki?phrase=${txt}`);
+    a('CBA - produkty', cbaUrl ? cbaUrl : `https://cba.kierus.com.pl/?p=ShowProducts&pt=${txt}`);
+    if (isBasket) a('CBA - koszyki', `https://cba.kierus.com.pl/?p=SupplierBasket&ShowBasket=${txt}`);
+    a('LubimyCzytac', `https://lubimyczytac.pl/szukaj/ksiazki?phrase=${txt}`);
     a('Google', `https://www.google.com/search?client=firefox-b-d&q=${txt}`);
-  	a('Wiki', `https://pl.wikipedia.org/w/index.php?search=${txt}`);
-  	a('YouTube', `https://www.youtube.com/results?search_query=${txt}`);
+    a('Wiki', `https://pl.wikipedia.org/w/index.php?search=${txt}`);
+    a('YouTube', `https://www.youtube.com/results?search_query=${txt}`);
 }
 
 function a(txt, url) {
     let el = document.createElement('a');
+    el.target = "_blank";
     el.href = url;
     el.textContent = txt;
     el.style.display = 'block';
