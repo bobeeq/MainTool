@@ -14,7 +14,7 @@ document.addEventListener('selectionchange', e => {
 
 document.addEventListener('mouseup', e => {
     if( ! window.getSelection().toString()) {
-        if(e.altKey) {
+        if(e.altKey && e.button === 0) {
             txt = e.target.textContent.replaceAll(/[^0-9a-zęóąśłżźćń\s]/ig, ' ').replaceAll(/\s+/g, ' ').trim();
             showBox(e, txt);
         } else {
@@ -26,7 +26,6 @@ document.addEventListener('mouseup', e => {
             currentEl = undefined;
         }
     } else if(e.altKey) {
-        console.debug('jest selection');
         let txt = rawSelectedTxt.replaceAll(/[^0-9a-zęóąśłżźćń\s]/ig, ' ').replaceAll(/\s+/g, ' ').trim();
         console.debug(txt);
         showBox(e, txt);
@@ -35,55 +34,6 @@ document.addEventListener('mouseup', e => {
         currentEl = undefined;
     }
 });
-
-
-// window.addEventListener('contextmenu', e => {
-//     if(e.button === 2 && e.ctrlKey) e.preventDefault();
-// });
-
-// window.addEventListener('mousedown', e => {
-//     const selection = window.getSelection();
-//     console.debug(selection);
-//     if(e.button === 0) {
-//         current.remove();
-//         current = undefined;
-//     }
-
-//     if(e.button !== 2 || ! e.ctrlKey ) return;
-//     console.debug(e);
-//     if(selection.toString()) {
-//         e.preventDefault();
-//         e.target.style.userSelect = 'auto';
-//         let els = e.target.querySelectorAll('*')
-//         if(els.length) [...els].map(e => e.style.userSelect = 'auto');
-//         txt = selection.toString();
-//         console.debug(txt);
-//         txt = txt.replaceAll(/[^0-9a-zęóąśłżźćń\s]/ig, ' ').replaceAll(/\s+/g, ' ').trim();
-//         showBox(e, txt);
-//     }
-// });
-
-// window.addEventListener('mouseup', e => {
-//     if(e.button !== 2 || ! e.ctrlKey ) return;
-//     const selection = window.getSelection();
-    
-//     if( ! selection.toString()) {
-//         console.debug('nie ma selecta, jadziem');
-//         e.preventDefault();
-//         let txt = '';
-//         selection.modify('extend', 'left', 'word');
-//         txt += selection.toString();
-//         selection.modify('extend', 'right', 'word');
-//         txt += selection.toString();
-//         txt = txt.replaceAll(/[^0-9a-zęóąśłżźćń\s]/ig, ' ').replaceAll(/\s+/g, ' ').trim();
-//         selection.removeAllRanges();
-//         showBox(e, txt);
-//     } else {
-//         selection.removeAllRanges();
-//     }
-//     return false;
-// });
-
 
 async function showBox(event, txt) {
     if(currentEl) {
@@ -127,29 +77,44 @@ async function showBox(event, txt) {
     search.style.fontWeight = '800';
     search.style.color = 'blue';
     currentEl.prepend(title);
-
-    if(txt.match(/\d{13}/)) {
+    let tkUrl = null;
+    if(txt.match(/\d{11}(?:\d{2}(?:33)?|KS)/)) {
         let dom = await fetchPageDOM(`https://www.taniaksiazka.pl/Szukaj/q-${txt}`);
-        let prod = dom.querySelector(`a[data-model="${txt}"]`)
-        if(prod) {
-            let productTitle = prod.dataset?.name;
-            console.debug(prod);
-            let img = prod.querySelector('img[data-src]')?.dataset.src;
+        let foundProducts = [...dom.querySelectorAll('.product-container')];
+        if(foundProducts.length > 0) {
+            let foundProduct;
+            if(foundProducts.length === 1) {
+                foundProduct = foundProducts[0];
+            } else {
+                for(let prod of foundProducts) {
+                    if( ! prod.querySelector(`[data-model="${txt}"]`)) {
+                        continue;
+                    }
+                    foundProduct = prod;
+                    break;
+                }
+            }
+            if( ! foundProduct) return;
+            let productTitle = foundProduct.querySelector('[data-name]')?.dataset?.name;
+            let imgSrc = foundProduct.querySelector('img[data-src]');
+            tkUrl = foundProduct.querySelector('a[data-model]')?.getAttribute('href');
+            tkUrl = `https://taniaksiazka.pl${tkUrl}`;
+            if(imgSrc) {
+                let imgEl = document.createElement('img');
+                imgEl.src = imgSrc.dataset.src;
+                right.append(imgEl);
+            }
             let tit = document.createElement('div');
             tit.textContent = productTitle;
-            let imgEl = document.createElement('img');
-            imgEl.src = img;
             currentEl.prepend(tit);
-            right.append(imgEl);
         }
     }
-    a('TK', `https://www.taniaksiazka.pl/Szukaj/q-${txt}`);
+    a('TK', tkUrl ? tkUrl : `https://www.taniaksiazka.pl/Szukaj/q-${txt}`);
     a('Bee', `https://www.bee.pl/Szukaj/q-${txt}`);
   	a('LubimyCzytac', `https://lubimyczytac.pl/szukaj/ksiazki?phrase=${txt}`);
     a('Google', `https://www.google.com/search?client=firefox-b-d&q=${txt}`);
   	a('Wiki', `https://pl.wikipedia.org/w/index.php?search=${txt}`);
   	a('YouTube', `https://www.youtube.com/results?search_query=${txt}`);
-  
 }
 
 function a(txt, url) {
