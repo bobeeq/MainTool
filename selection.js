@@ -5,7 +5,8 @@
 // ==/UserScript==
 var rawSelectedTxt = '';
 var currentEl;
-console.debug('selection script is working.');
+
+console.debug('Selection script is working.');
 
 
 document.addEventListener('selectionchange', e => {
@@ -20,19 +21,15 @@ document.addEventListener('mouseup', e => {
             !e.target.classList.contains('tomczuk-info-box') &&
             !e.target.closest('.tomczuk-info-box')
         ) {
-            console.debug('usuwam currentEl');
             if (currentEl) currentEl.remove();
             currentEl = undefined;
         }
-        console.log(e);
         if (e.altKey && e.button === 0) {
-            console.log('z altem');
             txt = e.target.textContent.replaceAll(/[^0-9a-zęóąśłżźćń\s]/ig, ' ').replaceAll(/\s+/g, ' ').trim();
             showBox(e, txt);
         }
     } else if (e.altKey) {
         let txt = rawSelectedTxt.replaceAll(/[^0-9a-zęóąśłżźćń\s]/ig, ' ').replaceAll(/\s+/g, ' ').trim();
-        console.debug(txt);
         showBox(e, txt);
     }
 });
