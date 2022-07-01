@@ -3,11 +3,61 @@
 // @version  1
 // @grant    none
 // ==/UserScript==
+console.debug('Selection script is working.');
 var rawSelectedTxt = '';
 var currentEl;
 
-console.debug('Selection script is working.');
+class Selection {
+    rawSelection = null;
+    selection = null;
 
+    getRawSelection() {
+        let rawSelection = document.getSelection().toString();
+        if (rawSelection) {
+            this.rawSelection = rawSelection;
+        } else {
+            let active = document.activeElement;
+            if (
+                active &&
+                (
+                    active.localName === 'textarea' ||
+                    (
+                        active.localName === 'input' &&
+                        active.type === 'text'
+                    )
+                )
+            ) {
+                if (active.selectionEnd - active.selectionStart > 0) {
+                    this.rawSelection = active.value.substring(active.selectionStart, active.selectionEnd);
+                } else {
+                    this.rawSelection = active.value;
+                }
+            }
+        }
+        console.debug(this.rawSelection);
+    }
+
+    prepareSelection() {
+        this.selection = this.rawSelection.replaceAll(/[^0-9a-zęóąśłżźćń\s]/ig, ' ').replaceAll(/\s+/g, ' ').trim();
+    }
+    
+    getSelection() {
+        this.getRawSelection();
+        this.prepareSelection();
+        return this.selection;
+    }
+
+    setListeners() {
+        
+    }
+}
+
+document.addEventListener('keyup', e => {
+    if (e.ctrlKey && e.altKey && e.key === 'd') {
+        let sel = new Selection;
+        sel.getRawSelection();
+    }
+})
 
 document.addEventListener('selectionchange', e => {
     let rawTxt = window.getSelection().toString();
@@ -17,8 +67,7 @@ document.addEventListener('selectionchange', e => {
 
 document.addEventListener('mouseup', e => {
     if (!window.getSelection().toString()) {
-        if (
-            !e.target.classList.contains('tomczuk-info-box') &&
+        if (!e.target.classList.contains('tomczuk-info-box') &&
             !e.target.closest('.tomczuk-info-box')
         ) {
             if (currentEl) currentEl.remove();
