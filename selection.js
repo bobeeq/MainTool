@@ -130,7 +130,7 @@ async function showBox(event, txt) {
     let isBasket = false;
     if (txt.match(/\d{11}(?:(?:\d{2}(?:33)?)|KS)/)) {
         cbaUrl = `https://cba.kierus.com.pl/?p=EditProduct&load=*${txt}`;
-        let dom = await fetchPageDOM(`https://www.taniaksiazka.pl/Szukaj/q-${txt}`);
+        let dom = await fetchPageDOM(`https://www.taniaksiazka.pl/Szukaj/q-m:${txt}`);
         let foundProducts = [...dom.querySelectorAll('.product-container')];
         if (foundProducts.length > 0) {
             let foundProduct;
