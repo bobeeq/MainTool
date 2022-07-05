@@ -454,16 +454,6 @@ function useTomczukToolbarStyles() {
     background-color: rgba(0, 0, 255, .2);
 }
 
-.tomczuk-supply-availab-danger {
-    box-shadow: inset 0 0 20px 10px #ff1493;
-    background-color: rgba(255,20,147, .5);
-    transition: 450ms;
-}
-
-.tomczuk-supply-availab-danger:hover {
-    background-color: rgba(255,20,147, .8);
-}
-
 .tomczuk-supply-medium {
     box-shadow: inset 0 0 20px 5px #ffa500;
     background-color: rgba(255, 165, 0, .2);
@@ -472,6 +462,16 @@ function useTomczukToolbarStyles() {
 .tomczuk-supply-overload {
     box-shadow: inset 0 0 20px 5px #000;
     background-color: rgba(0, 0, 0, .2);
+}
+
+.tomczuk-supply-availab-danger {
+    box-shadow: inset 0 0 20px 10px #ff1493;
+    background-color: rgba(255,20,147, .5);
+    transition: 450ms;
+}
+
+.tomczuk-supply-availab-danger:hover {
+    background-color: rgba(255,20,147, .8);
 }
 
 .tomczuk-height-auto {
